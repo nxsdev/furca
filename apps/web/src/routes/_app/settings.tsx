@@ -1,5 +1,5 @@
 import { Button, Input, Label, TextField, toast } from "@heroui/react";
-import type { Invitation, Member } from "@kuji/core/members/Member";
+import type { Invitation, Member } from "@furca/core/members/Member";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, Link2 } from "lucide-react";
@@ -10,11 +10,11 @@ import { tbl } from "~/components/ui/table";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: "Settings · kuji" }] }),
+  head: () => ({ meta: [{ title: "Settings · furca" }] }),
   component: Page,
 });
 
-const REPO = "https://github.com/nxsdev/kuji";
+const REPO = "https://github.com/nxsdev/furca";
 const fullUrl = (inv: Invitation) => new URL(inv.url, window.location.origin).toString();
 const joinedFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 
@@ -197,7 +197,7 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
   const pending = invitations.filter((i) => i.id !== created?.id);
   return (
     <Panel>
-      <PanelHeader title="Invitations" description="kuji is invite-only: people join through a link you create here." />
+      <PanelHeader title="Invitations" description="furca is invite-only: people join through a link you create here." />
       <InviteForm onCreated={setCreated} />
       {created !== null && <CreatedInvite invitation={created} onDismiss={() => setCreated(null)} />}
       {pending.length === 0 ? (
@@ -301,7 +301,7 @@ function Page() {
   const list = useQuery(orpc.members.list.queryOptions());
   return (
     <>
-      <PageHeader title="Settings" description="Who has access to this kuji instance, and where its data lives." />
+      <PageHeader title="Settings" description="Who has access to this furca instance, and where its data lives." />
       <div className="flex flex-col gap-6">
         {list.isPending ? (
           <Panel>

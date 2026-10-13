@@ -1,6 +1,6 @@
-import { EventStatsServiceLive } from "@kuji/persistence/Layers/EventStatsServiceLive";
-import { ExperimentAnalysisServiceLive } from "@kuji/persistence/Layers/ExperimentAnalysisServiceLive";
-import { WarehouseTesterLive } from "@kuji/persistence/Layers/WarehouseTesterLive";
+import { EventStatsServiceLive } from "@furca/persistence/Layers/EventStatsServiceLive";
+import { ExperimentAnalysisServiceLive } from "@furca/persistence/Layers/ExperimentAnalysisServiceLive";
+import { WarehouseTesterLive } from "@furca/persistence/Layers/WarehouseTesterLive";
 import { Layer } from "effect";
 
 /**

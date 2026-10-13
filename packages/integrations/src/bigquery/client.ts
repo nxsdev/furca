@@ -2,7 +2,7 @@
  * BigQuery REST client for Workers: service-account JWT (jose, WebCrypto) -> OAuth token -> jobs.query.
  * No Node built-ins. Every failure is a WarehouseError whose message says what to fix
  */
-import { WarehouseError } from "@kuji/core/shared/errors";
+import { WarehouseError } from "@furca/core/shared/errors";
 import { Effect } from "effect";
 import { importPKCS8, SignJWT } from "jose";
 

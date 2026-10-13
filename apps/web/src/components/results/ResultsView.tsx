@@ -1,7 +1,7 @@
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import type { Feature } from "@kuji/core/features/Feature";
-import type { Metric } from "@kuji/core/metrics/Metric";
-import type { ExperimentHealth, MetricResult, ResultSnapshot } from "@kuji/core/results/ExperimentResult";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import type { Feature } from "@furca/core/features/Feature";
+import type { Metric } from "@furca/core/metrics/Metric";
+import type { ExperimentHealth, MetricResult, ResultSnapshot } from "@furca/core/results/ExperimentResult";
 import { Button, Label, ListBox, Select, Skeleton, toast } from "@heroui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CircleCheck, CircleDashed, RefreshCw, ShieldAlert } from "lucide-react";
@@ -505,20 +505,20 @@ function WaitingForData({
   const fallback = feature === undefined ? "null" : feature.defaultValue;
   const read =
     feature?.valueType === "boolean"
-      ? `if (kuji.isOn("${flagKey}")) {\n  // ${experiment.variations[1]?.name ?? "treatment"} experience\n}`
-      : `const value = kuji.getValue("${flagKey}", ${fallback});`;
-  const snippet = `import { createClient } from "@kuji/sdk";
+      ? `if (furca.isOn("${flagKey}")) {\n  // ${experiment.variations[1]?.name ?? "treatment"} experience\n}`
+      : `const value = furca.getValue("${flagKey}", ${fallback});`;
+  const snippet = `import { createClient } from "@furca/sdk";
 
-const kuji = createClient({
+const furca = createClient({
   apiHost: "${typeof window === "undefined" ? "" : window.location.origin}",
   sdkKey: "${env?.sdkKey ?? "<sdk key>"}",
   attributes: { ${experiment.hashAttribute}: user.id },
 });
-await kuji.ready();
+await furca.ready();
 
 // Evaluating the flag assigns a variation and sends the exposure
 ${read}
-${event === null ? "" : `\n// Later, when the user converts\nkuji.track("${event}");`}`;
+${event === null ? "" : `\n// Later, when the user converts\nfurca.track("${event}");`}`;
 
   return (
     <Panel>
@@ -531,7 +531,7 @@ ${event === null ? "" : `\n// Later, when the user converts\nkuji.track("${event
         <ol className="flex flex-col gap-4 text-label">
           {[
             ["Users get assigned", `Each user is hashed on "${experiment.hashAttribute}" into a variation; the same user always gets the same one.`],
-            ["Exposures arrive", "The SDK batches exposures to kuji. Bots and duplicate exposures are filtered out."],
+            ["Exposures arrive", "The SDK batches exposures to furca. Bots and duplicate exposures are filtered out."],
             [
               "Refresh to analyze",
               "Health checks run first. The verdict appears once each variation has enough users for the primary metric.",

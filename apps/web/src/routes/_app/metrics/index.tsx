@@ -11,7 +11,7 @@ import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/metrics/")({
   validateSearch: (s: Record<string, unknown>): { new?: true } => (s.new ? { new: true } : {}),
-  head: () => ({ meta: [{ title: "Metrics · kuji" }] }),
+  head: () => ({ meta: [{ title: "Metrics · furca" }] }),
   component: Page,
 });
 

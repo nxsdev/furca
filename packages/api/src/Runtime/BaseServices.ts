@@ -1,9 +1,9 @@
-import { CredentialCipher } from "@kuji/core/datasources/CredentialCipher";
-import { PayloadStore } from "@kuji/core/environments/PayloadStore";
-import { PersistenceError, ValidationError } from "@kuji/core/shared/errors";
-import { DatabaseLive } from "@kuji/database/Database";
+import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import { PayloadStore } from "@furca/core/environments/PayloadStore";
+import { PersistenceError, ValidationError } from "@furca/core/shared/errors";
+import { DatabaseLive } from "@furca/database/Database";
 import { Effect, Layer } from "effect";
-import type { KujiEnv } from "./Env";
+import type { FurcaEnv } from "./Env";
 
 const payloadKey = (sdkKey: string) => `payload:${sdkKey}`;
 
@@ -54,7 +54,7 @@ export const CredentialCipherAesGcm = (secret: string) => {
 };
 
 /** Infrastructure services every request gets */
-export const makeBaseLayer = (env: KujiEnv) =>
+export const makeBaseLayer = (env: FurcaEnv) =>
   Layer.mergeAll(DatabaseLive(env.DB), PayloadStoreKv(env.KV), CredentialCipherAesGcm(env.ENCRYPTION_KEY));
 
 export type BaseServices = Layer.Success<ReturnType<typeof makeBaseLayer>>;

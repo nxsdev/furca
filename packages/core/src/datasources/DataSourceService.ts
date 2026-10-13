@@ -30,5 +30,5 @@ export interface DataSourceServiceShape {
 }
 
 export class DataSourceService extends Context.Service<DataSourceService, DataSourceServiceShape>()(
-  "kuji/DataSourceService",
+  "furca/DataSourceService",
 ) {}

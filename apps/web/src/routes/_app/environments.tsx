@@ -1,6 +1,6 @@
 import { Button, Description, Drawer, Dropdown, FieldError, Input, Label, Spinner, TextField, toast, Tooltip } from "@heroui/react";
-import type { EnvironmentListItem } from "@kuji/api/contract";
-import type { Environment } from "@kuji/core/environments/Environment";
+import type { EnvironmentListItem } from "@furca/api/contract";
+import type { Environment } from "@furca/core/environments/Environment";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { FileJson, KeyRound, MoreHorizontal, Plus, RotateCw, TriangleAlert } from "lucide-react";
@@ -15,7 +15,7 @@ import { tbl } from "~/components/ui/table";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/environments")({
-  head: () => ({ meta: [{ title: "SDK & environments · kuji" }] }),
+  head: () => ({ meta: [{ title: "SDK & environments · furca" }] }),
   component: Page,
 });
 

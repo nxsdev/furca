@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, spyOn, test } from "bun:test";
-import { createClient, fetchPayload, type EventsBody, type Exposure, type KujiClient, type SdkPayload } from "../src/index.ts";
+import { createClient, fetchPayload, type EventsBody, type Exposure, type FurcaClient, type SdkPayload } from "../src/index.ts";
 
 beforeAll(() => {
   spyOn(console, "warn").mockImplementation(() => {});
@@ -56,9 +56,9 @@ function fakeServer() {
   return s;
 }
 
-const clients: KujiClient[] = [];
+const clients: FurcaClient[] = [];
 const make = (o: Partial<Parameters<typeof createClient>[0]> & { fetch: (u: string, i?: RequestInit) => Promise<Response> }) => {
-  const c = createClient({ sdkKey: "sdk-key", apiHost: "https://kuji.test/", attributes: { id: "user-1" }, flushInterval: 0, ...o });
+  const c = createClient({ sdkKey: "sdk-key", apiHost: "https://furca.test/", attributes: { id: "user-1" }, flushInterval: 0, ...o });
   clients.push(c);
   return c;
 };
@@ -72,7 +72,7 @@ describe("client", () => {
     const c = make({ fetch: s.fetch });
     expect(c.getValue("color", "fallback")).toBe("fallback"); // before ready
     await Promise.all([c.ready(), c.ready()]);
-    expect(s.calls).toEqual(["GET https://kuji.test/api/sdk/v1/payload/sdk-key"]);
+    expect(s.calls).toEqual(["GET https://furca.test/api/sdk/v1/payload/sdk-key"]);
     expect(c.isOn("flag")).toBe(true);
     expect(c.getValue("color", "fallback")).toBe("red");
     expect(c.getValue("missing", 7)).toBe(7);
@@ -107,7 +107,7 @@ describe("client", () => {
     expect(s.posts).toHaveLength(1);
     expect(s.posts[0]!.exposures!.map((e) => e.userId)).toEqual(["user-1", "user-2"]);
     expect(s.posts[0]!.exposures![0]).toMatchObject({ experimentKey: "exp-key", phase: 0 });
-    expect(s.calls.at(-1)).toBe("POST https://kuji.test/api/sdk/v1/events/sdk-key");
+    expect(s.calls.at(-1)).toBe("POST https://furca.test/api/sdk/v1/events/sdk-key");
   });
 
   test("a new experiment phase re-sends the exposure of an already exposed user", async () => {
@@ -246,13 +246,13 @@ test("browser: queue goes to sendBeacon on pagehide / hidden", () => {
   g.document = Object.assign(new EventTarget(), { visibilityState: "visible" });
   Object.defineProperty(navigator, "sendBeacon", { configurable: true, value: (url: string, body: string) => (beacons.push([url, body]), true) });
   try {
-    const c = createClient({ sdkKey: "sdk-key", apiHost: "https://kuji.test", attributes: { id: "u" }, payload: payload(), fetch: fakeServer().fetch });
+    const c = createClient({ sdkKey: "sdk-key", apiHost: "https://furca.test", attributes: { id: "u" }, payload: payload(), fetch: fakeServer().fetch });
     c.track("a");
     (g.document as EventTarget).dispatchEvent(new Event("visibilitychange")); // still visible: nothing
     expect(beacons).toHaveLength(0);
     (g.window as EventTarget).dispatchEvent(new Event("pagehide"));
     expect(beacons).toHaveLength(1);
-    expect(beacons[0]![0]).toBe("https://kuji.test/api/sdk/v1/events/sdk-key");
+    expect(beacons[0]![0]).toBe("https://furca.test/api/sdk/v1/events/sdk-key");
     expect((JSON.parse(beacons[0]![1]) as EventsBody).events!.map((e) => e.name)).toEqual(["a"]);
     c.track("b");
     (g.document as { visibilityState: string }).visibilityState = "hidden";
@@ -270,11 +270,11 @@ test("browser: queue goes to sendBeacon on pagehide / hidden", () => {
 describe("fetchPayload", () => {
   test("returns payload; throws on HTTP or format errors", async () => {
     const s = fakeServer();
-    expect((await fetchPayload({ apiHost: "https://kuji.test", sdkKey: "a b", fetch: s.fetch })).version).toBe(1);
-    expect(s.calls).toEqual(["GET https://kuji.test/api/sdk/v1/payload/a%20b"]);
+    expect((await fetchPayload({ apiHost: "https://furca.test", sdkKey: "a b", fetch: s.fetch })).version).toBe(1);
+    expect(s.calls).toEqual(["GET https://furca.test/api/sdk/v1/payload/a%20b"]);
     s.fail = 500;
-    await expect(fetchPayload({ apiHost: "https://kuji.test", sdkKey: "k", fetch: s.fetch })).rejects.toThrow();
+    await expect(fetchPayload({ apiHost: "https://furca.test", sdkKey: "k", fetch: s.fetch })).rejects.toThrow();
     const bad = async () => Response.json({ hello: "world" });
-    await expect(fetchPayload({ apiHost: "https://kuji.test", sdkKey: "k", fetch: bad })).rejects.toThrow();
+    await expect(fetchPayload({ apiHost: "https://furca.test", sdkKey: "k", fetch: bad })).rejects.toThrow();
   });
 });

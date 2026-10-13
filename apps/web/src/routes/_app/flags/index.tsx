@@ -1,4 +1,4 @@
-import type { Feature, FeatureValueType } from "@kuji/core/features/Feature";
+import type { Feature, FeatureValueType } from "@furca/core/features/Feature";
 import { Button, Checkbox, ListBox, SearchField, Select } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -17,13 +17,13 @@ export const Route = createFileRoute("/_app/flags/")({
   // ?new=1 (also from the ⌘K palette) opens the inline create form
   validateSearch: (search: Record<string, unknown>): { new?: 1 | "1" } =>
     search.new === "1" || search.new === 1 || search.new === true ? { new: 1 } : {},
-  head: () => ({ meta: [{ title: "Flags · kuji" }] }),
+  head: () => ({ meta: [{ title: "Flags · furca" }] }),
   component: FlagsPage,
 });
 
-const SNIPPET = `const kuji = createClient({ apiHost, sdkKey });
-await kuji.ready();
-if (kuji.isOn("new-checkout")) showNewCheckout();`;
+const SNIPPET = `const furca = createClient({ apiHost, sdkKey });
+await furca.ready();
+if (furca.isOn("new-checkout")) showNewCheckout();`;
 
 const matches = (f: Feature, q: string) =>
   f.key.includes(q) || f.description.toLowerCase().includes(q) || f.tags.some((t) => t.toLowerCase().includes(q));
@@ -83,7 +83,7 @@ function FlagsPage() {
         <EmptyState
           icon={<Flag />}
           title="Create your first flag"
-          description="A flag is a value your code asks kuji for at runtime. Change who gets what per environment, without a deploy."
+          description="A flag is a value your code asks furca for at runtime. Change who gets what per environment, without a deploy."
           action={
             <div className="flex w-full max-w-[560px] flex-col items-center gap-4">
               <div className="w-full">

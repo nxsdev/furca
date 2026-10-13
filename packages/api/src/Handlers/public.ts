@@ -1,5 +1,5 @@
-import { Database } from "@kuji/database/Database";
-import { user } from "@kuji/database/schema/index";
+import { Database } from "@furca/database/Database";
+import { user } from "@furca/database/schema/index";
 import { ORPCError } from "@orpc/server";
 import { count } from "drizzle-orm";
 import { Effect } from "effect";

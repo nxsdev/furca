@@ -17,4 +17,4 @@ export interface MemberServiceShape {
   readonly remove: (id: string, actor: Actor) => Effect.Effect<void, NotFoundError | PersistenceError>;
 }
 
-export class MemberService extends Context.Service<MemberService, MemberServiceShape>()("kuji/MemberService") {}
+export class MemberService extends Context.Service<MemberService, MemberServiceShape>()("furca/MemberService") {}

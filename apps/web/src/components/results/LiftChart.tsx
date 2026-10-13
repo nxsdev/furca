@@ -1,5 +1,5 @@
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import type { MetricResult } from "@kuji/core/results/ExperimentResult";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import type { MetricResult } from "@furca/core/results/ExperimentResult";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { VariationSwatch, variationColor } from "~/components/experiments/parts";
 import { formatCi, formatCount, formatLift } from "./format";

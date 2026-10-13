@@ -1,5 +1,5 @@
-import type { Environment } from "@kuji/core/environments/Environment";
-import type { Feature } from "@kuji/core/features/Feature";
+import type { Environment } from "@furca/core/environments/Environment";
+import type { Feature } from "@furca/core/features/Feature";
 import { toast } from "@heroui/react";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
 import { client, errorMessage, orpc } from "~/lib/rpc";

@@ -1,10 +1,10 @@
-import { CredentialCipher } from "@kuji/core/datasources/CredentialCipher";
-import type { DataSource } from "@kuji/core/datasources/DataSource";
-import { WarehouseTester, type WarehouseTestResult } from "@kuji/core/datasources/WarehouseTester";
-import { WarehouseError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { environments, events } from "@kuji/database/schema/index";
-import * as BigQuery from "@kuji/integrations/bigquery/client";
+import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import type { DataSource } from "@furca/core/datasources/DataSource";
+import { WarehouseTester, type WarehouseTestResult } from "@furca/core/datasources/WarehouseTester";
+import { WarehouseError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { environments, events } from "@furca/database/schema/index";
+import * as BigQuery from "@furca/integrations/bigquery/client";
 import { and, count, gte, inArray } from "drizzle-orm";
 import { Cause, Effect, Layer } from "effect";
 import { bigQueryExposureCountsSql } from "./AnalysisSql";
@@ -50,7 +50,7 @@ export const WarehouseTesterLive = Layer.effect(
       const now = Date.now();
       const q = bigQueryExposureCountsSql({
         exposureSql: dataSource.exposureSql,
-        experimentKey: "kuji-connection-test",
+        experimentKey: "furca-connection-test",
         startMs: now - DAY_MS,
         endMs: now,
       });

@@ -1,4 +1,4 @@
-import type { ExperimentHealth, MetricResult, VariationComparison, Verdict } from "@kuji/core/results/ExperimentResult";
+import type { ExperimentHealth, MetricResult, VariationComparison, Verdict } from "@furca/core/results/ExperimentResult";
 import { ArrowDownRight, ArrowUpRight, CircleDashed, Minus } from "lucide-react";
 
 export const verdictStyle: Record<Verdict, { label: string; text: string; fill: string; band: string; icon: typeof Minus }> = {

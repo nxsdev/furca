@@ -7,7 +7,7 @@ import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/invite/$token")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Join · kuji" }] }),
+  head: () => ({ meta: [{ title: "Join · furca" }] }),
   component: InvitePage,
 });
 
@@ -35,7 +35,7 @@ function InvitePage() {
 
   return (
     <AuthCard
-      title="Join kuji"
+      title="Join furca"
       description={`You were invited as ${invitation.data.email}.`}
       submitLabel="Create account"
       fields={[

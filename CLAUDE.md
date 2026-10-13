@@ -1,4 +1,4 @@
-# kuji — agent guide
+# furca — agent guide
 
 Open-source feature flags + A/B testing that deploys to one Cloudflare Worker (D1 + KV), with an
 optional BigQuery warehouse. Product scope and what we deliberately do NOT build:
@@ -10,14 +10,14 @@ Language: code, comments, UI copy and README in English. `docs/` is Japanese.
 ## Layout (dependency direction: apps → api → persistence → database/core; core depends on nothing)
 
 ```
-apps/web               TanStack Start admin UI (HeroUI v3) + src/server.ts Worker entry (/api/* → @kuji/api)
+apps/web               TanStack Start admin UI (HeroUI v3) + src/server.ts Worker entry (/api/* → @furca/api)
 packages/core          Domain models (Effect Schema classes), errors, service contracts (Context.Service). No runtime code
 packages/database      Drizzle schema (sqlite/D1), Database service, migrations/, Miniflare D1 test helper
 packages/persistence   Repository / ServiceLive implementations (Layers/), row mappers (src/mappers.ts)
 packages/integrations  External providers (BigQuery REST client)
 packages/api           oRPC v2 contract (src/contract.ts), handlers (src/Handlers/*), SDK HTTP endpoints (src/Http), runtime
 packages/stats         Pure statistics engine (no Effect; also bundled into the browser)
-packages/sdk           Public zero-dependency SDK (@kuji/sdk), local evaluation, GrowthBook-compatible hashing
+packages/sdk           Public zero-dependency SDK (@furca/sdk), local evaluation, GrowthBook-compatible hashing
 packages/infra         Alchemy v2 stack: Worker + D1 + KV
 ```
 
@@ -31,14 +31,14 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 - Route tree after adding routes: `cd apps/web && npx -y @tanstack/router-cli@1.167.5 generate`
 - Dev server: `bun run dev` (Alchemy local D1/KV, http://localhost:5173). Demo data: `bun scripts/seed-demo.ts http://localhost:5173`.
   A parallel agent must use its own stage, port AND hostname (cookies ignore ports, so sessions collide on plain localhost):
-  `ALCHEMY_LOCAL_STATE=1 ALCHEMY_STAGE=dev_<you> KUJI_DEV_PORT=<port> node_modules/.bin/alchemy dev packages/infra/alchemy.run.ts --no-input`,
+  `ALCHEMY_LOCAL_STATE=1 ALCHEMY_STAGE=dev_<you> FURCA_DEV_PORT=<port> node_modules/.bin/alchemy dev packages/infra/alchemy.run.ts --no-input`,
   then open `http://<you>.localhost:<port>`. Stop only your own process (never `pkill -f` a shared command line)
 
 ## Effect 4 (stable 4.0.3)
 
 - `import { Context, Effect, Layer, Schema } from "effect"`. Module paths are flat (`effect/Config`), not `effect/unstable/*`
-- Services: `class X extends Context.Service<X, XShape>()("kuji/X") {}`; shape interface named `XShape`
-- Errors: `Schema.TaggedError` (not TaggedErrorClass). Domain errors live in `@kuji/core/shared/errors`
+- Services: `class X extends Context.Service<X, XShape>()("furca/X") {}`; shape interface named `XShape`
+- Errors: `Schema.TaggedError` (not TaggedErrorClass). Domain errors live in `@furca/core/shared/errors`
 - Public service methods: `Effect.fn("Service.method")(function* (...) { ... })`. Use `function*` only when you `yield*`
 - Never swallow failures (`Effect.ignore`, `catch(() => void)`); log or map them
 - Timestamps are `Date` (Schema.Date) end to end: DB `timestamp_ms` columns, domain, oRPC wire
@@ -72,7 +72,7 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 ## Tests
 
 - `bun:test` with `describe` / `it`; test names state the condition and the expected behavior
-- DB-backed code is tested against real D1: `const t = await makeTestD1()` from `@kuji/database/testing/TestDatabase`
+- DB-backed code is tested against real D1: `const t = await makeTestD1()` from `@furca/database/testing/TestDatabase`
 - Don't write tests that only restate types; test behavior (state transitions, phases, SQL results, stats)
 
 ## UI (apps/web)

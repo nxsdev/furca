@@ -1,4 +1,4 @@
-import { ExperimentService } from "@kuji/core/experiments/ExperimentService";
+import { ExperimentService } from "@furca/core/experiments/ExperimentService";
 import { authed } from "../Runtime/orpc";
 
 export const experimentsRouter = {

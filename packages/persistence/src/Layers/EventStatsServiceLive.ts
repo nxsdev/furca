@@ -1,6 +1,6 @@
-import { EventStatsService } from "@kuji/core/analysis/Analysis";
-import { Database } from "@kuji/database/Database";
-import { events, exposures } from "@kuji/database/schema/index";
+import { EventStatsService } from "@furca/core/analysis/Analysis";
+import { Database } from "@furca/database/Database";
+import { events, exposures } from "@furca/database/schema/index";
 import { and, count, desc, eq, gte, lt, max, sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 

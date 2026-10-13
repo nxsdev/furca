@@ -1,8 +1,8 @@
-import { SdkService } from "@kuji/core/environments/SdkService";
-import type { NotFoundError, PersistenceError } from "@kuji/core/shared/errors";
+import { SdkService } from "@furca/core/environments/SdkService";
+import type { NotFoundError, PersistenceError } from "@furca/core/shared/errors";
 import { isbot } from "isbot";
 import { Cause, Effect, Schema } from "effect";
-import type { KujiEnv } from "../Runtime/Env";
+import type { FurcaEnv } from "../Runtime/Env";
 import { makeAppLayer } from "../Runtime/Services";
 
 /**
@@ -25,7 +25,7 @@ const json = (body: unknown, status: number) => Response.json(body, { status, he
 
 const Text = Schema.String.check(Schema.isMaxLength(256));
 
-/** EventsBody from @kuji/sdk/types */
+/** EventsBody from @furca/sdk/types */
 const EventsBody = Schema.Struct({
   exposures: Schema.optional(
     Schema.Array(
@@ -53,7 +53,7 @@ const parseJson = (text: string): unknown => {
 };
 
 /** Runs an SDK program with the app services; unknown SDK keys become 404, anything else a logged 500 */
-const run = (env: KujiEnv, program: Effect.Effect<Response, NotFoundError | PersistenceError, SdkService>) =>
+const run = (env: FurcaEnv, program: Effect.Effect<Response, NotFoundError | PersistenceError, SdkService>) =>
   Effect.runPromise(
     program.pipe(
       Effect.catchTag("NotFoundError", () => Effect.succeed(json({ error: "Unknown SDK key" }, 404))),
@@ -67,7 +67,7 @@ const run = (env: KujiEnv, program: Effect.Effect<Response, NotFoundError | Pers
     ),
   );
 
-const payload = (env: KujiEnv, sdkKey: string) =>
+const payload = (env: FurcaEnv, sdkKey: string) =>
   run(
     env,
     Effect.gen(function* () {
@@ -82,7 +82,7 @@ const payload = (env: KujiEnv, sdkKey: string) =>
     }),
   );
 
-const ingest = async (request: Request, env: KujiEnv, sdkKey: string): Promise<Response> => {
+const ingest = async (request: Request, env: FurcaEnv, sdkKey: string): Promise<Response> => {
   // Bot filtering applies to browser traffic only: server-side SDKs (Node, Bun) send their runtime's
   // user agent, which isbot flags, and the end user's agent is unknown there
   const fromBrowser = request.headers.has("sec-fetch-site") || request.headers.has("origin");
@@ -105,7 +105,7 @@ const ingest = async (request: Request, env: KujiEnv, sdkKey: string): Promise<R
   );
 };
 
-export const handleSdkRequest = async (request: Request, env: KujiEnv, _ctx: ExecutionContext): Promise<Response> => {
+export const handleSdkRequest = async (request: Request, env: FurcaEnv, _ctx: ExecutionContext): Promise<Response> => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   const match = /^\/api\/sdk\/v1\/(payload|events)\/([^/]+)$/.exec(new URL(request.url).pathname);
   if (match === null) return json({ error: "Not found" }, 404);

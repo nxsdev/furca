@@ -1,6 +1,6 @@
-import { AuditLog, AuditEntityType } from "@kuji/core/audit/AuditLog";
-import { AuditService } from "@kuji/core/audit/AuditService";
-import { Database } from "@kuji/database/Database";
+import { AuditLog, AuditEntityType } from "@furca/core/audit/AuditLog";
+import { AuditService } from "@furca/core/audit/AuditService";
+import { Database } from "@furca/database/Database";
 import { Effect, Layer, Schema } from "effect";
 
 const entityType = Schema.decodeUnknownSync(AuditEntityType);

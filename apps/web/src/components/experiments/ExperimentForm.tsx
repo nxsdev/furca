@@ -1,8 +1,8 @@
-import { type Experiment, defaultStatsSettings } from "@kuji/core/experiments/Experiment";
-import { type Feature, validateFeatureValue } from "@kuji/core/features/Feature";
-import { BUILTIN_DATA_SOURCE_ID } from "@kuji/core/datasources/DataSource";
-import type { Metric } from "@kuji/core/metrics/Metric";
-import { daysToReach, mdeForSampleSize, sampleSizePerVariation } from "@kuji/stats";
+import { type Experiment, defaultStatsSettings } from "@furca/core/experiments/Experiment";
+import { type Feature, validateFeatureValue } from "@furca/core/features/Feature";
+import { BUILTIN_DATA_SOURCE_ID } from "@furca/core/datasources/DataSource";
+import type { Metric } from "@furca/core/metrics/Metric";
+import { daysToReach, mdeForSampleSize, sampleSizePerVariation } from "@furca/stats";
 import {
   Button,
   Checkbox,

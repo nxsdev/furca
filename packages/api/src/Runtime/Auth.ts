@@ -1,10 +1,10 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
-import { makeDrizzle } from "@kuji/database/Database";
-import * as schema from "@kuji/database/schema/index";
+import { makeDrizzle } from "@furca/database/Database";
+import * as schema from "@furca/database/schema/index";
 import { APIError } from "better-auth/api";
 import { betterAuth } from "better-auth/minimal";
 import { and, count, eq, gt, isNull } from "drizzle-orm";
-import type { KujiEnv } from "./Env";
+import type { FurcaEnv } from "./Env";
 
 const { user, session, account, verification, invitations } = schema;
 
@@ -12,7 +12,7 @@ const { user, session, account, verification, invitations } = schema;
  * Email + password auth. The first account becomes the owner; after that sign-up requires an
  * unexpired invitation for the same email (created in Settings > Members)
  */
-export const createAuth = (env: KujiEnv, origin: string) => {
+export const createAuth = (env: FurcaEnv, origin: string) => {
   const db = makeDrizzle(env.DB);
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL ?? origin,

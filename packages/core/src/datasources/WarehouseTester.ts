@@ -15,5 +15,5 @@ export interface WarehouseTesterShape {
 }
 
 export class WarehouseTester extends Context.Service<WarehouseTester, WarehouseTesterShape>()(
-  "kuji/WarehouseTester",
+  "furca/WarehouseTester",
 ) {}

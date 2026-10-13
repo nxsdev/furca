@@ -23,7 +23,7 @@ declare module "react-aria-components" {
 const themeScript = `(()=>{try{let t=localStorage.getItem("heroui-theme")||"system";if(t==="system")t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";const d=document.documentElement;d.classList.add(t);d.setAttribute("data-theme",t)}catch{}})()`;
 
 const faviconSvg = `data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#171717"/><rect x="8" y="9" width="3" height="16" rx="1.5" fill="#fff"/><rect x="14.5" y="6" width="3" height="19" rx="1.5" fill="#fff"/><rect x="14.5" y="6" width="3" height="5" rx="1.5" fill="#d23c6f"/><rect x="21" y="11" width="3" height="14" rx="1.5" fill="#fff"/></svg>`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#171717"/><path d="M16 25.5V17.5C16 14.5 13.5 12.5 10.5 10.5M16 17.5C16 14.5 18.5 12.5 21.5 10.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21.5" cy="10.5" r="2.6" fill="#d23c6f"/></svg>`,
 )}`;
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -31,7 +31,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "kuji" },
+      { title: "furca" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

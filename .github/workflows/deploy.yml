@@ -1,6 +1,6 @@
 name: Deploy
 
-# Deploys kuji to your Cloudflare account with Alchemy (Worker + D1 + KV; D1 migrations are applied).
+# Deploys furca to your Cloudflare account with Alchemy (Worker + D1 + KV; D1 migrations are applied).
 # Required repository secrets: CLOUDFLARE_API_TOKEN, BETTER_AUTH_SECRET, ENCRYPTION_KEY
 # Required repository variable: CLOUDFLARE_ACCOUNT_ID
 # API token permissions (account): Workers Scripts Write, D1 Write, Workers KV Storage Write,

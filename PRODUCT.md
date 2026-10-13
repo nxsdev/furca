@@ -6,8 +6,8 @@ product
 
 ## Users
 
-Product engineers and PMs on small-to-mid teams who self-host kuji on their own Cloudflare account.
-Engineers flip between their editor and kuji to create a flag, target QA users, or ship a winning
+Product engineers and PMs on small-to-mid teams who self-host furca on their own Cloudflare account.
+Engineers flip between their editor and furca to create a flag, target QA users, or ship a winning
 variation; PMs open an experiment page (often on a shared screen in a review meeting) to decide
 whether yesterday's result is real. Both are fluent in Vercel, Linear, Stripe and GitHub.
 

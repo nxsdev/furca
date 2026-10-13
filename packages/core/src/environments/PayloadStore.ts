@@ -8,4 +8,4 @@ export interface PayloadStoreShape {
   readonly remove: (sdkKey: string) => Effect.Effect<void, PersistenceError>;
 }
 
-export class PayloadStore extends Context.Service<PayloadStore, PayloadStoreShape>()("kuji/PayloadStore") {}
+export class PayloadStore extends Context.Service<PayloadStore, PayloadStoreShape>()("furca/PayloadStore") {}

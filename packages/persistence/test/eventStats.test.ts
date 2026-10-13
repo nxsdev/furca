@@ -1,11 +1,11 @@
 import { afterAll, afterEach, describe, expect, it } from "bun:test";
-import { EventStatsService } from "@kuji/core/analysis/Analysis";
-import { CredentialCipher } from "@kuji/core/datasources/CredentialCipher";
-import { WarehouseTester } from "@kuji/core/datasources/WarehouseTester";
-import { makeDrizzle } from "@kuji/database/Database";
-import { dataSources } from "@kuji/database/schema/index";
-import { makeTestD1, TestDatabaseLayer } from "@kuji/database/testing/TestDatabase";
-import { fakeBigQuery, makeTestServiceAccount } from "@kuji/integrations/bigquery/testing";
+import { EventStatsService } from "@furca/core/analysis/Analysis";
+import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import { WarehouseTester } from "@furca/core/datasources/WarehouseTester";
+import { makeDrizzle } from "@furca/database/Database";
+import { dataSources } from "@furca/database/schema/index";
+import { makeTestD1, TestDatabaseLayer } from "@furca/database/testing/TestDatabase";
+import { fakeBigQuery, makeTestServiceAccount } from "@furca/integrations/bigquery/testing";
 import { Effect, Layer } from "effect";
 import { EventStatsServiceLive } from "../src/Layers/EventStatsServiceLive";
 import { WarehouseTesterLive } from "../src/Layers/WarehouseTesterLive";

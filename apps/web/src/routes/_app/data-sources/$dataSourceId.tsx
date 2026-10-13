@@ -1,5 +1,5 @@
 import { Breadcrumbs, Button, Skeleton, toast } from "@heroui/react";
-import type { DataSource } from "@kuji/core/datasources/DataSource";
+import type { DataSource } from "@furca/core/datasources/DataSource";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CircleCheck, CircleX, PlugZap, Trash2 } from "lucide-react";
@@ -16,7 +16,7 @@ import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/data-sources/$dataSourceId")({
-  head: () => ({ meta: [{ title: "Data source · kuji" }] }),
+  head: () => ({ meta: [{ title: "Data source · furca" }] }),
   component: Page,
 });
 
@@ -103,7 +103,7 @@ function BuiltinDetail({ source }: { source: DataSource }) {
     [
       "Events",
       <>
-        <code className="font-mono text-foreground">kuji.track(name, value?)</code> records an event. Metrics count them,
+        <code className="font-mono text-foreground">furca.track(name, value?)</code> records an event. Metrics count them,
         or sum their value (e.g. revenue).
       </>,
     ],
@@ -158,7 +158,7 @@ function BuiltinDetail({ source }: { source: DataSource }) {
             </div>
           ) : names.data.length === 0 ? (
             <p className="px-5 py-6 text-body text-muted">
-              No events yet. Call <code className="font-mono text-foreground">kuji.track("purchase")</code> from your app;{" "}
+              No events yet. Call <code className="font-mono text-foreground">furca.track("purchase")</code> from your app;{" "}
               <Link to="/environments" className="rounded-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus">
                 the quickstart
               </Link>{" "}

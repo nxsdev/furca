@@ -1,4 +1,4 @@
-import type { Experiment, ExperimentStatus } from "@kuji/core/experiments/Experiment";
+import type { Experiment, ExperimentStatus } from "@furca/core/experiments/Experiment";
 import { NumberField, Slider } from "@heroui/react";
 import { CircleSlash, Rocket, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";

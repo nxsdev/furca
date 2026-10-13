@@ -2,13 +2,13 @@
  * SDK payload building and publishing. Every change that can alter what SDKs receive (features,
  * experiments, environments) calls publishAll afterwards
  */
-import type { PayloadStoreShape } from "@kuji/core/environments/PayloadStore";
-import type { Environment } from "@kuji/core/environments/Environment";
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import type { Feature } from "@kuji/core/features/Feature";
-import type { Condition } from "@kuji/core/targeting/Condition";
-import type { DatabaseShape } from "@kuji/database/Database";
-import type { PayloadCondition, PayloadFeature, PayloadRule, SdkPayload } from "@kuji/sdk/types";
+import type { PayloadStoreShape } from "@furca/core/environments/PayloadStore";
+import type { Environment } from "@furca/core/environments/Environment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import type { Feature } from "@furca/core/features/Feature";
+import type { Condition } from "@furca/core/targeting/Condition";
+import type { DatabaseShape } from "@furca/database/Database";
+import type { PayloadCondition, PayloadFeature, PayloadRule, SdkPayload } from "@furca/sdk/types";
 import { Effect } from "effect";
 import { toEnvironment, toExperiment } from "./mappers";
 import { loadFeatures } from "./shared";

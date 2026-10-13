@@ -7,7 +7,7 @@ import { orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Sign in · kuji" }] }),
+  head: () => ({ meta: [{ title: "Sign in · furca" }] }),
   component: LoginPage,
 });
 
@@ -30,7 +30,7 @@ function LoginPage() {
   if (status.data?.needsSetup === true) {
     return (
       <AuthCard
-        title="Set up kuji"
+        title="Set up furca"
         description="Create the owner account. Everyone else joins by invitation."
         submitLabel="Create owner account"
         fields={[
@@ -48,7 +48,7 @@ function LoginPage() {
 
   return (
     <AuthCard
-      title="Sign in to kuji"
+      title="Sign in to furca"
       description="Feature flags and experiments you can trust."
       submitLabel="Sign in"
       fields={[

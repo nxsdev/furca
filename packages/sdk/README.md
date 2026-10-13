@@ -1,33 +1,33 @@
-# @kuji/sdk
+# @furca/sdk
 
-TypeScript SDK for [kuji](https://github.com/nxsdev/kuji) feature flags and A/B tests.
+TypeScript SDK for [furca](https://github.com/nxsdev/furca) feature flags and A/B tests.
 
 - Local evaluation: the SDK downloads one JSON payload and evaluates every flag in memory, synchronously.
 - Zero dependencies. Runs in browsers, Cloudflare Workers, Node ≥ 20, Bun and Deno.
 - Bucketing is byte-compatible with GrowthBook (FNV-1a 32 hash v2), so users keep their buckets when you migrate.
 
 ```sh
-npm install @kuji/sdk
+npm install @furca/sdk
 ```
 
 ## Browser
 
 ```ts
-import { createClient } from "@kuji/sdk";
+import { createClient } from "@furca/sdk";
 
-const kuji = createClient({
-  apiHost: "https://kuji.example.com",
+const furca = createClient({
+  apiHost: "https://furca.example.com",
   sdkKey: "sdk_prod_xxx",
   attributes: { id: user.id, country: "jp", appVersion: "2.3.0" },
   refreshInterval: 60_000, // optional polling, ms (default 0 = never)
 });
 
-await kuji.ready(); // never rejects; on failure every flag returns your fallback
+await furca.ready(); // never rejects; on failure every flag returns your fallback
 
-if (kuji.isOn("new-checkout")) showNewCheckout();
-const color = kuji.getValue("button-color", "blue");
+if (furca.isOn("new-checkout")) showNewCheckout();
+const color = furca.getValue("button-color", "blue");
 
-kuji.track("purchase", 4980); // needs an `id` attribute
+furca.track("purchase", 4980); // needs an `id` attribute
 ```
 
 Events and exposures are batched: they are sent every `flushInterval` ms (default 2000) or when `maxBatchSize` (default 100) items are queued. When the page is hidden or unloaded the queue goes out with `navigator.sendBeacon`. Network errors are logged once and never thrown.
@@ -37,16 +37,16 @@ Events and exposures are batched: they are sent every `flushInterval` ms (defaul
 Workers end when the response is returned, so hand the flush to `ctx.waitUntil`. Fetch the payload once per isolate and reuse it across requests:
 
 ```ts
-import { createClient, fetchPayload, type SdkPayload } from "@kuji/sdk";
+import { createClient, fetchPayload, type SdkPayload } from "@furca/sdk";
 
 let cache: { payload: SdkPayload; at: number } | undefined;
 
 async function getPayload(env: Env): Promise<SdkPayload | undefined> {
   if (!cache || Date.now() - cache.at > 30_000) {
     try {
-      cache = { payload: await fetchPayload({ apiHost: env.KUJI_HOST, sdkKey: env.KUJI_SDK_KEY }), at: Date.now() };
+      cache = { payload: await fetchPayload({ apiHost: env.FURCA_HOST, sdkKey: env.FURCA_SDK_KEY }), at: Date.now() };
     } catch (e) {
-      console.warn("kuji payload refresh failed, keeping last copy", e); // fetchPayload throws, the client never does
+      console.warn("furca payload refresh failed, keeping last copy", e); // fetchPayload throws, the client never does
     }
   }
   return cache?.payload;
@@ -54,22 +54,22 @@ async function getPayload(env: Env): Promise<SdkPayload | undefined> {
 
 export default {
   async fetch(request, env, ctx) {
-    const kuji = createClient({
-      apiHost: env.KUJI_HOST,
-      sdkKey: env.KUJI_SDK_KEY,
+    const furca = createClient({
+      apiHost: env.FURCA_HOST,
+      sdkKey: env.FURCA_SDK_KEY,
       payload: await getPayload(env), // bootstrapped: no fetch, no ready() needed
       attributes: { id: request.headers.get("x-user-id"), country: request.cf?.country },
     });
 
-    const body = kuji.isOn("new-pricing") ? renderNewPricing() : renderPricing();
+    const body = furca.isOn("new-pricing") ? renderNewPricing() : renderPricing();
 
-    ctx.waitUntil(kuji.flush()); // sends exposures/events after the response
+    ctx.waitUntil(furca.flush()); // sends exposures/events after the response
     return new Response(body);
   },
 } satisfies ExportedHandler<Env>;
 ```
 
-Calling kuji through a service binding? Pass `fetch: (url, init) => env.KUJI.fetch(url, init)`.
+Calling furca through a service binding? Pass `fetch: (url, init) => env.FURCA.fetch(url, init)`.
 
 ## React
 
@@ -77,15 +77,15 @@ No React dependency ships with the SDK. This hook is all you need:
 
 ```tsx
 import { useSyncExternalStore } from "react";
-import { createClient } from "@kuji/sdk";
+import { createClient } from "@furca/sdk";
 
-export const kuji = createClient({ apiHost: "https://kuji.example.com", sdkKey: "sdk_prod_xxx", attributes: { id: userId } });
-void kuji.ready();
+export const furca = createClient({ apiHost: "https://furca.example.com", sdkKey: "sdk_prod_xxx", attributes: { id: userId } });
+void furca.ready();
 
 export function useFeature<T>(key: string, fallback: T): T {
   return useSyncExternalStore(
-    kuji.subscribe,                     // re-renders when the payload changes
-    () => kuji.getValue(key, fallback), // keep `fallback` a primitive or a stable reference
+    furca.subscribe,                     // re-renders when the payload changes
+    () => furca.getValue(key, fallback), // keep `fallback` a primitive or a stable reference
     () => fallback,                     // SSR
   );
 }
@@ -103,8 +103,8 @@ function BuyButton() {
 `onExposure` is called once per experiment phase, variation and user per client, when the user is first evaluated into an experiment. It runs even with `trackExposures: false`.
 
 ```ts
-const kuji = createClient({
-  apiHost: "https://kuji.example.com",
+const furca = createClient({
+  apiHost: "https://furca.example.com",
   sdkKey: "sdk_prod_xxx",
   attributes: { id: user.id },
   onExposure: (e) => {
@@ -117,7 +117,7 @@ const kuji = createClient({
 ## API
 
 ```ts
-createClient(options: ClientOptions): KujiClient
+createClient(options: ClientOptions): FurcaClient
 fetchPayload({ apiHost, sdkKey, fetch? }): Promise<SdkPayload>   // throws on failure
 
 // Pure helpers (server-side evaluation, admin "test a user" simulator)
@@ -137,11 +137,11 @@ chooseVariation(n: number, ranges: [number, number][]): number
 | `refreshInterval` | `0` | Payload polling, ms. `0` = never |
 | `flushInterval` | `2000` | Max delay before queued events are sent, ms. `0` = only on size / `flush()` |
 | `maxBatchSize` | `100` | |
-| `trackExposures` | `true` | Send exposures to kuji |
+| `trackExposures` | `true` | Send exposures to furca |
 | `onExposure` | — | `(exposure) => void` |
 | `fetch` | `globalThis.fetch` | Called unbound |
 
-`KujiClient`: `ready()`, `isOn(key)`, `getValue(key, fallback)`, `evaluate(key)`, `setAttributes(attrs)`, `updateAttributes(partial)`, `getAttributes()`, `getPayload()`, `track(name, value?)`, `flush()`, `refresh()`, `subscribe(listener) → unsubscribe`, `destroy()`.
+`FurcaClient`: `ready()`, `isOn(key)`, `getValue(key, fallback)`, `evaluate(key)`, `setAttributes(attrs)`, `updateAttributes(partial)`, `getAttributes()`, `getPayload()`, `track(name, value?)`, `flush()`, `refresh()`, `subscribe(listener) → unsubscribe`, `destroy()`.
 
 ## Evaluation rules
 

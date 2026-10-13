@@ -15,7 +15,7 @@ A/Bテスト基盤の難所は振り分けではなく「結果が信頼でき�
 
 ## 競合比較の要約
 
-| 能力 | GrowthBook | Statsig | Eppo | PostHog | LaunchDarkly | Bucketeer | Unleash | **kuji v1** |
+| 能力 | GrowthBook | Statsig | Eppo | PostHog | LaunchDarkly | Bucketeer | Unleash | **furca v1** |
 |---|---|---|---|---|---|---|---|---|
 | Flag + ターゲティング + % rollout | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | 環境 (dev/prod) | ✅ | ✅ | ✅ | △ project で代用 | ✅ | ✅ | ✅(OSS 2個) | ✅ |

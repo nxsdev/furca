@@ -1,5 +1,5 @@
-import type { Experiment, ExperimentStatus } from "@kuji/core/experiments/Experiment";
-import type { ResultSnapshot } from "@kuji/core/results/ExperimentResult";
+import type { Experiment, ExperimentStatus } from "@furca/core/experiments/Experiment";
+import type { ResultSnapshot } from "@furca/core/results/ExperimentResult";
 import { Skeleton } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -20,7 +20,7 @@ const filters: ReadonlyArray<{ id: Filter; label: string }> = [
 ];
 
 export const Route = createFileRoute("/_app/experiments/")({
-  head: () => ({ meta: [{ title: "Experiments · kuji" }] }),
+  head: () => ({ meta: [{ title: "Experiments · furca" }] }),
   validateSearch: (search: Record<string, unknown>): { status?: Filter } =>
     filters.some((f) => f.id === search.status) ? { status: search.status as Filter } : {},
   component: Page,

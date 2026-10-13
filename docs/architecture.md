@@ -2,14 +2,14 @@
 
 ## 全体像
 
-kuji は Cloudflare Worker 1本 + D1 + KV で完結する。Docker もサーバーも不要で、利用者は自分の Cloudflare
+furca は Cloudflare Worker 1本 + D1 + KV で完結する。Docker もサーバーも不要で、利用者は自分の Cloudflare
 アカウントに Alchemy でデプロイする（BYOC）。
 
 ```
-アプリ ── @kuji/sdk ──► GET  /api/sdk/v1/payload/:sdkKey   KV から設定を取得し、SDK 内でローカル評価
+アプリ ── @furca/sdk ──► GET  /api/sdk/v1/payload/:sdkKey   KV から設定を取得し、SDK 内でローカル評価
                     └──► POST /api/sdk/v1/events/:sdkKey    露出・イベントを D1 に保存（Bot 除外）
 
-kuji Worker
+furca Worker
 ├── apps/web          TanStack Start の管理画面（HeroUI v3）
 ├── /api/rpc          oRPC v2 の contract-first API。ハンドラは Effect 4 のサービスを使う
 ├── /api/auth         Better Auth（最初のユーザーがオーナー、以降は招待制）
@@ -29,7 +29,7 @@ kuji Worker
 | API | oRPC v2 + Effect 4 | 契約（`packages/api/src/contract.ts`）をブラウザと共有。`.effect()` ハンドラで Effect サービスを注入 |
 | ORM | Drizzle 1.0 (RQB v2) | zcareer と同じ書き味。マイグレーションは drizzle-kit v1 形式で Alchemy が直接適用 |
 | UI | TanStack Start + HeroUI v3 | React Aria ベースでアクセシビリティが担保される。テーマは OKLCH トークンで上書き |
-| 統計 | 自前の `@kuji/stats`（GrowthBook gbstats の移植） | Python 不要。GrowthBook の数値ベクトルで検証済み |
+| 統計 | 自前の `@furca/stats`（GrowthBook gbstats の移植） | Python 不要。GrowthBook の数値ベクトルで検証済み |
 | BigQuery | `jose` + REST | 公式 `@google-cloud/bigquery` は Workers で動かない（Node 依存・巨大）。保守されている `jose` で JWT を作る |
 
 ## レイヤー（zcareer に準拠）
@@ -44,7 +44,7 @@ packages/stats / packages/sdk は依存なしの純粋パッケージ（ブラ�
 
 zcareer との意図的な差分:
 
-| 項目 | zcareer | kuji | 理由 |
+| 項目 | zcareer | furca | 理由 |
 |---|---|---|---|
 | RPC | Effect RPC | oRPC v2（Effect 統合） | 要望。TanStack Query との統合と OSS 利用者の馴染みやすさ |
 | DB | PostgreSQL + Hyperdrive | D1 | Cloudflare だけで完結させるため |

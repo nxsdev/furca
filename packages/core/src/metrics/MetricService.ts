@@ -18,4 +18,4 @@ export interface MetricServiceShape {
   readonly archive: (input: { readonly id: string; readonly archived: boolean }, actor: Actor) => Effect.Effect<Metric, Errors>;
 }
 
-export class MetricService extends Context.Service<MetricService, MetricServiceShape>()("kuji/MetricService") {}
+export class MetricService extends Context.Service<MetricService, MetricServiceShape>()("furca/MetricService") {}

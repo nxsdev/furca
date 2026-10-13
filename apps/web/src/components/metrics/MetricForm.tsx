@@ -12,9 +12,9 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import type { EventNameStat } from "@kuji/api/contract";
-import { BUILTIN_DATA_SOURCE_ID, type DataSource } from "@kuji/core/datasources/DataSource";
-import type { EventAggregation, Metric, MetricType } from "@kuji/core/metrics/Metric";
+import type { EventNameStat } from "@furca/api/contract";
+import { BUILTIN_DATA_SOURCE_ID, type DataSource } from "@furca/core/datasources/DataSource";
+import type { EventAggregation, Metric, MetricType } from "@furca/core/metrics/Metric";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { formatCount } from "~/components/results/format";
@@ -257,7 +257,7 @@ function SqlField({
       <Description>
         One row per event with columns <code className="font-mono">user_id</code> STRING,{" "}
         <code className="font-mono">timestamp</code> TIMESTAMP, <code className="font-mono">value</code> FLOAT64 (use 1 to
-        count). kuji joins it to exposures by <code className="font-mono">user_id</code>.
+        count). furca joins it to exposures by <code className="font-mono">user_id</code>.
       </Description>
       <FieldError>{error}</FieldError>
     </TextField>
@@ -461,7 +461,7 @@ export function MetricForm({
                   ? "Event suggestions are unavailable right now. Type the event name you send with track()."
                   : eventNames.length > 0
                     ? `Suggestions are events received in ${env?.name ?? "this environment"} over the last 30 days. You can also type a name that hasn't arrived yet.`
-                    : `No events received in ${env?.name ?? "this environment"} yet. Type the name you will send with kuji.track("purchase").`}
+                    : `No events received in ${env?.name ?? "this environment"} yet. Type the name you will send with furca.track("purchase").`}
               </p>
             </>
           )}

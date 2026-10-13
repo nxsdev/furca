@@ -1,5 +1,5 @@
 import { Skeleton } from "@heroui/react";
-import type { Experiment } from "@kuji/core/experiments/Experiment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleAlert, CircleDashed, TriangleAlert } from "lucide-react";

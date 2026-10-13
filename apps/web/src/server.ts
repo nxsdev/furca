@@ -1,4 +1,4 @@
-import { handleApiRequest, runScheduled, type KujiEnv } from "@kuji/api/Runtime/WorkerEntry";
+import { handleApiRequest, runScheduled, type FurcaEnv } from "@furca/api/Runtime/WorkerEntry";
 import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 
 const startFetch = createStartHandler(defaultStreamHandler);
@@ -13,4 +13,4 @@ export default {
   scheduled(controller, env, ctx) {
     ctx.waitUntil(runScheduled(controller, env));
   },
-} satisfies ExportedHandler<KujiEnv>;
+} satisfies ExportedHandler<FurcaEnv>;

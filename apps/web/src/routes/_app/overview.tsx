@@ -11,22 +11,22 @@ import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/overview")({
-  head: () => ({ meta: [{ title: "Overview · kuji" }] }),
+  head: () => ({ meta: [{ title: "Overview · furca" }] }),
   component: Page,
 });
 
 const linkCls = "rounded-sm text-label text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus";
 
-const firstSnippet = (sdkKey: string, flagKey: string) => `import { createClient } from "@kuji/sdk";
+const firstSnippet = (sdkKey: string, flagKey: string) => `import { createClient } from "@furca/sdk";
 
-const kuji = createClient({
+const furca = createClient({
   apiHost: "${apiHost()}",
   sdkKey: "${sdkKey}",
   attributes: { id: user.id },
 });
-await kuji.ready();
+await furca.ready();
 
-if (kuji.isOn("${flagKey}")) {
+if (furca.isOn("${flagKey}")) {
   // the new code path
 }`;
 
@@ -90,7 +90,7 @@ function Page() {
       title: "Install the SDK",
       description: sawTraffic
         ? `${current?.name ?? "This environment"} is receiving SDK traffic.`
-        : `Add @kuji/sdk to your app with the ${current?.name ?? ""} key. It downloads one payload and evaluates flags locally, with no request per check.`,
+        : `Add @furca/sdk to your app with the ${current?.name ?? ""} key. It downloads one payload and evaluates flags locally, with no request per check.`,
       done: sawTraffic,
       body:
         current === null ? undefined : (
@@ -111,7 +111,7 @@ function Page() {
           `${metrics.data.length} ${metrics.data.length === 1 ? "metric" : "metrics"} defined.`
         ) : (
           <>
-            Call <code className="font-mono text-foreground">kuji.track("purchase")</code> where the outcome happens, then turn
+            Call <code className="font-mono text-foreground">furca.track("purchase")</code> where the outcome happens, then turn
             that event into a metric like "share of users who purchased".
             {eventNames.length > 0 &&
               ` Received so far: ${eventNames
@@ -131,7 +131,7 @@ function Page() {
       id: "experiment",
       title: "Start an experiment",
       description:
-        "Pick the flag, a primary metric and the traffic split. kuji assigns users deterministically and tells you when the result is real.",
+        "Pick the flag, a primary metric and the traffic split. furca assigns users deterministically and tells you when the result is real.",
       done: experiments.data.some((x) => x.status !== "draft"),
       action: (v) => (
         <Link to="/experiments/new" className={buttonVariants({ size: "sm", variant: v })}>

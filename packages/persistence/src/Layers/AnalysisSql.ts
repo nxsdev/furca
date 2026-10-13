@@ -22,7 +22,7 @@
  * User input is always a bound parameter. The only interpolated text is warehouse SQL written by
  * admins (data source exposure SQL, metric SQL), which is the point of a warehouse-native source
  */
-import type { EventSource, Metric } from "@kuji/core/metrics/Metric";
+import type { EventSource, Metric } from "@furca/core/metrics/Metric";
 
 const HOUR_MS = 3_600_000;
 export const LOOKBACK_MS = 14 * 24 * HOUR_MS;
@@ -133,13 +133,13 @@ export interface BigQueryQuery {
 
 const strip = (sql: string) => sql.trim().replace(/;+$/, "");
 
-const bigQueryUnits = (exposureSql: string) => `kuji_exposure_source AS (
+const bigQueryUnits = (exposureSql: string) => `furca_exposure_source AS (
 ${strip(exposureSql)}
 ),
-kuji_units AS (
+furca_units AS (
   SELECT CAST(user_id AS STRING) AS user_id, MIN(CAST(variation_key AS STRING)) AS variation,
     COUNT(DISTINCT CAST(variation_key AS STRING)) AS nv, MIN(timestamp) AS t0
-  FROM kuji_exposure_source
+  FROM furca_exposure_source
   WHERE experiment_key = @experiment_key AND timestamp >= TIMESTAMP_MILLIS(@start_ms) AND timestamp <= TIMESTAMP_MILLIS(@end_ms)
   GROUP BY 1
 )`;
@@ -148,7 +148,7 @@ const windowParams = (q: AnalysisWindow) => ({ experiment_key: q.experimentKey, 
 
 export const bigQueryExposureCountsSql = (q: AnalysisWindow & { readonly exposureSql: string }): BigQueryQuery => ({
   sql: `WITH ${bigQueryUnits(q.exposureSql)}
-SELECT IF(nv > 1, NULL, variation) AS variation, COUNT(*) AS users FROM kuji_units GROUP BY 1`,
+SELECT IF(nv > 1, NULL, variation) AS variation, COUNT(*) AS users FROM furca_units GROUP BY 1`,
   params: windowParams(q),
 });
 
@@ -159,7 +159,7 @@ export const bigQueryMomentsSql = (
   const params: Record<string, string | number> = { ...windowParams(q), delay_ms: delayMs };
   const perUnit = (name: string, source: string, range: string) => `${name} AS (
   SELECT u.user_id, SUM(s.value) AS v
-  FROM kuji_units u JOIN ${source} s ON CAST(s.user_id AS STRING) = u.user_id
+  FROM furca_units u JOIN ${source} s ON CAST(s.user_id AS STRING) = u.user_id
   WHERE u.nv = 1 AND ${range}
   GROUP BY 1
 )`;
@@ -174,25 +174,25 @@ export const bigQueryMomentsSql = (
 
   const ctes = [
     bigQueryUnits(q.exposureSql),
-    `kuji_numerator_source AS (\n${strip(q.numeratorSql)}\n)`,
-    perUnit("kuji_numerator", "kuji_numerator_source", post),
+    `furca_numerator_source AS (\n${strip(q.numeratorSql)}\n)`,
+    perUnit("furca_numerator", "furca_numerator_source", post),
   ];
-  const joins = ["LEFT JOIN kuji_numerator m ON m.user_id = u.user_id"];
+  const joins = ["LEFT JOIN furca_numerator m ON m.user_id = u.user_id"];
   const denominator = ratio && q.denominatorSql !== null;
   if (denominator) {
-    ctes.push(`kuji_denominator_source AS (\n${strip(q.denominatorSql ?? "")}\n)`, perUnit("kuji_denominator", "kuji_denominator_source", post));
-    joins.push("LEFT JOIN kuji_denominator dn ON dn.user_id = u.user_id");
+    ctes.push(`furca_denominator_source AS (\n${strip(q.denominatorSql ?? "")}\n)`, perUnit("furca_denominator", "furca_denominator_source", post));
+    joins.push("LEFT JOIN furca_denominator dn ON dn.user_id = u.user_id");
   }
   if (pre) {
     params.lookback_ms = LOOKBACK_MS;
     ctes.push(
-      perUnit("kuji_pre", "kuji_numerator_source", "s.timestamp >= TIMESTAMP_MILLIS(UNIX_MILLIS(u.t0) - @lookback_ms) AND s.timestamp < u.t0"),
+      perUnit("furca_pre", "furca_numerator_source", "s.timestamp >= TIMESTAMP_MILLIS(UNIX_MILLIS(u.t0) - @lookback_ms) AND s.timestamp < u.t0"),
     );
-    joins.push("LEFT JOIN kuji_pre pr ON pr.user_id = u.user_id");
+    joins.push("LEFT JOIN furca_pre pr ON pr.user_id = u.user_id");
   }
-  ctes.push(`kuji_values AS (
+  ctes.push(`furca_values AS (
   SELECT u.variation, u.t0, ${valueOf("m")} AS y, ${denominator ? "COALESCE(dn.v, 0)" : "0"} AS d, ${pre ? valueOf("pr") : "0"} AS x
-  FROM kuji_units u
+  FROM furca_units u
   ${joins.join("\n  ")}
   WHERE u.nv = 1
 )`);
@@ -204,19 +204,19 @@ export const bigQueryMomentsSql = (
   } else if (capping.type === "percentile") {
     params.cap_percentile = capping.value;
     ctes.push(
-      "kuji_cap AS (SELECT APPROX_QUANTILES(y, 1000)[OFFSET(CAST(ROUND(@cap_percentile * 1000) AS INT64))] AS c FROM kuji_values)",
+      "furca_cap AS (SELECT APPROX_QUANTILES(y, 1000)[OFFSET(CAST(ROUND(@cap_percentile * 1000) AS INT64))] AS c FROM furca_values)",
     );
-    cap = "(SELECT c FROM kuji_cap)";
+    cap = "(SELECT c FROM furca_cap)";
   }
-  ctes.push(`kuji_capped AS (
+  ctes.push(`furca_capped AS (
   SELECT variation, t0, ${cap === null ? "y" : `LEAST(y, ${cap})`} AS y, d, ${cap === null ? "x" : `LEAST(x, ${cap})`} AS x, ${cap ?? "CAST(NULL AS FLOAT64)"} AS cap
-  FROM kuji_values
+  FROM furca_values
 )`);
 
   const sql = `WITH ${ctes.join(",\n")}
 SELECT variation, FORMAT_DATE('%F', DATE(t0)) AS day, COUNT(*) AS n,
   SUM(y) AS sum_y, SUM(y * y) AS sum_y2, SUM(d) AS sum_d, SUM(d * d) AS sum_d2, SUM(y * d) AS sum_yd,
   SUM(x) AS sum_x, SUM(x * x) AS sum_x2, SUM(x * y) AS sum_xy, ANY_VALUE(cap) AS cap_value
-FROM kuji_capped GROUP BY variation, day`;
+FROM furca_capped GROUP BY variation, day`;
   return { sql, params };
 };

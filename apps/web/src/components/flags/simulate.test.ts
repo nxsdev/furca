@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { hash, type SdkPayload } from "@kuji/sdk";
+import { hash, type SdkPayload } from "@furca/sdk";
 import { alignRules, traceEvaluation } from "./simulate";
 
 // Pick a seed so that user "u1" lands inside a 50% rollout and "u2" outside it

@@ -1,4 +1,4 @@
-import { MetricService } from "@kuji/core/metrics/MetricService";
+import { MetricService } from "@furca/core/metrics/MetricService";
 import { authed } from "../Runtime/orpc";
 
 export const metricsRouter = {

@@ -6,22 +6,22 @@
  * Errors use standard oRPC codes: UNAUTHORIZED, FORBIDDEN, NOT_FOUND, BAD_REQUEST, CONFLICT,
  * BAD_GATEWAY (warehouse failures), INTERNAL_SERVER_ERROR. `message` is always safe to display
  */
-import type { AuditLog } from "@kuji/core/audit/AuditLog";
-import { AuditEntityType } from "@kuji/core/audit/AuditLog";
-import { BigQueryConfig, type DataSource } from "@kuji/core/datasources/DataSource";
-import type { Environment } from "@kuji/core/environments/Environment";
+import type { AuditLog } from "@furca/core/audit/AuditLog";
+import { AuditEntityType } from "@furca/core/audit/AuditLog";
+import { BigQueryConfig, type DataSource } from "@furca/core/datasources/DataSource";
+import type { Environment } from "@furca/core/environments/Environment";
 import {
   DecisionOutcome,
   type Experiment,
   ExperimentPlan,
   StatsSettings,
   Variation,
-} from "@kuji/core/experiments/Experiment";
-import { type Feature, FeatureRule, FeatureValueType } from "@kuji/core/features/Feature";
-import type { Invitation, Member } from "@kuji/core/members/Member";
-import { type Metric, MetricCapping, MetricDefinition, MetricType } from "@kuji/core/metrics/Metric";
-import type { ResultSnapshot } from "@kuji/core/results/ExperimentResult";
-import { Condition } from "@kuji/core/targeting/Condition";
+} from "@furca/core/experiments/Experiment";
+import { type Feature, FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
+import type { Invitation, Member } from "@furca/core/members/Member";
+import { type Metric, MetricCapping, MetricDefinition, MetricType } from "@furca/core/metrics/Metric";
+import type { ResultSnapshot } from "@furca/core/results/ExperimentResult";
+import { Condition } from "@furca/core/targeting/Condition";
 import { oc, type } from "@orpc/contract";
 import { toStandardSchema } from "@orpc/experimental-effect";
 import { Schema } from "effect";
@@ -277,4 +277,4 @@ export const contract = {
   },
 };
 
-export type KujiContract = typeof contract;
+export type FurcaContract = typeof contract;

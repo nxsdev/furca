@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "kuji",
+      "name": "furca",
       "devDependencies": {
         "@cloudflare/workers-types": "catalog:",
         "@effect/platform-bun": "catalog:",
@@ -16,7 +16,7 @@
       },
     },
     "apps/web": {
-      "name": "@kuji/web",
+      "name": "@furca/web",
       "version": "0.0.0",
       "dependencies": {
         "@fontsource-variable/geist": "catalog:",
@@ -24,10 +24,10 @@
         "@heroui/react": "catalog:",
         "@heroui/styles": "catalog:",
         "@internationalized/date": "catalog:",
-        "@kuji/api": "workspace:*",
-        "@kuji/core": "workspace:*",
-        "@kuji/sdk": "workspace:*",
-        "@kuji/stats": "workspace:*",
+        "@furca/api": "workspace:*",
+        "@furca/core": "workspace:*",
+        "@furca/sdk": "workspace:*",
+        "@furca/stats": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/experimental-effect": "catalog:",
@@ -57,13 +57,13 @@
       },
     },
     "packages/api": {
-      "name": "@kuji/api",
+      "name": "@furca/api",
       "version": "0.0.0",
       "dependencies": {
         "@better-auth/drizzle-adapter": "catalog:",
-        "@kuji/core": "workspace:*",
-        "@kuji/database": "workspace:*",
-        "@kuji/persistence": "workspace:*",
+        "@furca/core": "workspace:*",
+        "@furca/database": "workspace:*",
+        "@furca/persistence": "workspace:*",
         "@orpc/contract": "catalog:",
         "@orpc/experimental-effect": "catalog:",
         "@orpc/server": "catalog:",
@@ -77,17 +77,17 @@
       },
     },
     "packages/core": {
-      "name": "@kuji/core",
+      "name": "@furca/core",
       "version": "0.0.0",
       "dependencies": {
         "effect": "catalog:",
       },
     },
     "packages/database": {
-      "name": "@kuji/database",
+      "name": "@furca/database",
       "version": "0.0.0",
       "dependencies": {
-        "@kuji/core": "workspace:*",
+        "@furca/core": "workspace:*",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
       },
@@ -97,7 +97,7 @@
       },
     },
     "packages/infra": {
-      "name": "@kuji/infra",
+      "name": "@furca/infra",
       "version": "0.0.0",
       "dependencies": {
         "@effect/platform-bun": "catalog:",
@@ -110,23 +110,23 @@
       },
     },
     "packages/integrations": {
-      "name": "@kuji/integrations",
+      "name": "@furca/integrations",
       "version": "0.0.0",
       "dependencies": {
-        "@kuji/core": "workspace:*",
+        "@furca/core": "workspace:*",
         "effect": "catalog:",
         "jose": "catalog:",
       },
     },
     "packages/persistence": {
-      "name": "@kuji/persistence",
+      "name": "@furca/persistence",
       "version": "0.0.0",
       "dependencies": {
-        "@kuji/core": "workspace:*",
-        "@kuji/database": "workspace:*",
-        "@kuji/integrations": "workspace:*",
-        "@kuji/sdk": "workspace:*",
-        "@kuji/stats": "workspace:*",
+        "@furca/core": "workspace:*",
+        "@furca/database": "workspace:*",
+        "@furca/integrations": "workspace:*",
+        "@furca/sdk": "workspace:*",
+        "@furca/stats": "workspace:*",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
       },
@@ -135,11 +135,11 @@
       },
     },
     "packages/sdk": {
-      "name": "@kuji/sdk",
+      "name": "@furca/sdk",
       "version": "0.1.0",
     },
     "packages/stats": {
-      "name": "@kuji/stats",
+      "name": "@furca/stats",
       "version": "0.0.0",
       "dependencies": {
         "@stdlib/stats-base-dists-chisquare-cdf": "catalog:",
@@ -498,23 +498,23 @@
 
     "@js-temporal/polyfill": ["@js-temporal/polyfill@0.5.1", "", { "dependencies": { "jsbi": "^4.3.0" } }, "sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ=="],
 
-    "@kuji/api": ["@kuji/api@workspace:packages/api"],
+    "@furca/api": ["@furca/api@workspace:packages/api"],
 
-    "@kuji/core": ["@kuji/core@workspace:packages/core"],
+    "@furca/core": ["@furca/core@workspace:packages/core"],
 
-    "@kuji/database": ["@kuji/database@workspace:packages/database"],
+    "@furca/database": ["@furca/database@workspace:packages/database"],
 
-    "@kuji/infra": ["@kuji/infra@workspace:packages/infra"],
+    "@furca/infra": ["@furca/infra@workspace:packages/infra"],
 
-    "@kuji/integrations": ["@kuji/integrations@workspace:packages/integrations"],
+    "@furca/integrations": ["@furca/integrations@workspace:packages/integrations"],
 
-    "@kuji/persistence": ["@kuji/persistence@workspace:packages/persistence"],
+    "@furca/persistence": ["@furca/persistence@workspace:packages/persistence"],
 
-    "@kuji/sdk": ["@kuji/sdk@workspace:packages/sdk"],
+    "@furca/sdk": ["@furca/sdk@workspace:packages/sdk"],
 
-    "@kuji/stats": ["@kuji/stats@workspace:packages/stats"],
+    "@furca/stats": ["@furca/stats@workspace:packages/stats"],
 
-    "@kuji/web": ["@kuji/web@workspace:apps/web"],
+    "@furca/web": ["@furca/web@workspace:apps/web"],
 
     "@libsql/client": ["@libsql/client@0.17.4", "", { "dependencies": { "@libsql/core": "^0.17.4", "@libsql/hrana-client": "^0.10.0", "js-base64": "^3.7.5", "libsql": "^0.5.28", "promise-limit": "^2.7.0" } }, "sha512-lYayFWasDV78A+TjlEhr6ubb3odBV6OHjb+wdp8VQcyWWAEIjuwbCHaraEUS4m4yWoo0BvZo96It4VdzZRmRWw=="],
 

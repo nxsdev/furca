@@ -5,7 +5,7 @@ import * as Effect from "effect/Effect";
 import { resolve } from "node:path";
 
 /**
- * kuji on your Cloudflare account: one Worker (admin UI + API + SDK endpoints), one D1 database,
+ * furca on your Cloudflare account: one Worker (admin UI + API + SDK endpoints), one D1 database,
  * one KV namespace. `bun run deploy` / CI runs `alchemy deploy`; migrations are applied by Alchemy
  */
 
@@ -27,13 +27,13 @@ export const Web = Cloudflare.Website.Vite("web", {
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
     ENCRYPTION_KEY: Config.Redacted("ENCRYPTION_KEY"),
   },
-  dev: { port: Number(process.env.KUJI_DEV_PORT ?? 5173) },
+  dev: { port: Number(process.env.FURCA_DEV_PORT ?? 5173) },
 });
 
 export type WebEnv = Cloudflare.InferEnv<typeof Web>;
 
 export default Alchemy.Stack(
-  "kuji",
+  "furca",
   {
     providers: Cloudflare.providers(),
     // Local dev needs no Cloudflare credentials; deploys keep state in your Cloudflare account

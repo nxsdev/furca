@@ -1,4 +1,4 @@
-import { ExperimentAnalysisService } from "@kuji/core/analysis/Analysis";
+import { ExperimentAnalysisService } from "@furca/core/analysis/Analysis";
 import { authed } from "../Runtime/orpc";
 
 export const resultsRouter = {

@@ -1,4 +1,4 @@
-import { PersistenceError } from "@kuji/core/shared/errors";
+import { PersistenceError } from "@furca/core/shared/errors";
 import { defineRelations } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { Context, Effect, Layer } from "effect";
@@ -25,7 +25,7 @@ export interface DatabaseShape {
   readonly run: <A>(operation: string, query: (db: Db) => Promise<A>) => Effect.Effect<A, PersistenceError>;
 }
 
-export class Database extends Context.Service<Database, DatabaseShape>()("kuji/Database") {}
+export class Database extends Context.Service<Database, DatabaseShape>()("furca/Database") {}
 
 export const makeDatabase = (d1: D1Database): DatabaseShape => {
   const db = makeDrizzle(d1);

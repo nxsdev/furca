@@ -1,9 +1,9 @@
-import type { Actor } from "@kuji/core/audit/AuditLog";
-import { Metric, MetricCapping, MetricDefinition } from "@kuji/core/metrics/Metric";
-import { type MetricInput, MetricService } from "@kuji/core/metrics/MetricService";
-import { NotFoundError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { metrics } from "@kuji/database/schema/index";
+import type { Actor } from "@furca/core/audit/AuditLog";
+import { Metric, MetricCapping, MetricDefinition } from "@furca/core/metrics/Metric";
+import { type MetricInput, MetricService } from "@furca/core/metrics/MetricService";
+import { NotFoundError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { metrics } from "@furca/database/schema/index";
 import { eq } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { toMetric } from "../mappers";

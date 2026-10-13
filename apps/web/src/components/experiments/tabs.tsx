@@ -1,6 +1,6 @@
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import type { Feature } from "@kuji/core/features/Feature";
-import type { Metric } from "@kuji/core/metrics/Metric";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import type { Feature } from "@furca/core/features/Feature";
+import type { Metric } from "@furca/core/metrics/Metric";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, RotateCcw } from "lucide-react";

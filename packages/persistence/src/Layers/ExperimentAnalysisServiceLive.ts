@@ -1,7 +1,7 @@
-import { ExperimentAnalysisService } from "@kuji/core/analysis/Analysis";
-import { CredentialCipher } from "@kuji/core/datasources/CredentialCipher";
-import type { Experiment, ExperimentPhase } from "@kuji/core/experiments/Experiment";
-import type { Metric } from "@kuji/core/metrics/Metric";
+import { ExperimentAnalysisService } from "@furca/core/analysis/Analysis";
+import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import type { Experiment, ExperimentPhase } from "@furca/core/experiments/Experiment";
+import type { Metric } from "@furca/core/metrics/Metric";
 import {
   ExperimentHealth,
   MetricResult,
@@ -11,11 +11,11 @@ import {
   TimeseriesPoint,
   VariationComparison,
   VariationMetricSummary,
-} from "@kuji/core/results/ExperimentResult";
-import { NotFoundError, ValidationError, WarehouseError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { dataSources as dataSourcesTable, resultSnapshots } from "@kuji/database/schema/index";
-import * as BigQuery from "@kuji/integrations/bigquery/client";
+} from "@furca/core/results/ExperimentResult";
+import { NotFoundError, ValidationError, WarehouseError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { dataSources as dataSourcesTable, resultSnapshots } from "@furca/database/schema/index";
+import * as BigQuery from "@furca/integrations/bigquery/client";
 import {
   adjustedInterval,
   type AnalysisSettings,
@@ -29,7 +29,7 @@ import {
   srmPValue,
   summarize,
   verdict,
-} from "@kuji/stats";
+} from "@furca/stats";
 import { Effect, Layer, Schema } from "effect";
 import { toDataSource, toExperiment, toMetric } from "../mappers";
 import {

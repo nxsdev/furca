@@ -1,16 +1,16 @@
-import type { Actor } from "@kuji/core/audit/AuditLog";
-import { PayloadStore } from "@kuji/core/environments/PayloadStore";
+import type { Actor } from "@furca/core/audit/AuditLog";
+import { PayloadStore } from "@furca/core/environments/PayloadStore";
 import {
   Experiment,
   ExperimentDecision,
   ExperimentPhase,
   trafficChangeNeedsNewPhase,
-} from "@kuji/core/experiments/Experiment";
-import { type ExperimentDraft, ExperimentService } from "@kuji/core/experiments/ExperimentService";
-import { ExperimentRule, type FeatureRule, FeatureValueType, ForceRule, validateFeatureValue } from "@kuji/core/features/Feature";
-import { NotFoundError } from "@kuji/core/shared/errors";
-import { Database, type Db } from "@kuji/database/Database";
-import { experiments, featureEnvironments } from "@kuji/database/schema/index";
+} from "@furca/core/experiments/Experiment";
+import { type ExperimentDraft, ExperimentService } from "@furca/core/experiments/ExperimentService";
+import { ExperimentRule, type FeatureRule, FeatureValueType, ForceRule, validateFeatureValue } from "@furca/core/features/Feature";
+import { NotFoundError } from "@furca/core/shared/errors";
+import { Database, type Db } from "@furca/database/Database";
+import { experiments, featureEnvironments } from "@furca/database/schema/index";
 import { and, eq } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { experimentJsonColumns, rulesJson, toExperiment, toRules } from "../mappers";

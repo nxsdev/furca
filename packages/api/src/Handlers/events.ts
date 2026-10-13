@@ -1,4 +1,4 @@
-import { EventStatsService } from "@kuji/core/analysis/Analysis";
+import { EventStatsService } from "@furca/core/analysis/Analysis";
 import { authed } from "../Runtime/orpc";
 
 export const eventsRouter = {

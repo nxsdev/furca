@@ -1,9 +1,9 @@
-import type { Environment } from "@kuji/core/environments/Environment";
+import type { Environment } from "@furca/core/environments/Environment";
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { orpc } from "./rpc";
 
-const STORAGE_KEY = "kuji-environment";
+const STORAGE_KEY = "furca-environment";
 
 interface EnvironmentState {
   readonly environments: ReadonlyArray<Environment>;

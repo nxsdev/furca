@@ -1,5 +1,5 @@
 import { Label, ListBox, Select } from "@heroui/react";
-import type { AuditEntityType } from "@kuji/core/audit/AuditLog";
+import type { AuditEntityType } from "@furca/core/audit/AuditLog";
 import { createFileRoute } from "@tanstack/react-router";
 import { AuditList, entityTypes } from "~/components/audit/AuditList";
 import { PageHeader, Panel } from "~/components/ui/primitives";
@@ -8,7 +8,7 @@ const isEntityType = (v: unknown): v is AuditEntityType => entityTypes.some((t) 
 
 export const Route = createFileRoute("/_app/audit")({
   validateSearch: (s: Record<string, unknown>): { type?: AuditEntityType } => (isEntityType(s.type) ? { type: s.type } : {}),
-  head: () => ({ meta: [{ title: "Audit log · kuji" }] }),
+  head: () => ({ meta: [{ title: "Audit log · furca" }] }),
   component: Page,
 });
 

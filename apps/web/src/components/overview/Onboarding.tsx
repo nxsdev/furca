@@ -13,7 +13,7 @@ export interface OnboardingStep {
   readonly done: boolean;
 }
 
-/** The kuji loop as a checklist; every check comes from real data, never from clicking "mark done" */
+/** The furca loop as a checklist; every check comes from real data, never from clicking "mark done" */
 export function Onboarding({ steps }: { steps: ReadonlyArray<OnboardingStep> }) {
   const done = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done)?.id;

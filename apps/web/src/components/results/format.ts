@@ -1,4 +1,4 @@
-import type { MetricType } from "@kuji/core/metrics/Metric";
+import type { MetricType } from "@furca/core/metrics/Metric";
 
 const MINUS = "−";
 const countFormat = new Intl.NumberFormat("en-US");

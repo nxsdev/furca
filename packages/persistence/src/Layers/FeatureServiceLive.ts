@@ -1,15 +1,15 @@
-import type { Actor } from "@kuji/core/audit/AuditLog";
-import { PayloadStore } from "@kuji/core/environments/PayloadStore";
+import type { Actor } from "@furca/core/audit/AuditLog";
+import { PayloadStore } from "@furca/core/environments/PayloadStore";
 import {
   Feature,
   FeatureEnvironmentConfig,
   type FeatureRule,
   validateFeatureValue,
-} from "@kuji/core/features/Feature";
-import { FeatureService } from "@kuji/core/features/FeatureService";
-import { ConflictError, NotFoundError } from "@kuji/core/shared/errors";
-import { Database, type Db } from "@kuji/database/Database";
-import { environments, featureEnvironments, features } from "@kuji/database/schema/index";
+} from "@furca/core/features/Feature";
+import { FeatureService } from "@furca/core/features/FeatureService";
+import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { Database, type Db } from "@furca/database/Database";
+import { environments, featureEnvironments, features } from "@furca/database/schema/index";
 import { and, eq, sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { rulesJson } from "../mappers";

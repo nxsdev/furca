@@ -1,5 +1,5 @@
 {
-  "name": "@kuji/database",
+  "name": "@furca/database",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@kuji/core": "workspace:*",
+    "@furca/core": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:"
   },

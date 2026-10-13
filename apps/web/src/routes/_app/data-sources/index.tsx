@@ -9,7 +9,7 @@ import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/data-sources/")({
   validateSearch: (s: Record<string, unknown>): { new?: true } => (s.new ? { new: true } : {}),
-  head: () => ({ meta: [{ title: "Data sources · kuji" }] }),
+  head: () => ({ meta: [{ title: "Data sources · furca" }] }),
   component: Page,
 });
 
@@ -128,7 +128,7 @@ function SourceList() {
           </Panel>
           {!hasWarehouse && (
             <p className="max-w-[72ch] text-label text-muted">
-              Already send events to GA4 or Segment with a BigQuery export? Connect it and kuji reads exposures and metrics
+              Already send events to GA4 or Segment with a BigQuery export? Connect it and furca reads exposures and metrics
               straight from your tables with SQL you control. Templates for both are included.
             </p>
           )}

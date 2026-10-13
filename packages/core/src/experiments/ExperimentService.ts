@@ -60,5 +60,5 @@ export interface ExperimentServiceShape {
 }
 
 export class ExperimentService extends Context.Service<ExperimentService, ExperimentServiceShape>()(
-  "kuji/ExperimentService",
+  "furca/ExperimentService",
 ) {}

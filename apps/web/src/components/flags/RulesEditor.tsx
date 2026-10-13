@@ -1,6 +1,6 @@
-import type { Environment } from "@kuji/core/environments/Environment";
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import { type FeatureRule, type FeatureValueType, validateFeatureValue } from "@kuji/core/features/Feature";
+import type { Environment } from "@furca/core/environments/Environment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import { type FeatureRule, type FeatureValueType, validateFeatureValue } from "@furca/core/features/Feature";
 import { Button, Dropdown, Input, Label, NumberField, Separator, Slider, TextField } from "@heroui/react";
 import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, Ellipsis, FlaskConical, Pencil, Plus, Trash2 } from "lucide-react";

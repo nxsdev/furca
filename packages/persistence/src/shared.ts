@@ -1,9 +1,9 @@
 /** Helpers shared by the *ServiceLive layers */
-import type { Actor, AuditEntityType } from "@kuji/core/audit/AuditLog";
-import type { Feature } from "@kuji/core/features/Feature";
-import { NotFoundError, type PersistenceError, ValidationError } from "@kuji/core/shared/errors";
-import type { DatabaseShape, Db } from "@kuji/database/Database";
-import { auditLogs } from "@kuji/database/schema/index";
+import type { Actor, AuditEntityType } from "@furca/core/audit/AuditLog";
+import type { Feature } from "@furca/core/features/Feature";
+import { NotFoundError, type PersistenceError, ValidationError } from "@furca/core/shared/errors";
+import type { DatabaseShape, Db } from "@furca/database/Database";
+import { auditLogs } from "@furca/database/schema/index";
 import { Effect } from "effect";
 import { toFeature } from "./mappers";
 

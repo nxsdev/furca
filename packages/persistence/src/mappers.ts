@@ -2,8 +2,8 @@
  * D1 row -> domain entity mapping, shared by every repository and the analysis pipeline.
  * JSON columns are decoded with the core Schemas so a malformed row fails loudly
  */
-import { DataSource, BigQueryConfig } from "@kuji/core/datasources/DataSource";
-import { Environment } from "@kuji/core/environments/Environment";
+import { DataSource, BigQueryConfig } from "@furca/core/datasources/DataSource";
+import { Environment } from "@furca/core/environments/Environment";
 import {
   Experiment,
   ExperimentDecision,
@@ -11,11 +11,11 @@ import {
   ExperimentPlan,
   StatsSettings,
   Variation,
-} from "@kuji/core/experiments/Experiment";
-import { Feature, FeatureEnvironmentConfig, FeatureRule, FeatureValueType } from "@kuji/core/features/Feature";
-import { Metric, MetricCapping, MetricDefinition, MetricType } from "@kuji/core/metrics/Metric";
-import { Condition } from "@kuji/core/targeting/Condition";
-import type * as schema from "@kuji/database/schema/index";
+} from "@furca/core/experiments/Experiment";
+import { Feature, FeatureEnvironmentConfig, FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
+import { Metric, MetricCapping, MetricDefinition, MetricType } from "@furca/core/metrics/Metric";
+import { Condition } from "@furca/core/targeting/Condition";
+import type * as schema from "@furca/database/schema/index";
 import { Schema } from "effect";
 
 type Row<T extends { $inferSelect: unknown }> = T["$inferSelect"];

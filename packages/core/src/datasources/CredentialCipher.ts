@@ -9,5 +9,5 @@ export interface CredentialCipherShape {
 }
 
 export class CredentialCipher extends Context.Service<CredentialCipher, CredentialCipherShape>()(
-  "kuji/CredentialCipher",
+  "furca/CredentialCipher",
 ) {}

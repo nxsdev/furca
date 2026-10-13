@@ -1,7 +1,7 @@
-import type { Environment } from "@kuji/core/environments/Environment";
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import type { Feature } from "@kuji/core/features/Feature";
-import type { SdkPayload } from "@kuji/sdk";
+import type { Environment } from "@furca/core/environments/Environment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import type { Feature } from "@furca/core/features/Feature";
+import type { SdkPayload } from "@furca/sdk";
 import { Button, Input, Skeleton, TextArea, TextField } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Info, Minus, Plus, X } from "lucide-react";

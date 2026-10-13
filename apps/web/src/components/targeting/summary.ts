@@ -1,4 +1,4 @@
-import type { ConditionOperator } from "@kuji/core/targeting/Condition";
+import type { ConditionOperator } from "@furca/core/targeting/Condition";
 
 export interface ConditionValue {
   readonly attribute: string;

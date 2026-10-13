@@ -27,5 +27,5 @@ export interface EnvironmentServiceShape {
 }
 
 export class EnvironmentService extends Context.Service<EnvironmentService, EnvironmentServiceShape>()(
-  "kuji/EnvironmentService",
+  "furca/EnvironmentService",
 ) {}

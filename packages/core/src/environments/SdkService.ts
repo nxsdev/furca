@@ -1,7 +1,7 @@
 import { Context, type Effect } from "effect";
 import type { NotFoundError, PersistenceError } from "../shared/errors";
 
-/** Validated SDK events request (see EventsBody in @kuji/sdk) */
+/** Validated SDK events request (see EventsBody in @furca/sdk) */
 export interface IngestBatch {
   readonly exposures: ReadonlyArray<{
     readonly experimentKey: string;
@@ -25,4 +25,4 @@ export interface SdkServiceShape {
   readonly ingest: (sdkKey: string, batch: IngestBatch) => Effect.Effect<number, NotFoundError | PersistenceError>;
 }
 
-export class SdkService extends Context.Service<SdkService, SdkServiceShape>()("kuji/SdkService") {}
+export class SdkService extends Context.Service<SdkService, SdkServiceShape>()("furca/SdkService") {}

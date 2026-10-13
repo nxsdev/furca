@@ -1,4 +1,4 @@
-import { Database } from "@kuji/database/Database";
+import { Database } from "@furca/database/Database";
 import { ORPCError } from "@orpc/server";
 import { Effect } from "effect";
 import { authed } from "../Runtime/orpc";

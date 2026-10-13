@@ -1,4 +1,4 @@
-import type { Experiment } from "@kuji/core/experiments/Experiment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
 import { AlertDialog, Button, Skeleton, Tabs, toast } from "@heroui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -20,7 +20,7 @@ type Tab = "results" | "setup" | "phases" | "history";
 const tabs: ReadonlyArray<Tab> = ["results", "setup", "phases", "history"];
 
 export const Route = createFileRoute("/_app/experiments/$experimentId")({
-  head: () => ({ meta: [{ title: "Experiment · kuji" }] }),
+  head: () => ({ meta: [{ title: "Experiment · furca" }] }),
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
     tabs.includes(search.tab as Tab) ? { tab: search.tab as Tab } : {},
   component: Page,

@@ -1,7 +1,7 @@
 import { afterAll, afterEach, describe, expect, it } from "bun:test";
-import { ExperimentAnalysisService } from "@kuji/core/analysis/Analysis";
-import { CredentialCipher } from "@kuji/core/datasources/CredentialCipher";
-import { defaultStatsSettings, Experiment, ExperimentPhase, ExperimentPlan, StatsSettings, Variation } from "@kuji/core/experiments/Experiment";
+import { ExperimentAnalysisService } from "@furca/core/analysis/Analysis";
+import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import { defaultStatsSettings, Experiment, ExperimentPhase, ExperimentPlan, StatsSettings, Variation } from "@furca/core/experiments/Experiment";
 import {
   EventMetricDefinition,
   EventSource,
@@ -9,11 +9,11 @@ import {
   MetricCapping,
   MetricDefinition,
   SqlMetricDefinition,
-} from "@kuji/core/metrics/Metric";
-import { makeDrizzle } from "@kuji/database/Database";
-import { dataSources, experiments, features, metrics } from "@kuji/database/schema/index";
-import { makeTestD1, TestDatabaseLayer } from "@kuji/database/testing/TestDatabase";
-import { bqResult, fakeBigQuery, makeTestServiceAccount } from "@kuji/integrations/bigquery/testing";
+} from "@furca/core/metrics/Metric";
+import { makeDrizzle } from "@furca/database/Database";
+import { dataSources, experiments, features, metrics } from "@furca/database/schema/index";
+import { makeTestD1, TestDatabaseLayer } from "@furca/database/testing/TestDatabase";
+import { bqResult, fakeBigQuery, makeTestServiceAccount } from "@furca/integrations/bigquery/testing";
 import { eq } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { bigQueryMomentsSql, d1ExposureCountsSql, d1MomentsSql, LOOKBACK_MS } from "../src/Layers/AnalysisSql";
@@ -203,10 +203,10 @@ describe("BigQuery moments SQL", () => {
       cap_percentile: 0.99,
     });
     expect(q.sql).not.toContain("DROP TABLE");
-    expect(q.sql).toContain("kuji_exposure_source AS (\nSELECT * FROM `acme.analytics.exposures`\n)");
-    expect(q.sql).toContain("kuji_denominator_source AS (\nSELECT user_id, timestamp, 1 AS value FROM sessions\n)");
+    expect(q.sql).toContain("furca_exposure_source AS (\nSELECT * FROM `acme.analytics.exposures`\n)");
+    expect(q.sql).toContain("furca_denominator_source AS (\nSELECT user_id, timestamp, 1 AS value FROM sessions\n)");
     expect(q.sql).toContain("APPROX_QUANTILES(y, 1000)");
-    expect(q.sql).not.toContain("kuji_pre"); // no CUPED for ratio metrics
+    expect(q.sql).not.toContain("furca_pre"); // no CUPED for ratio metrics
   });
 
   it("omits the window bound without a window, adds the lookback for CUPED and never caps proportions", () => {
@@ -442,8 +442,8 @@ describe("ExperimentAnalysisService.refresh with BigQuery", () => {
     expect(snapshot.health).toMatchObject({ totalUsers: 1000, multipleExposureUsers: 3, multipleExposuresOk: true });
     expect(snapshot.metrics[0]!.variations.map((v) => v.mean)).toEqual([0.1, 0.15]);
     const [counts, moments] = fake.requests as Array<{ body: { query: string; queryParameters: Array<{ name: string; parameterValue: { value: string } }> } }>;
-    expect(counts!.body.query).toContain("kuji_exposure_source AS (\nSELECT * FROM exposures\n)");
-    expect(moments!.body.query).toContain("kuji_numerator_source AS (\nSELECT user_id, timestamp, 1 AS value FROM orders\n)");
+    expect(counts!.body.query).toContain("furca_exposure_source AS (\nSELECT * FROM exposures\n)");
+    expect(moments!.body.query).toContain("furca_numerator_source AS (\nSELECT user_id, timestamp, 1 AS value FROM orders\n)");
     expect(moments!.body.queryParameters.find((p) => p.name === "experiment_key")!.parameterValue.value).toBe("bq_exp");
   });
 

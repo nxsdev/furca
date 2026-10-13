@@ -1,4 +1,4 @@
-import { FeatureService } from "@kuji/core/features/FeatureService";
+import { FeatureService } from "@furca/core/features/FeatureService";
 import { authed } from "../Runtime/orpc";
 
 export const featuresRouter = {

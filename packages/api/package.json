@@ -1,5 +1,5 @@
 {
-  "name": "@kuji/api",
+  "name": "@furca/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "catalog:",
-    "@kuji/core": "workspace:*",
-    "@kuji/database": "workspace:*",
-    "@kuji/persistence": "workspace:*",
+    "@furca/core": "workspace:*",
+    "@furca/database": "workspace:*",
+    "@furca/persistence": "workspace:*",
     "@orpc/contract": "catalog:",
     "@orpc/experimental-effect": "catalog:",
     "@orpc/server": "catalog:",

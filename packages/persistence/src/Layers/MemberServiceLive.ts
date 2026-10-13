@@ -1,8 +1,8 @@
-import { Invitation, Member } from "@kuji/core/members/Member";
-import { MemberService } from "@kuji/core/members/MemberService";
-import { NotFoundError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { account, invitations, session, user } from "@kuji/database/schema/index";
+import { Invitation, Member } from "@furca/core/members/Member";
+import { MemberService } from "@furca/core/members/MemberService";
+import { NotFoundError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { account, invitations, session, user } from "@furca/database/schema/index";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { auditInsert, batch, invalid, newId, randomHex } from "../shared";

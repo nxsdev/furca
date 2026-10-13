@@ -1,6 +1,6 @@
-import type { Experiment, StatsEngine } from "@kuji/core/experiments/Experiment";
-import type { Metric } from "@kuji/core/metrics/Metric";
-import type { MetricResult, MetricRole, VariationComparison } from "@kuji/core/results/ExperimentResult";
+import type { Experiment, StatsEngine } from "@furca/core/experiments/Experiment";
+import type { Metric } from "@furca/core/metrics/Metric";
+import type { MetricResult, MetricRole, VariationComparison } from "@furca/core/results/ExperimentResult";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { Fragment } from "react";

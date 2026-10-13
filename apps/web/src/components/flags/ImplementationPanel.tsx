@@ -1,5 +1,5 @@
-import type { Environment } from "@kuji/core/environments/Environment";
-import type { Feature } from "@kuji/core/features/Feature";
+import type { Environment } from "@furca/core/environments/Environment";
+import type { Feature } from "@furca/core/features/Feature";
 import { useState } from "react";
 import { Panel, PanelHeader } from "~/components/ui/primitives";
 import { CodeBlock } from "./CodeBlock";
@@ -9,9 +9,9 @@ const camel = (key: string) => key.replace(/[-_]+([a-z0-9])/g, (_, c: string) =>
 
 function usage(feature: Feature, indent: string) {
   if (feature.valueType === "boolean") {
-    return `${indent}if (kuji.isOn("${feature.key}")) {\n${indent}  // new behavior\n${indent}}`;
+    return `${indent}if (furca.isOn("${feature.key}")) {\n${indent}  // new behavior\n${indent}}`;
   }
-  return `${indent}const ${camel(feature.key)} = kuji.getValue("${feature.key}", ${feature.defaultValue});`;
+  return `${indent}const ${camel(feature.key)} = furca.getValue("${feature.key}", ${feature.defaultValue});`;
 }
 
 /** Copy-paste SDK snippets for this flag, using the chosen environment's SDK key */
@@ -26,35 +26,35 @@ export function ImplementationPanel({
 }) {
   const [envId, setEnvId] = useState(initialEnvironmentId ?? environments[0]?.id ?? "");
   const env = environments.find((e) => e.id === envId) ?? environments[0];
-  const apiHost = typeof window === "undefined" ? "https://kuji.example.com" : window.location.origin;
+  const apiHost = typeof window === "undefined" ? "https://furca.example.com" : window.location.origin;
   const sdkKey = env?.sdkKey ?? "<sdk-key>";
 
-  const browser = `import { createClient } from "@kuji/sdk";
+  const browser = `import { createClient } from "@furca/sdk";
 
-const kuji = createClient({
+const furca = createClient({
   apiHost: "${apiHost}",
   sdkKey: "${sdkKey}",
   attributes: { id: user.id },
 });
-await kuji.ready();
+await furca.ready();
 
 ${usage(feature, "")}`;
 
-  const worker = `import { createClient } from "@kuji/sdk";
+  const worker = `import { createClient } from "@furca/sdk";
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
-    const kuji = createClient({
+    const furca = createClient({
       apiHost: "${apiHost}",
       sdkKey: "${sdkKey}",
       attributes: { id: getUserId(request) },
     });
-    await kuji.ready();
+    await furca.ready();
 
 ${usage(feature, "    ")}
 
     // Send exposures after the response, without delaying it
-    ctx.waitUntil(kuji.flush());
+    ctx.waitUntil(furca.flush());
     return new Response("ok");
   },
 } satisfies ExportedHandler;`;
@@ -65,7 +65,7 @@ ${usage(feature, "    ")}
         title="Use this flag in code"
         description={
           <>
-            Install with <code className="rounded-[4px] bg-default px-1 font-mono text-meta">npm install @kuji/sdk</code>. The SDK
+            Install with <code className="rounded-[4px] bg-default px-1 font-mono text-meta">npm install @furca/sdk</code>. The SDK
             evaluates locally, so checks don't make a network call.
           </>
         }

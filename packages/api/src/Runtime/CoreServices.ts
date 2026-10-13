@@ -1,11 +1,11 @@
-import { AuditServiceLive } from "@kuji/persistence/Layers/AuditServiceLive";
-import { DataSourceServiceLive } from "@kuji/persistence/Layers/DataSourceServiceLive";
-import { EnvironmentServiceLive } from "@kuji/persistence/Layers/EnvironmentServiceLive";
-import { ExperimentServiceLive } from "@kuji/persistence/Layers/ExperimentServiceLive";
-import { FeatureServiceLive } from "@kuji/persistence/Layers/FeatureServiceLive";
-import { MemberServiceLive } from "@kuji/persistence/Layers/MemberServiceLive";
-import { MetricServiceLive } from "@kuji/persistence/Layers/MetricServiceLive";
-import { SdkServiceLive } from "@kuji/persistence/Layers/SdkServiceLive";
+import { AuditServiceLive } from "@furca/persistence/Layers/AuditServiceLive";
+import { DataSourceServiceLive } from "@furca/persistence/Layers/DataSourceServiceLive";
+import { EnvironmentServiceLive } from "@furca/persistence/Layers/EnvironmentServiceLive";
+import { ExperimentServiceLive } from "@furca/persistence/Layers/ExperimentServiceLive";
+import { FeatureServiceLive } from "@furca/persistence/Layers/FeatureServiceLive";
+import { MemberServiceLive } from "@furca/persistence/Layers/MemberServiceLive";
+import { MetricServiceLive } from "@furca/persistence/Layers/MetricServiceLive";
+import { SdkServiceLive } from "@furca/persistence/Layers/SdkServiceLive";
 import { Layer } from "effect";
 
 /**

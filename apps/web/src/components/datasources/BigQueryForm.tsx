@@ -1,5 +1,5 @@
 import { Button, ComboBox, Description, FieldError, Input, Label, ListBox, TextArea, TextField, toast } from "@heroui/react";
-import type { DataSource } from "@kuji/core/datasources/DataSource";
+import type { DataSource } from "@furca/core/datasources/DataSource";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, FileUp, KeyRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -259,7 +259,7 @@ export function BigQueryForm({
         description={
           <>
             Stored encrypted with this deployment's <code className="font-mono">ENCRYPTION_KEY</code> and never shown again.
-            kuji only runs read queries.
+            furca only runs read queries.
           </>
         }
       >
@@ -354,7 +354,7 @@ export function BigQueryForm({
 
       <Section
         title="Exposure query"
-        description="Tells kuji who saw which variation. Used when experiments analyze this source instead of the SDK's built-in exposures."
+        description="Tells furca who saw which variation. Used when experiments analyze this source instead of the SDK's built-in exposures."
       >
         <TextField value={sql} onChange={setSql} isInvalid={shown("sql") !== undefined} className="w-full">
           <div className="flex flex-wrap items-end justify-between gap-2">
@@ -383,7 +383,7 @@ export function BigQueryForm({
             className="w-full resize-y font-mono text-[0.8125rem] leading-5"
           />
           <Description>
-            One row per exposure event (don't de-duplicate; kuji splits phases by time) with columns{" "}
+            One row per exposure event (don't de-duplicate; furca splits phases by time) with columns{" "}
             <code className="font-mono">user_id</code> STRING, <code className="font-mono">timestamp</code> TIMESTAMP,{" "}
             <code className="font-mono">experiment_key</code> STRING, <code className="font-mono">variation_key</code> STRING.
             Optionally use <code className="font-mono">@experiment_key</code>, <code className="font-mono">@start_ms</code> and{" "}

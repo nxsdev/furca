@@ -127,15 +127,15 @@ describe("operators", () => {
   });
 
   test("string operators", () => {
-    expect(match("contains", "hello@kuji.dev", "@kuji")).toBe(true);
-    expect(match("contains", "hello@x.dev", "@kuji")).toBe(false);
-    expect(match("contains", "hello@x.dev", "@kuji", "@x")).toBe(true);
-    expect(match("not_contains", "hello@x.dev", "@kuji")).toBe(true);
-    expect(match("not_contains", "hello@kuji.dev", "@kuji")).toBe(false);
+    expect(match("contains", "hello@furca.dev", "@furca")).toBe(true);
+    expect(match("contains", "hello@x.dev", "@furca")).toBe(false);
+    expect(match("contains", "hello@x.dev", "@furca", "@x")).toBe(true);
+    expect(match("not_contains", "hello@x.dev", "@furca")).toBe(true);
+    expect(match("not_contains", "hello@furca.dev", "@furca")).toBe(false);
     expect(match("starts_with", "/admin/x", "/admin")).toBe(true);
     expect(match("starts_with", "/x/admin", "/admin")).toBe(false);
-    expect(match("ends_with", "a@kuji.dev", ".dev")).toBe(true);
-    expect(match("ends_with", "a@kuji.com", ".dev")).toBe(false);
+    expect(match("ends_with", "a@furca.dev", ".dev")).toBe(true);
+    expect(match("ends_with", "a@furca.com", ".dev")).toBe(false);
   });
 
   test("regex, invalid regex never matches", () => {

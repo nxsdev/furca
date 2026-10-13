@@ -4,7 +4,7 @@ import type { ServiceAccount } from "./client";
 
 export const makeTestServiceAccount = async (): Promise<ServiceAccount> => {
   const { privateKey } = await generateKeyPair("RS256", { extractable: true });
-  return { client_email: `kuji-${crypto.randomUUID()}@test.iam.gserviceaccount.com`, private_key: await exportPKCS8(privateKey) };
+  return { client_email: `furca-${crypto.randomUUID()}@test.iam.gserviceaccount.com`, private_key: await exportPKCS8(privateKey) };
 };
 
 /** A completed jobs.query response with the given column types (legacy names: STRING, INTEGER, FLOAT) */

@@ -1,4 +1,4 @@
-import type { ConditionOperator } from "@kuji/core/targeting/Condition";
+import type { ConditionOperator } from "@furca/core/targeting/Condition";
 import { Button, ComboBox, Header, Input, ListBox, Select, TextField } from "@heroui/react";
 import { Plus, X } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";

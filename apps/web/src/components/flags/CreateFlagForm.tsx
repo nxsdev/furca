@@ -1,4 +1,4 @@
-import { type FeatureValueType, validateFeatureValue } from "@kuji/core/features/Feature";
+import { type FeatureValueType, validateFeatureValue } from "@furca/core/features/Feature";
 import { Button, Description, FieldError, Input, Label, TextField, toast } from "@heroui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";

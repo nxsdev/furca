@@ -1,8 +1,8 @@
-import { PayloadStore } from "@kuji/core/environments/PayloadStore";
-import { SdkService } from "@kuji/core/environments/SdkService";
-import { NotFoundError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { events, exposures } from "@kuji/database/schema/index";
+import { PayloadStore } from "@furca/core/environments/PayloadStore";
+import { SdkService } from "@furca/core/environments/SdkService";
+import { NotFoundError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { events, exposures } from "@furca/database/schema/index";
 import { Effect, Layer } from "effect";
 import { buildPayloads } from "../payload";
 import { batch, chunk } from "../shared";

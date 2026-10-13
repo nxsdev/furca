@@ -1,5 +1,5 @@
 /**
- * Seeds a local kuji instance with demo flags, metrics, a running experiment and simulated traffic.
+ * Seeds a local furca instance with demo flags, metrics, a running experiment and simulated traffic.
  *
  *   bun scripts/seed-demo.ts [baseUrl=http://localhost:5173] [setup|traffic|all=all] [users=4000]
  *
@@ -12,8 +12,8 @@ import { evaluate, type SdkPayload } from "../packages/sdk/src/index.ts";
 const base = process.argv[2] ?? "http://localhost:5173";
 const mode = process.argv[3] ?? "all";
 const userCount = Number(process.argv[4] ?? 4000);
-const email = process.env.DEV_OWNER_EMAIL ?? "owner@kuji.test";
-const password = process.env.DEV_OWNER_PASSWORD ?? "kuji-demo-password";
+const email = process.env.DEV_OWNER_EMAIL ?? "owner@furca.test";
+const password = process.env.DEV_OWNER_PASSWORD ?? "furca-demo-password";
 
 let cookie = "";
 
@@ -81,7 +81,7 @@ const setup = async () => {
     id: cart.id,
     environmentId: prod.id,
     rules: [
-      { _tag: "force", id: uuid(), description: "Internal staff", enabled: true, conditions: [{ attribute: "email", operator: "ends_with", values: ["@kuji.dev"] }], value: "100" },
+      { _tag: "force", id: uuid(), description: "Internal staff", enabled: true, conditions: [{ attribute: "email", operator: "ends_with", values: ["@furca.dev"] }], value: "100" },
       { _tag: "rollout", id: uuid(), description: "Gradual increase", enabled: true, conditions: [], value: "50", coverage: 0.3, hashAttribute: "id", seed: uuid() },
     ],
   });

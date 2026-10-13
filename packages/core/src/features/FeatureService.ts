@@ -30,4 +30,4 @@ export interface FeatureServiceShape {
   readonly delete: (id: string, actor: Actor) => Effect.Effect<void, Errors | ConflictError>;
 }
 
-export class FeatureService extends Context.Service<FeatureService, FeatureServiceShape>()("kuji/FeatureService") {}
+export class FeatureService extends Context.Service<FeatureService, FeatureServiceShape>()("furca/FeatureService") {}

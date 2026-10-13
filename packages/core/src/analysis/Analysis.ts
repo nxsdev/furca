@@ -18,7 +18,7 @@ export interface ExperimentAnalysisServiceShape {
 export class ExperimentAnalysisService extends Context.Service<
   ExperimentAnalysisService,
   ExperimentAnalysisServiceShape
->()("kuji/ExperimentAnalysisService") {}
+>()("furca/ExperimentAnalysisService") {}
 
 export interface EventNameStat {
   readonly name: string;
@@ -43,5 +43,5 @@ export interface EventStatsServiceShape {
 }
 
 export class EventStatsService extends Context.Service<EventStatsService, EventStatsServiceShape>()(
-  "kuji/EventStatsService",
+  "furca/EventStatsService",
 ) {}

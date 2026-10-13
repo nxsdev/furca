@@ -1,4 +1,4 @@
-import type { KujiContract } from "@kuji/api/contract";
+import type { FurcaContract } from "@furca/api/contract";
 import { createORPCClient, isDefinedError, ORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { ContractRouterClient } from "@orpc/contract";
@@ -7,7 +7,7 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 const link = new RPCLink({ url: "/api/rpc" });
 
 /** Typed admin API client: `await client.features.list({ includeArchived: false })` */
-export const client: ContractRouterClient<KujiContract> = createORPCClient(link);
+export const client: ContractRouterClient<FurcaContract> = createORPCClient(link);
 
 /**
  * TanStack Query helpers:

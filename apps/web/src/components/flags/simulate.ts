@@ -8,7 +8,7 @@ import {
   hash,
   type PayloadRule,
   type SdkPayload,
-} from "@kuji/sdk";
+} from "@furca/sdk";
 import { conditionsSummary } from "../targeting/summary";
 
 export interface TraceStep {

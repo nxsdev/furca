@@ -1,5 +1,5 @@
-import { DataSourceService } from "@kuji/core/datasources/DataSourceService";
-import { WarehouseTester } from "@kuji/core/datasources/WarehouseTester";
+import { DataSourceService } from "@furca/core/datasources/DataSourceService";
+import { WarehouseTester } from "@furca/core/datasources/WarehouseTester";
 import { authed } from "../Runtime/orpc";
 
 export const dataSourcesRouter = {

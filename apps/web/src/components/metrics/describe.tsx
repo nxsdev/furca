@@ -1,5 +1,5 @@
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import type { Metric, MetricType } from "@kuji/core/metrics/Metric";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import type { Metric, MetricType } from "@furca/core/metrics/Metric";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { ReactNode } from "react";
 

@@ -34,7 +34,7 @@ function AppLayout() {
     if (isUnauthorized(me.error)) return <Navigate to="/login" />;
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-3 text-body">
-        <p>kuji could not load your session.</p>
+        <p>furca could not load your session.</p>
         <Button size="sm" variant="outline" onPress={() => me.refetch()}>
           Retry
         </Button>

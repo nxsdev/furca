@@ -1,4 +1,4 @@
-import { EnvironmentService } from "@kuji/core/environments/EnvironmentService";
+import { EnvironmentService } from "@furca/core/environments/EnvironmentService";
 import { authed } from "../Runtime/orpc";
 
 export const environmentsRouter = {

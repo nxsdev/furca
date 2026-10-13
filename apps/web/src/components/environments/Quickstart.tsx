@@ -9,10 +9,10 @@ interface Conn {
   readonly sdkKey: string;
 }
 
-/** The origin SDKs talk to: this kuji deployment */
-export const apiHost = () => (typeof window === "undefined" ? "https://kuji.example.com" : window.location.origin);
+/** The origin SDKs talk to: this furca deployment */
+export const apiHost = () => (typeof window === "undefined" ? "https://furca.example.com" : window.location.origin);
 
-export const INSTALL = "npm install @kuji/sdk";
+export const INSTALL = "npm install @furca/sdk";
 
 /**
  * Copyable SDK setup per runtime. GA4 params match the GA4 exposure SQL template on the data
@@ -20,9 +20,9 @@ export const INSTALL = "npm install @kuji/sdk";
  */
 const sdkSnippet = (target: SdkTarget, { apiHost, sdkKey }: Conn): string => {
   if (target === "browser")
-    return `import { createClient } from "@kuji/sdk";
+    return `import { createClient } from "@furca/sdk";
 
-const kuji = createClient({
+const furca = createClient({
   apiHost: "${apiHost}",
   sdkKey: "${sdkKey}",
   attributes: { id: user.id },
@@ -34,16 +34,16 @@ const kuji = createClient({
     }),
 });
 
-await kuji.ready(); // never rejects; flags fall back to your defaults
+await furca.ready(); // never rejects; flags fall back to your defaults
 
-if (kuji.isOn("new-checkout")) showNewCheckout();
+if (furca.isOn("new-checkout")) showNewCheckout();
 
-kuji.track("purchase", 4980); // value is optional; "sum" metrics add it up`;
+furca.track("purchase", 4980); // value is optional; "sum" metrics add it up`;
 
   if (target === "workers")
-    return `import { createClient, fetchPayload, type SdkPayload } from "@kuji/sdk";
+    return `import { createClient, fetchPayload, type SdkPayload } from "@furca/sdk";
 
-const KUJI = { apiHost: "${apiHost}", sdkKey: "${sdkKey}" };
+const FURCA = { apiHost: "${apiHost}", sdkKey: "${sdkKey}" };
 let cache: { payload: SdkPayload; at: number } | undefined;
 
 export default {
@@ -51,47 +51,47 @@ export default {
     // One payload per isolate, refreshed every 30s; flags evaluate locally
     if (!cache || Date.now() - cache.at > 30_000) {
       try {
-        cache = { payload: await fetchPayload(KUJI), at: Date.now() };
+        cache = { payload: await fetchPayload(FURCA), at: Date.now() };
       } catch (e) {
-        console.warn("kuji payload refresh failed, keeping last copy", e);
+        console.warn("furca payload refresh failed, keeping last copy", e);
       }
     }
 
-    const kuji = createClient({
-      ...KUJI,
+    const furca = createClient({
+      ...FURCA,
       payload: cache?.payload,
       attributes: { id: request.headers.get("x-user-id"), country: request.cf?.country },
     });
 
-    const body = kuji.isOn("new-pricing") ? renderNewPricing() : renderPricing();
-    kuji.track("pricing_viewed");
+    const body = furca.isOn("new-pricing") ? renderNewPricing() : renderPricing();
+    furca.track("pricing_viewed");
 
-    ctx.waitUntil(kuji.flush()); // send exposures and events after responding
+    ctx.waitUntil(furca.flush()); // send exposures and events after responding
     return new Response(body);
   },
 } satisfies ExportedHandler<Env>;`;
 
-  return `import { createClient, fetchPayload, type SdkPayload } from "@kuji/sdk";
+  return `import { createClient, fetchPayload, type SdkPayload } from "@furca/sdk";
 
-const KUJI = { apiHost: "${apiHost}", sdkKey: "${sdkKey}" };
+const FURCA = { apiHost: "${apiHost}", sdkKey: "${sdkKey}" };
 
 // One payload per process, refreshed every 30s; flags evaluate locally
 let payload: SdkPayload | undefined;
 const refresh = () =>
-  fetchPayload(KUJI).then(
+  fetchPayload(FURCA).then(
     (p) => (payload = p),
-    (e) => console.warn("kuji payload refresh failed, keeping last copy", e),
+    (e) => console.warn("furca payload refresh failed, keeping last copy", e),
   );
 await refresh();
 setInterval(refresh, 30_000);
 
 app.get("/checkout", async (req, res) => {
-  const kuji = createClient({ ...KUJI, payload, attributes: { id: req.user.id } });
+  const furca = createClient({ ...FURCA, payload, attributes: { id: req.user.id } });
 
-  res.render("checkout", { layout: kuji.getValue("checkout-layout", "classic") });
+  res.render("checkout", { layout: furca.getValue("checkout-layout", "classic") });
 
-  kuji.track("checkout_viewed");
-  await kuji.flush();
+  furca.track("checkout_viewed");
+  await furca.flush();
 });`;
 };
 

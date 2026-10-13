@@ -1,4 +1,4 @@
-import type { Member } from "@kuji/core/members/Member";
+import type { Member } from "@furca/core/members/Member";
 import { Dropdown, Kbd, Label, ListBox, Select, Separator, useTheme } from "@heroui/react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
@@ -156,7 +156,7 @@ export function Sidebar({
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-4 bg-surface-secondary px-3 py-4">
       <div className="px-1">
-        <Link to="/overview" onClick={onNavigate} aria-label="kuji home" className="inline-flex rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus">
+        <Link to="/overview" onClick={onNavigate} aria-label="furca home" className="inline-flex rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus">
           <Logo />
         </Link>
       </div>

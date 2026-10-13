@@ -1,9 +1,9 @@
-import { CredentialCipher } from "@kuji/core/datasources/CredentialCipher";
-import { BigQueryConfig, BUILTIN_DATA_SOURCE_ID, DataSource } from "@kuji/core/datasources/DataSource";
-import { DataSourceService } from "@kuji/core/datasources/DataSourceService";
-import { ConflictError, NotFoundError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { dataSources } from "@kuji/database/schema/index";
+import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import { BigQueryConfig, BUILTIN_DATA_SOURCE_ID, DataSource } from "@furca/core/datasources/DataSource";
+import { DataSourceService } from "@furca/core/datasources/DataSourceService";
+import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { dataSources } from "@furca/database/schema/index";
 import { eq } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { toDataSource } from "../mappers";

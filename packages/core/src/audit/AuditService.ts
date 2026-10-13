@@ -16,4 +16,4 @@ export interface AuditServiceShape {
   readonly list: (query: AuditQuery) => Effect.Effect<ReadonlyArray<AuditLog>, PersistenceError>;
 }
 
-export class AuditService extends Context.Service<AuditService, AuditServiceShape>()("kuji/AuditService") {}
+export class AuditService extends Context.Service<AuditService, AuditServiceShape>()("furca/AuditService") {}

@@ -1,9 +1,9 @@
-import { Environment } from "@kuji/core/environments/Environment";
-import { EnvironmentService } from "@kuji/core/environments/EnvironmentService";
-import { PayloadStore } from "@kuji/core/environments/PayloadStore";
-import { ConflictError, NotFoundError } from "@kuji/core/shared/errors";
-import { Database } from "@kuji/database/Database";
-import { environments, experiments, featureEnvironments, features } from "@kuji/database/schema/index";
+import { Environment } from "@furca/core/environments/Environment";
+import { EnvironmentService } from "@furca/core/environments/EnvironmentService";
+import { PayloadStore } from "@furca/core/environments/PayloadStore";
+import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { Database } from "@furca/database/Database";
+import { environments, experiments, featureEnvironments, features } from "@furca/database/schema/index";
 import { and, count, eq, isNull, max, sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { toEnvironment, toExperiment } from "../mappers";

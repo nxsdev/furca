@@ -1,5 +1,5 @@
 import { Breadcrumbs, Button, buttonVariants, Skeleton, toast } from "@heroui/react";
-import type { Metric } from "@kuji/core/metrics/Metric";
+import type { Metric } from "@furca/core/metrics/Metric";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, Pencil } from "lucide-react";
@@ -14,7 +14,7 @@ import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/metrics/$metricId")({
   validateSearch: (s: Record<string, unknown>): { edit?: true } => (s.edit ? { edit: true } : {}),
-  head: () => ({ meta: [{ title: "Metric · kuji" }] }),
+  head: () => ({ meta: [{ title: "Metric · furca" }] }),
   component: Page,
 });
 

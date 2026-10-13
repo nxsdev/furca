@@ -1,8 +1,8 @@
-# kuji
+# furca
 
 **Feature flags and A/B experiments you can trust, on your own Cloudflare account.**
 
-kuji (くじ, "drawing lots") is an open-source alternative to GrowthBook that deploys as a single
+furca (Latin for "fork", the root of *bifurcate*) is an open-source alternative to GrowthBook that deploys as a single
 Cloudflare Worker with D1 and KV. No Docker, no MongoDB, no Python stats service. SDKs evaluate flags
 locally, results use sequential testing by default, and broken data (sample ratio mismatch, multiple
 exposures) blocks a decision instead of decorating it.
@@ -13,7 +13,7 @@ exposures) blocks a decision instead of decorating it.
 
 ## Why another one
 
-| | kuji | GrowthBook (self-hosted) |
+| | furca | GrowthBook (self-hosted) |
 |---|---|---|
 | Infrastructure | 1 Worker + D1 + KV on your account | Node app + MongoDB + Python + your warehouse |
 | Start without a warehouse | Built-in event store (D1) | Needs a warehouse (managed warehouse is Cloud-only) |
@@ -43,10 +43,10 @@ What is deliberately **not** built (visual editor, bandits, holdouts, quantile m
 ## Architecture
 
 ```
-your app ── @kuji/sdk ──► GET  /api/sdk/v1/payload/:sdkKey  (KV, edge cached; evaluated locally)
+your app ── @furca/sdk ──► GET  /api/sdk/v1/payload/:sdkKey  (KV, edge cached; evaluated locally)
                     └───► POST /api/sdk/v1/events/:sdkKey   (exposures + events → D1)
 
-kuji Worker (one deploy)
+furca Worker (one deploy)
 ├── TanStack Start admin UI (HeroUI)
 ├── /api/rpc   oRPC v2 contract-first API, Effect 4 services
 ├── /api/auth  Better Auth
@@ -63,7 +63,7 @@ See [CLAUDE.md](CLAUDE.md) for conventions.
 Prerequisites: a Cloudflare account and [Bun](https://bun.sh) 1.4+.
 
 ```bash
-git clone https://github.com/<you>/kuji && cd kuji
+git clone https://github.com/<you>/furca && cd furca
 bun install
 cp .env.example .env   # fill BETTER_AUTH_SECRET and ENCRYPTION_KEY (openssl rand -hex 32)
 bun alchemy profile edit --add Cloudflare   # or export CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID
@@ -97,22 +97,22 @@ bun run check           # typecheck + tests (tests run against a real local D1 v
 ## SDK
 
 ```ts
-import { createClient } from "@kuji/sdk";
+import { createClient } from "@furca/sdk";
 
-const kuji = createClient({
+const furca = createClient({
   sdkKey: "sdk-…",
-  apiHost: "https://kuji.example.com",
+  apiHost: "https://furca.example.com",
   attributes: { id: user.id, country: "JP", plan: "pro" },
 });
-await kuji.ready();
+await furca.ready();
 
-if (kuji.isOn("new-checkout")) renderNewCheckout();
-const color = kuji.getValue("button-color", "blue");
-kuji.track("purchase", 42.5);
+if (furca.isOn("new-checkout")) renderNewCheckout();
+const color = furca.getValue("button-color", "blue");
+furca.track("purchase", 42.5);
 ```
 
 Exposures are sent automatically the first time a user is assigned to a variation. On Workers, call
-`ctx.waitUntil(kuji.flush())`. More: [packages/sdk/README.md](packages/sdk/README.md).
+`ctx.waitUntil(furca.flush())`. More: [packages/sdk/README.md](packages/sdk/README.md).
 
 ## License
 

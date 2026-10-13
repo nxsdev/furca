@@ -214,10 +214,10 @@ const trimHost = (apiHost: string) => apiHost.replace(/\/+$/, "");
 export async function fetchPayload(options: { apiHost: string; sdkKey: string; fetch?: FetchFn }): Promise<SdkPayload> {
   const f: FetchFn = options.fetch ?? ((input, init) => globalThis.fetch(input, init));
   const res = await f(`${trimHost(options.apiHost)}/api/sdk/v1/payload/${encodeURIComponent(options.sdkKey)}`);
-  if (!res.ok) throw new Error(`[kuji] payload request failed: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`[furca] payload request failed: HTTP ${res.status}`);
   const payload = (await res.json()) as SdkPayload;
   if (payload?.version !== 1 || typeof payload.features !== "object" || payload.features === null) {
-    throw new Error("[kuji] unsupported payload format");
+    throw new Error("[furca] unsupported payload format");
   }
   return payload;
 }
@@ -228,7 +228,7 @@ export async function fetchPayload(options: { apiHost: string; sdkKey: string; f
 
 export interface ClientOptions {
   sdkKey: string;
-  /** e.g. "https://kuji.example.com". Required unless `payload` is given */
+  /** e.g. "https://furca.example.com". Required unless `payload` is given */
   apiHost?: string;
   attributes?: Attributes;
   /** Bootstrapped payload (SSR / Workers). When set, `ready()` does not fetch */
@@ -239,7 +239,7 @@ export interface ClientOptions {
   flushInterval?: number;
   /** Flush as soon as this many exposures+events are queued. Default 100 */
   maxBatchSize?: number;
-  /** Send exposures to kuji. Default true. `onExposure` is called either way */
+  /** Send exposures to furca. Default true. `onExposure` is called either way */
   trackExposures?: boolean;
   /** Called once per (experiment, phase, variation, user) per client, e.g. to forward to GA4/Segment */
   onExposure?: (exposure: Exposure) => void;
@@ -247,7 +247,7 @@ export interface ClientOptions {
   fetch?: FetchFn;
 }
 
-export interface KujiClient {
+export interface FurcaClient {
   /** Resolves once the payload is loaded (or failed to load). Never rejects */
   ready(): Promise<void>;
   isOn(key: string): boolean;
@@ -272,12 +272,12 @@ const warned = new Set<string>();
 const warnOnce = (msg: string, err?: unknown) => {
   if (warned.has(msg)) return;
   warned.add(msg);
-  console.warn(`[kuji] ${msg}`, ...(err === undefined ? [] : [err]));
+  console.warn(`[furca] ${msg}`, ...(err === undefined ? [] : [err]));
 };
 
-export function createClient(options: ClientOptions): KujiClient {
+export function createClient(options: ClientOptions): FurcaClient {
   const { sdkKey, apiHost, onExposure } = options;
-  if (!apiHost && !options.payload) throw new Error("[kuji] createClient needs `apiHost` or `payload`");
+  if (!apiHost && !options.payload) throw new Error("[furca] createClient needs `apiHost` or `payload`");
   const flushInterval = options.flushInterval ?? 2000;
   const maxBatchSize = options.maxBatchSize ?? 100;
   const trackExposures = options.trackExposures ?? true;
@@ -305,7 +305,7 @@ export function createClient(options: ClientOptions): KujiClient {
           try {
             l(next);
           } catch (e) {
-            console.error("[kuji] subscriber threw", e);
+            console.error("[furca] subscriber threw", e);
           }
         }
       }
@@ -382,7 +382,7 @@ export function createClient(options: ClientOptions): KujiClient {
         try {
           onExposure?.(exposure);
         } catch (e) {
-          console.error("[kuji] onExposure threw", e);
+          console.error("[furca] onExposure threw", e);
         }
       }
     }

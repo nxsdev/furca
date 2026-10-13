@@ -1,17 +1,17 @@
 import "@orpc/experimental-effect/extensions/effect";
-import { user } from "@kuji/database/schema/index";
-import { makeDrizzle } from "@kuji/database/Database";
+import { user } from "@furca/database/schema/index";
+import { makeDrizzle } from "@furca/database/Database";
 import type { WithEffectContext } from "@orpc/experimental-effect";
 import { implement, ORPCError } from "@orpc/server";
 import { contract } from "../contract";
 import type { Auth } from "./Auth";
-import type { KujiEnv } from "./Env";
+import type { FurcaEnv } from "./Env";
 import type { AppServices } from "./Services";
 
 /** oRPC context of every request. Effect handlers get AppServices through `effect/context` */
 export interface RequestContext extends WithEffectContext<AppServices> {
   readonly headers: Headers;
-  readonly env: KujiEnv;
+  readonly env: FurcaEnv;
   readonly auth: Auth;
 }
 

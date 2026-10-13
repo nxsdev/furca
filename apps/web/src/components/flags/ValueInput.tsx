@@ -1,4 +1,4 @@
-import { type FeatureValueType, validateFeatureValue } from "@kuji/core/features/Feature";
+import { type FeatureValueType, validateFeatureValue } from "@furca/core/features/Feature";
 import { Button, Input, Label, NumberField, TextArea, TextField } from "@heroui/react";
 import { Segmented } from "./Segmented";
 

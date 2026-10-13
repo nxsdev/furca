@@ -1,4 +1,4 @@
-import { MemberService } from "@kuji/core/members/MemberService";
+import { MemberService } from "@furca/core/members/MemberService";
 import { ORPCError } from "@orpc/server";
 import { Effect } from "effect";
 import { authed } from "../Runtime/orpc";

@@ -1,6 +1,6 @@
-import type { Environment } from "@kuji/core/environments/Environment";
-import type { Experiment } from "@kuji/core/experiments/Experiment";
-import { type Feature, validateFeatureValue } from "@kuji/core/features/Feature";
+import type { Environment } from "@furca/core/environments/Environment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
+import { type Feature, validateFeatureValue } from "@furca/core/features/Feature";
 import { AlertDialog, Button, Dropdown, Input, Label, Skeleton, Tabs, TextField, toast } from "@heroui/react";
 import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,7 +26,7 @@ type Tab = "targeting" | "implementation" | "history";
 export const Route = createFileRoute("/_app/flags/$featureId")({
   validateSearch: (search: Record<string, unknown>): { tab?: Exclude<Tab, "targeting"> } =>
     search.tab === "implementation" || search.tab === "history" ? { tab: search.tab } : {},
-  head: () => ({ meta: [{ title: "Flag · kuji" }] }),
+  head: () => ({ meta: [{ title: "Flag · furca" }] }),
   component: FlagPage,
 });
 

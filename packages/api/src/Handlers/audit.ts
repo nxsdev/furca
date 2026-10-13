@@ -1,4 +1,4 @@
-import { AuditService } from "@kuji/core/audit/AuditService";
+import { AuditService } from "@furca/core/audit/AuditService";
 import { authed } from "../Runtime/orpc";
 
 export const auditRouter = {

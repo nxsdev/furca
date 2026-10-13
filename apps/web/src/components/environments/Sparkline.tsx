@@ -1,5 +1,5 @@
 import { Skeleton } from "@heroui/react";
-import type { VolumeBucket } from "@kuji/api/contract";
+import type { VolumeBucket } from "@furca/api/contract";
 import { useQuery } from "@tanstack/react-query";
 import { formatCount } from "~/components/results/format";
 import { orpc } from "~/lib/rpc";

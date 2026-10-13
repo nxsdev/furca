@@ -1,5 +1,5 @@
 {
-  "name": "kuji",
+  "name": "furca",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -11,7 +11,7 @@
     "deploy": "alchemy deploy packages/infra/alchemy.run.ts",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun test",
-    "db:generate": "bun run --filter @kuji/database db:generate",
+    "db:generate": "bun run --filter @furca/database db:generate",
     "check": "bun run typecheck && bun test",
     "postinstall": "effect-tsgo patch"
   },

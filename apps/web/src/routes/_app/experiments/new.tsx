@@ -3,7 +3,7 @@ import { ExperimentForm } from "~/components/experiments/ExperimentForm";
 import { PageHeader } from "~/components/ui/primitives";
 
 export const Route = createFileRoute("/_app/experiments/new")({
-  head: () => ({ meta: [{ title: "New experiment · kuji" }] }),
+  head: () => ({ meta: [{ title: "New experiment · furca" }] }),
   validateSearch: (search: Record<string, unknown>): { featureId?: string } =>
     typeof search.featureId === "string" ? { featureId: search.featureId } : {},
   component: Page,

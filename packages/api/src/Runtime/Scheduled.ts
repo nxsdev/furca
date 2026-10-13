@@ -1,9 +1,9 @@
-import { ExperimentAnalysisService } from "@kuji/core/analysis/Analysis";
-import { Database } from "@kuji/database/Database";
+import { ExperimentAnalysisService } from "@furca/core/analysis/Analysis";
+import { Database } from "@furca/database/Database";
 import { Effect, Layer } from "effect";
 import { AnalysisServicesLive } from "./AnalysisServices";
 import { makeBaseLayer } from "./BaseServices";
-import type { KujiEnv } from "./Env";
+import type { FurcaEnv } from "./Env";
 
 /** Refreshes every running experiment one by one; a failing experiment is logged and skipped */
 const refreshRunningExperiments = Effect.gen(function* () {
@@ -21,5 +21,5 @@ const refreshRunningExperiments = Effect.gen(function* () {
 });
 
 /** Hourly cron: refresh results of running experiments */
-export const runScheduledAnalysis = (env: KujiEnv): Promise<void> =>
+export const runScheduledAnalysis = (env: FurcaEnv): Promise<void> =>
   Effect.runPromise(refreshRunningExperiments.pipe(Effect.provide(AnalysisServicesLive.pipe(Layer.provideMerge(makeBaseLayer(env))))));

@@ -1,13 +1,13 @@
 import { afterAll, describe, expect, it } from "bun:test";
-import { makeTestD1 } from "@kuji/database/testing/TestDatabase";
-import type { KujiEnv } from "../src/Runtime/Env";
+import { makeTestD1 } from "@furca/database/testing/TestDatabase";
+import type { FurcaEnv } from "../src/Runtime/Env";
 import { handleApiRequest } from "../src/Runtime/WorkerEntry";
 
 const t = await makeTestD1();
 afterAll(() => t.dispose());
 
 const kv = new Map<string, string>();
-const env: KujiEnv = {
+const env: FurcaEnv = {
   DB: t.d1,
   KV: {
     get: async (key: string) => kv.get(key) ?? null,

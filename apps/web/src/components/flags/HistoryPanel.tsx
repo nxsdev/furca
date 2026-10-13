@@ -1,4 +1,4 @@
-import type { AuditLog } from "@kuji/core/audit/AuditLog";
+import type { AuditLog } from "@furca/core/audit/AuditLog";
 import { Button } from "@heroui/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ChevronRight, History } from "lucide-react";

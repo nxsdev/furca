@@ -1,5 +1,5 @@
 import { Button } from "@heroui/react";
-import type { AuditEntityType, AuditLog } from "@kuji/core/audit/AuditLog";
+import type { AuditEntityType, AuditLog } from "@furca/core/audit/AuditLog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChartLine, ChevronRight, Database, Flag, FlaskConical, History, KeyRound, UserRound } from "lucide-react";

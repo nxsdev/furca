@@ -1,5 +1,5 @@
-import { type Experiment, trafficChangeNeedsNewPhase } from "@kuji/core/experiments/Experiment";
-import type { Feature } from "@kuji/core/features/Feature";
+import { type Experiment, trafficChangeNeedsNewPhase } from "@furca/core/experiments/Experiment";
+import type { Feature } from "@furca/core/features/Feature";
 import { Button, Description, Label, NumberField, Switch, TextArea, TextField } from "@heroui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Info, RotateCcw } from "lucide-react";

@@ -1,6 +1,6 @@
 # Design
 
-Scene: an engineer at a desk mid-afternoon, editor in dark mode on one side, kuji on the other; or a
+Scene: an engineer at a desk mid-afternoon, editor in dark mode on one side, furca on the other; or a
 PM projecting the results page in a bright meeting room. Both themes are first-class; default follows
 the OS.
 
@@ -23,7 +23,7 @@ meaning and never used decoratively.
 | success (winning) | oklch(0.55 0.15 150) | oklch(0.72 0.17 150) | significant improvement |
 | danger (losing) | oklch(0.58 0.2 25) | oklch(0.68 0.19 25) | significant regression, destructive |
 | warning (health) | oklch(0.72 0.15 75) | oklch(0.8 0.14 75) | SRM, multiple exposures |
-| brand mark | oklch(0.57 0.16 353) | same | logo tip only (omikuji stick) |
+| brand mark | oklch(0.57 0.16 353) | same | logo tip only (omifurca stick) |
 
 Variation colors in charts: control = muted gray; treatments = blue 255, violet 300, teal 190,
 amber 75 (in that order). Lift intervals use the verdict color, not the variation color.
