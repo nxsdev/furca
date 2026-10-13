@@ -132,6 +132,11 @@
   .toggle-button {
     border-radius: calc(var(--radius) * 1.5);
   }
+
+  /* The current breadcrumb is the page itself, not a link: ink, not link blue */
+  .breadcrumbs .breadcrumbs__link[data-current="true"] {
+    color: var(--foreground);
+  }
 }
 
 @layer base {
