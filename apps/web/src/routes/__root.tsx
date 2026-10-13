@@ -40,7 +40,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootDocument,
   component: RootComponent,
+  notFoundComponent: NotFound,
 });
+
+function NotFound() {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-4 text-center">
+      <p className="font-mono text-label text-muted">404</p>
+      <h1 className="text-title font-semibold tracking-tight">This page doesn't exist</h1>
+      <a href="/overview" className="text-body text-link underline-offset-4 hover:underline">
+        Back to overview
+      </a>
+    </div>
+  );
+}
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (

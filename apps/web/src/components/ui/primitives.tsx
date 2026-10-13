@@ -96,8 +96,8 @@ export function Panel({ children, className = "" }: { children: ReactNode; class
 
 export function PanelHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
-      <div className="min-w-0">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-border px-5 py-4">
+      <div className="min-w-0 flex-1 basis-60">
         <h2 className="text-section font-medium">{title}</h2>
         {description !== undefined && <p className="mt-0.5 text-label text-muted">{description}</p>}
       </div>
