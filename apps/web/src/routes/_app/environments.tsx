@@ -1,6 +1,7 @@
 import { Button, Description, Drawer, Dropdown, FieldError, Input, Label, Spinner, TextField, toast, Tooltip } from "@heroui/react";
-import type { EnvironmentListItem } from "@furca/api/contract";
+import { type EnvironmentListItem, Key } from "@furca/api/contract";
 import type { Environment } from "@furca/core/environments/Environment";
+import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { FileJson, KeyRound, MoreHorizontal, Plus, RotateCw, TriangleAlert } from "lucide-react";
@@ -8,13 +9,14 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CodeBlock, Quickstart } from "~/components/environments/Quickstart";
 import { formatBytes, TrafficSparkline } from "~/components/environments/Sparkline";
-import { slugify } from "~/components/metrics/MetricForm";
+import { errorText, matches, setServerError, submitHandler, useAppForm, useFieldContext, useRequired } from "~/components/form/form";
+import { slugify } from "~/components/metrics/slugify";
 import { environmentHue } from "~/components/shell/Sidebar";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { CopyButton, EmptyState, ListSkeleton, PageHeader, Panel, QueryError } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
-import { errorMessage, orpc } from "~/lib/rpc";
+import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/environments")({
   head: () => ({ meta: [{ title: i18n.t("environments:pageTitle") }] }),
@@ -39,72 +41,96 @@ function PayloadSize({ bytes }: { bytes: number | null }) {
   );
 }
 
+/** Kit TextField plus isRequired / autoFocus / spellCheck, which this inline row needs */
+function RowField({
+  label,
+  placeholder,
+  description,
+  mono = false,
+  autoFocus = false,
+}: {
+  label: string;
+  placeholder: string;
+  description?: string;
+  mono?: boolean;
+  autoFocus?: boolean;
+}) {
+  const field = useFieldContext<string>();
+  const shown = field.state.meta.isTouched || field.form.state.submissionAttempts > 0;
+  const error = shown ? errorText(field.state.meta.errors) : "";
+  return (
+    <TextField
+      name={field.name}
+      value={field.state.value}
+      onChange={field.handleChange}
+      onBlur={field.handleBlur}
+      isRequired
+      isInvalid={error !== ""}
+      autoFocus={autoFocus}
+      validationBehavior="aria"
+      className="sm:w-56"
+    >
+      <Label>{label}</Label>
+      <Input placeholder={placeholder} spellCheck={mono ? false : undefined} className={mono ? "font-mono" : undefined} />
+      {description !== undefined && <Description>{description}</Description>}
+      <FieldError>{error}</FieldError>
+    </TextField>
+  );
+}
+
 function CreateEnvironment({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation(["environments", "common"]);
   const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [key, setKey] = useState("");
-  const [keyEdited, setKeyEdited] = useState(false);
-  const create = useMutation(
-    orpc.environments.create.mutationOptions({
-      onSuccess: (env) => {
+  const required = useRequired();
+  const keyPattern = matches(Key, () => t("create.keyInvalid"));
+  const form = useAppForm({
+    defaultValues: { name: "", key: "" },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        const env = await client.environments.create({ name: value.name.trim(), key: value.key });
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         toast.success(t("create.created", { name: env.name }), { description: t("create.createdDescription") });
         onDone();
-      },
-    }),
-  );
-  const keyValid = /^[a-z0-9][a-z0-9_-]{0,63}$/.test(key);
+      } catch (e) {
+        // BAD_REQUEST is the duplicate-key check (the name is validated here first)
+        setServerError(formApi, e, e instanceof ORPCError && e.code === "BAD_REQUEST" ? "key" : undefined);
+      }
+    },
+  });
   return (
     <form
+      noValidate
       className="flex flex-col gap-4 border-b border-border bg-default/30 px-5 py-4 sm:flex-row sm:items-start"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (name.trim() !== "" && keyValid) create.mutate({ name: name.trim(), key });
-      }}
+      onSubmit={submitHandler(form)}
     >
-      <TextField
-        value={name}
-        onChange={(v) => {
-          setName(v);
-          if (!keyEdited) setKey(slugify(v));
+      <form.AppField
+        name="name"
+        validators={{ onChange: required }}
+        listeners={{
+          onChange: ({ value }) => {
+            // Follow the name until the key is edited; Japanese names slugify to "", so leave the key alone then
+            const slug = slugify(value);
+            if (slug !== "" && form.getFieldMeta("key")?.isDirty !== true) form.setFieldValue("key", slug, { dontUpdateMeta: true });
+          },
         }}
-        isRequired
-        autoFocus
-        className="sm:w-56"
       >
-        <Label>{t("create.name")}</Label>
-        <Input placeholder="Staging" />
-      </TextField>
-      <TextField
-        value={key}
-        onChange={(v) => {
-          setKey(v);
-          setKeyEdited(true);
-        }}
-        isRequired
-        isInvalid={key !== "" && !keyValid}
-        className="sm:w-56"
-      >
-        <Label>{t("create.key")}</Label>
-        <Input placeholder="staging" spellCheck={false} className="font-mono" />
-        <Description>{t("create.keyHelp")}</Description>
-        <FieldError>{t("create.keyInvalid")}</FieldError>
-      </TextField>
+        {() => <RowField label={t("create.name")} placeholder="Staging" autoFocus />}
+      </form.AppField>
+      <form.AppField name="key" validators={{ onChange: ({ value }) => required({ value }) ?? keyPattern({ value }) }}>
+        {() => <RowField label={t("create.key")} placeholder="staging" description={t("create.keyHelp")} mono />}
+      </form.AppField>
       <div className="flex items-center gap-2 sm:mt-6">
-        <Button type="submit" size="sm" isPending={create.isPending} isDisabled={name.trim() === "" || !keyValid}>
-          {t("common:actions.create")}
-        </Button>
+        <form.AppForm>
+          <form.SubmitButton label={t("common:actions.create")} size="sm" />
+        </form.AppForm>
         <Button size="sm" variant="tertiary" onPress={onDone}>
           {t("common:actions.cancel")}
         </Button>
       </div>
-      {create.error !== null && (
-        <p role="alert" className="text-label text-danger sm:mt-7">
-          {errorMessage(create.error)}
-        </p>
-      )}
+      <form.AppForm>
+        <form.FormError className="sm:mt-6" />
+      </form.AppForm>
     </form>
   );
 }

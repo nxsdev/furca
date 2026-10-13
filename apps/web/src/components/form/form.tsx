@@ -27,8 +27,9 @@ import {
 } from "@heroui/react";
 import { type AnyFieldApi, type AnyFormApi, createFormHook, createFormHookContexts } from "@tanstack/react-form";
 import { Schema } from "effect";
-import type { FormEvent, ReactNode } from "react";
+import { type FormEvent, type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { i18n } from "~/i18n";
 import { errorMessage } from "~/lib/rpc";
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } = createFormHookContexts();
@@ -44,8 +45,24 @@ export const errorText = (errors: ReadonlyArray<unknown>): string =>
 const visibleError = (field: AnyFieldApi): string | null => {
   const { meta } = field.state;
   const submitted = field.form.state.submissionAttempts > 0;
-  if (meta.errors.length === 0 || (!meta.isTouched && !submitted)) return null;
+  if (meta.errors.length === 0 || (!meta.isBlurred && !submitted)) return null;
   return errorText(meta.errors) || null;
+};
+
+/**
+ * Validators return messages in the language active when they ran; re-run them when the user
+ * switches language so a visible error follows the new language
+ */
+const useRevalidateOnLanguageChange = (field: AnyFieldApi) => {
+  useEffect(() => {
+    const revalidate = () => {
+      if (field.state.meta.errors.length === 0) return;
+      void field.validate("change");
+      void field.validate("blur");
+    };
+    i18n.on("languageChanged", revalidate);
+    return () => i18n.off("languageChanged", revalidate);
+  }, [field]);
 };
 
 interface CommonProps {
@@ -73,6 +90,7 @@ function TextField({
   readonly mono?: boolean;
 }) {
   const field = useFieldContext<string>();
+  useRevalidateOnLanguageChange(field);
   const error = visibleError(field);
   return (
     <HeroTextField
@@ -107,6 +125,7 @@ function TextAreaField({
   className,
 }: CommonProps & { readonly placeholder?: string; readonly rows?: number; readonly mono?: boolean }) {
   const field = useFieldContext<string>();
+  useRevalidateOnLanguageChange(field);
   const error = visibleError(field);
   return (
     <HeroTextField
@@ -148,6 +167,7 @@ function NumberField({
   readonly suffix?: ReactNode;
 }) {
   const field = useFieldContext<number>();
+  useRevalidateOnLanguageChange(field);
   const error = visibleError(field);
   return (
     <HeroNumberField
@@ -192,6 +212,7 @@ function SelectField({
   className,
 }: CommonProps & { readonly options: ReadonlyArray<SelectOption>; readonly placeholder?: string }) {
   const field = useFieldContext<string>();
+  useRevalidateOnLanguageChange(field);
   const error = visibleError(field);
   return (
     <Select
@@ -282,7 +303,7 @@ function SubmitButton({
 function FormError({ className = "" }: { readonly className?: string }) {
   const form = useFormContext();
   return (
-    <form.Subscribe selector={(s) => s.errorMap.onSubmit}>
+    <form.Subscribe selector={(s) => s.errorMap.onServer ?? s.errorMap.onSubmit}>
       {(error) => {
         const text = error === undefined || error === null ? "" : errorText([error]);
         return text === "" ? null : (
@@ -318,11 +339,23 @@ export const matches =
   ({ value }: { value: unknown }): string | undefined =>
     Schema.is(schema)(value) ? undefined : message();
 
-/** Shows an API error under `field`, or as the form-level error when no field is given */
+/**
+ * Shows an API error under `field`, or as the form-level error when no field is given.
+ * Stored as the `onServer` error, which the next submit clears, so the user can always retry
+ */
 export const setServerError = (form: AnyFormApi, error: unknown, field?: string): void => {
-  const message = errorMessage(error);
-  form.setErrorMap({
-    onSubmit: field === undefined ? { form: message, fields: {} } : { fields: { [field]: message } },
+  const message = typeof error === "string" ? error : errorMessage(error);
+  if (field === undefined) {
+    form.setErrorMap({ onServer: { form: message, fields: {} } });
+    return;
+  }
+  form.setErrorMap({ onServer: { fields: { [field]: message } } });
+  // A field's server error describes the value that was sent; drop it as soon as the user edits it
+  const sent = form.getFieldValue(field);
+  const subscription = form.store.subscribe(() => {
+    if (Object.is(form.getFieldValue(field), sent)) return;
+    subscription.unsubscribe();
+    form.setFieldMeta(field, (meta) => ({ ...meta, errorMap: { ...meta.errorMap, onServer: undefined } }));
   });
 };
 

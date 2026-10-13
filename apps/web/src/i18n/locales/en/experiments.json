@@ -181,6 +181,7 @@
       "coverageHelp": "Share of matching users who enter; the rest get the flag's other rules. You can raise it later without restarting.",
       "environments": "Environments",
       "environmentsHelp": "The experiment rule is added to the flag in each.",
+      "environmentsError": "Choose at least one environment.",
       "analyzeFrom": "Analyze exposures from",
       "analyzeHelp": "Usually production; other environments are for QA.",
       "assignBy": "Assign by attribute",
@@ -285,6 +286,7 @@
     "evenSplit": "Even split",
     "weight": "{{name}} weight",
     "weightsTotal": "Weights total {{percent}}%; they must total 100%.",
+    "weightZero": "Give every variation more than 0%.",
     "whoCanEnter": "Who can enter",
     "changes": {
       "coverageDown": "coverage goes down",

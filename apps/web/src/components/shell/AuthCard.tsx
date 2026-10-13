@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { submitHandler, useAppForm } from "~/components/form/form";
+import { setServerError, submitHandler, useAppForm } from "~/components/form/form";
 import { currentLocale, setLocale } from "~/i18n";
 import { LogoMark } from "./Logo";
 
@@ -39,7 +39,7 @@ export function AuthCard({
     },
     onSubmit: async ({ value, formApi }) => {
       const error = await onSubmit(value);
-      if (error !== null) formApi.setErrorMap({ onSubmit: { form: error, fields: {} } });
+      if (error !== null) setServerError(formApi, error);
     },
   });
   const validatorFor = (f: AuthField) => ({

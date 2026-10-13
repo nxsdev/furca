@@ -1,21 +1,23 @@
 import type { Environment } from "@furca/core/environments/Environment";
 import type { Experiment } from "@furca/core/experiments/Experiment";
-import { type Feature, validateFeatureValue } from "@furca/core/features/Feature";
+import type { Feature } from "@furca/core/features/Feature";
 import { AlertDialog, Button, Dropdown, Input, Label, Skeleton, Tabs, TextField, toast } from "@heroui/react";
 import { ORPCError } from "@orpc/client";
+import { useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, CornerDownRight, Ellipsis, Flag, Info, Pencil, Trash2, TriangleAlert } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { FlagSwitch } from "~/components/flags/FlagSwitch";
 import { HistoryPanel } from "~/components/flags/HistoryPanel";
 import { ImplementationPanel } from "~/components/flags/ImplementationPanel";
-import { AddRuleButton, newRule, type Rule, RulesList, ruleIssue } from "~/components/flags/RulesEditor";
+import { AddRuleButton, newRule, type Rule, type RulesDraft, RulesList, ruleIssue } from "~/components/flags/RulesEditor";
 import { Segmented } from "~/components/flags/Segmented";
 import { TestUserPanel, useTestUser } from "~/components/flags/TestUserPanel";
 import { cacheFeature, useSetEnabled } from "~/components/flags/useSetEnabled";
-import { ValueInput, ValuePreview } from "~/components/flags/ValueInput";
+import { ValueInput, ValuePreview, valueIssue } from "~/components/flags/ValueInput";
+import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
 import { environmentHue } from "~/components/shell/Sidebar";
 import { TagInput } from "~/components/targeting/ConditionBuilder";
 import { CopyButton, EmptyState, ListSkeleton, Panel, PanelHeader, QueryError } from "~/components/ui/primitives";
@@ -35,6 +37,10 @@ export const Route = createFileRoute("/_app/flags/$featureId")({
 const noRules: ReadonlyArray<Rule> = [];
 const savedRulesOf = (feature: Feature | undefined, envId: string | undefined): ReadonlyArray<Rule> =>
   feature?.environments.find((e) => e.environmentId === envId)?.rules ?? noRules;
+const sameRules = (a: ReadonlyArray<Rule>, b: ReadonlyArray<Rule>) => JSON.stringify(a) === JSON.stringify(b);
+const draftOf = (feature: Feature, environments: ReadonlyArray<Environment>): RulesDraft => ({
+  envs: environments.map((e) => ({ environmentId: e.id, rules: [...savedRulesOf(feature, e.id)] })),
+});
 
 function FlagPage() {
   const { t } = useTranslation("flags");
@@ -88,15 +94,64 @@ function FlagDetail({ feature }: { feature: Feature }) {
   const experimentsById = useMemo(() => new Map((experiments.data ?? []).map((x) => [x.id, x])), [experiments.data]);
   const linkedExperiments = (experiments.data ?? []).filter((x) => x.featureId === feature.id);
 
-  // Rules: local drafts per environment until "Save"
   const [envId, setEnvId] = useState<string | undefined>(undefined);
   const ruleEnv = environments.find((e) => e.id === (envId ?? current?.id)) ?? environments[0];
-  const [drafts, setDrafts] = useState<Readonly<Record<string, ReadonlyArray<Rule>>>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-  const dirtyIds = Object.keys(drafts).filter((id) => JSON.stringify(drafts[id]) !== JSON.stringify(savedRulesOf(feature, id)));
+
+  // Rules: every environment's drafts live in one form until "Save"
+  const form = useAppForm({
+    defaultValues: draftOf(feature, environments),
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        let saved = feature;
+        for (const [i, env] of value.envs.entries()) {
+          if (sameRules(env.rules, savedRulesOf(saved, env.environmentId))) continue;
+          saved = await client.features.saveRules({ id: feature.id, environmentId: env.environmentId, rules: env.rules });
+          cacheFeature(queryClient, saved);
+          // Saved environments stop counting as unsaved even if a later one fails
+          formApi.setFieldValue(`envs[${i}].rules`, [...savedRulesOf(saved, env.environmentId)]);
+        }
+        formApi.reset(draftOf(saved, environments));
+        setEditingId(null);
+        toast.success(t("detail.rulesSaved"), { description: t("detail.rulesSavedDescription") });
+      } catch (error) {
+        setServerError(formApi, error);
+        toast.danger(t("detail.saveRulesFailed"), { description: errorMessage(error), timeout: 0 });
+      } finally {
+        void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+      }
+    },
+  });
+  const envs = useStore(form.store, (s) => s.values.envs);
+  const saving = useStore(form.store, (s) => s.isSubmitting);
+  const saveError = useStore(form.store, (s) => errorText(s.errors));
+  const dirtyIds = envs.filter((e) => !sameRules(e.rules, savedRulesOf(feature, e.environmentId))).map((e) => e.environmentId);
   const dirty = dirtyIds.length > 0;
-  const rules = (ruleEnv && drafts[ruleEnv.id]) ?? savedRulesOf(feature, ruleEnv?.id);
-  const invalidCount = dirtyIds.flatMap((id) => drafts[id] ?? []).filter((r) => ruleIssue(r, feature.valueType) !== null).length;
+  const envIndex = envs.findIndex((e) => e.environmentId === ruleEnv?.id);
+  const rules = envs[envIndex]?.rules ?? savedRulesOf(feature, ruleEnv?.id);
+  const invalidCount = envs
+    .filter((e) => dirtyIds.includes(e.environmentId))
+    .flatMap((e) => e.rules)
+    .filter((r) => ruleIssue(r, feature.valueType) !== null).length;
+  const discard = () => {
+    form.reset(draftOf(feature, environments));
+    setEditingId(null);
+  };
+
+  // Environments without edits keep following the saved rules (refetch, another tab); new environments join the form
+  const prevFeature = useRef(feature);
+  useEffect(() => {
+    const prev = prevFeature.current;
+    prevFeature.current = feature;
+    for (const env of environments) {
+      const i = form.state.values.envs.findIndex((e) => e.environmentId === env.id);
+      const next = [...savedRulesOf(feature, env.id)];
+      if (i === -1) form.pushFieldValue("envs", { environmentId: env.id, rules: next });
+      else if (sameRules(form.state.values.envs[i]!.rules, savedRulesOf(prev, env.id)) && !sameRules(next, savedRulesOf(prev, env.id)))
+        form.setFieldValue(`envs[${i}].rules`, next);
+    }
+  }, [feature, environments, form]);
 
   const testUser = useTestUser({
     feature,
@@ -107,37 +162,18 @@ function FlagDetail({ feature }: { feature: Feature }) {
   const matchedRuleId = testUser.result?.matchedRuleId ?? null;
   const defaultMatched = testUser.result?.evaluation.source === "default";
 
-  const save = useMutation({
-    mutationFn: async () => {
-      for (const environmentId of dirtyIds) {
-        const saved = await client.features.saveRules({ id: feature.id, environmentId, rules: drafts[environmentId] ?? [] });
-        cacheFeature(queryClient, saved);
-        setDrafts((d) => Object.fromEntries(Object.entries(d).filter(([k]) => k !== environmentId)));
-      }
-    },
-    onSuccess: () => {
-      setEditingId(null);
-      toast.success(t("detail.rulesSaved"), { description: t("detail.rulesSavedDescription") });
-    },
-    onError: (error) => toast.danger(t("detail.saveRulesFailed"), { description: errorMessage(error), timeout: 0 }),
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
-      void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-    },
-  });
-
   // ⌘S / Ctrl+S saves rule changes
   useEffect(() => {
     if (!dirty) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (invalidCount === 0 && !save.isPending) save.mutate();
+        if (invalidCount === 0 && !form.state.isSubmitting) void form.handleSubmit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dirty, invalidCount, save]);
+  }, [dirty, invalidCount, form]);
 
   const blocker = useBlocker({
     shouldBlockFn: ({ current: from, next }) => dirty && from.pathname !== next.pathname,
@@ -188,7 +224,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
           </Tabs.List>
         </Tabs.ListContainer>
         <Tabs.Panel id="targeting" className="p-0">
-          {ruleEnv === undefined ? (
+          {ruleEnv === undefined || envIndex === -1 ? (
             <Panel>
               <ListSkeleton rows={3} />
             </Panel>
@@ -226,8 +262,9 @@ function FlagDetail({ feature }: { feature: Feature }) {
                   />
                   <EnvironmentOffNote feature={feature} environment={ruleEnv} rules={rules} experimentsById={experimentsById} />
                   <RulesList
-                    rules={rules}
-                    onChange={(next) => setDrafts({ ...drafts, [ruleEnv.id]: next })}
+                    key={ruleEnv.id}
+                    form={form}
+                    envIndex={envIndex}
                     valueType={feature.valueType}
                     environment={ruleEnv}
                     experimentsById={experimentsById}
@@ -241,7 +278,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                     <AddRuleButton
                       onAdd={(kind) => {
                         const rule = newRule(kind, feature.valueType, feature.defaultValue);
-                        setDrafts({ ...drafts, [ruleEnv.id]: [...rules, rule] });
+                        form.pushFieldValue(`envs[${envIndex}].rules`, rule);
                         setEditingId(rule.id);
                       }}
                     />
@@ -286,22 +323,13 @@ function FlagDetail({ feature }: { feature: Feature }) {
                 ),
               })}
               {invalidCount > 0 && <span className="text-danger"> · {t("detail.fixFirst", { count: invalidCount })}</span>}
-              {save.error !== null && <span className="block text-meta text-danger">{errorMessage(save.error)}</span>}
+              {saveError !== "" && <span className="block text-meta text-danger">{saveError}</span>}
             </p>
             <div className="flex shrink-0 gap-2">
-              <Button
-                size="sm"
-                variant="tertiary"
-                isDisabled={save.isPending}
-                onPress={() => {
-                  setDrafts({});
-                  setEditingId(null);
-                  save.reset();
-                }}
-              >
+              <Button size="sm" variant="tertiary" isDisabled={saving} onPress={discard}>
                 {t("common:actions.discard")}
               </Button>
-              <Button size="sm" isPending={save.isPending} isDisabled={invalidCount > 0} onPress={() => save.mutate()}>
+              <Button size="sm" isPending={saving} isDisabled={invalidCount > 0} onPress={() => void form.handleSubmit()}>
                 {t("common:actions.save")}
               </Button>
             </div>
@@ -339,17 +367,25 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
-  const [description, setDescription] = useState(feature.description);
-  const [tags, setTags] = useState<string[]>([...feature.tags]);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const update = useMutation({
-    mutationFn: () => client.features.update({ id: feature.id, description: description.trim(), defaultValue: feature.defaultValue, tags }),
-    onSuccess: (saved) => {
-      cacheFeature(queryClient, saved);
-      setEditing(false);
+  const details = () => ({ description: feature.description, tags: [...feature.tags] });
+  const form = useAppForm({
+    defaultValues: details(),
+    onSubmit: async ({ value }) => {
+      try {
+        const saved = await client.features.update({
+          id: feature.id,
+          description: value.description.trim(),
+          defaultValue: feature.defaultValue,
+          tags: value.tags,
+        });
+        cacheFeature(queryClient, saved);
+        setEditing(false);
+      } catch (error) {
+        toast.danger(t("header.saveDetailsFailed"), { description: errorMessage(error) });
+      }
     },
-    onError: (error) => toast.danger(t("header.saveDetailsFailed"), { description: errorMessage(error) }),
   });
   const archive = useMutation({
     mutationFn: (archived: boolean) => client.features.archive({ id: feature.id, archived }),
@@ -374,8 +410,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
   });
 
   const startEditing = () => {
-    setDescription(feature.description);
-    setTags([...feature.tags]);
+    form.reset(details());
     setEditing(true);
   };
 
@@ -398,25 +433,27 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
             {feature.archived && <span className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px] text-muted">{t("shared.archived")}</span>}
           </div>
           {editing ? (
-            <form
-              className="mt-3 flex max-w-xl flex-col gap-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                update.mutate();
-              }}
-            >
-              <TextField value={description} onChange={setDescription} autoFocus>
-                <Label>{t("shared.description")}</Label>
-                <Input className="text-base sm:text-label" placeholder={t("shared.descriptionPlaceholder")} />
-              </TextField>
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("shared.tags")}</Label>
-                <TagInput aria-label={t("shared.tags")} values={tags} onChange={setTags} placeholder="checkout, growth" />
-              </div>
+            <form className="mt-3 flex max-w-xl flex-col gap-3" noValidate onSubmit={submitHandler(form)}>
+              <form.AppField name="description">
+                {(field) => (
+                  <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} autoFocus>
+                    <Label>{t("shared.description")}</Label>
+                    <Input className="text-base sm:text-label" placeholder={t("shared.descriptionPlaceholder")} />
+                  </TextField>
+                )}
+              </form.AppField>
+              <form.AppField name="tags">
+                {(field) => (
+                  <div className="flex flex-col gap-1.5">
+                    <Label>{t("shared.tags")}</Label>
+                    <TagInput aria-label={t("shared.tags")} values={field.state.value} onChange={field.handleChange} placeholder="checkout, growth" />
+                  </div>
+                )}
+              </form.AppField>
               <div className="flex gap-2">
-                <Button size="sm" type="submit" isPending={update.isPending}>
-                  {t("common:actions.save")}
-                </Button>
+                <form.AppForm>
+                  <form.SubmitButton size="sm" label={t("common:actions.save")} />
+                </form.AppForm>
                 <Button size="sm" variant="tertiary" onPress={() => setEditing(false)}>
                   {t("common:actions.cancel")}
                 </Button>
@@ -546,15 +583,23 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
   const { t } = useTranslation(["flags", "common"]);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(feature.defaultValue);
-  const error = validateFeatureValue(feature.valueType, value);
-  const update = useMutation({
-    mutationFn: () => client.features.update({ id: feature.id, description: feature.description, defaultValue: value, tags: feature.tags }),
-    onSuccess: (saved) => {
-      cacheFeature(queryClient, saved);
-      void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
-      setEditing(false);
-      toast.success(t("defaultRow.saved"));
+  const form = useAppForm({
+    defaultValues: { value: feature.defaultValue },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        const saved = await client.features.update({
+          id: feature.id,
+          description: feature.description,
+          defaultValue: value.value,
+          tags: feature.tags,
+        });
+        cacheFeature(queryClient, saved);
+        void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
+        setEditing(false);
+        toast.success(t("defaultRow.saved"));
+      } catch (error) {
+        setServerError(formApi, error);
+      }
     },
   });
 
@@ -588,7 +633,7 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
           aria-expanded={editing}
           className="size-8 min-w-8 text-muted hover:text-foreground"
           onPress={() => {
-            setValue(feature.defaultValue);
+            form.reset({ value: feature.defaultValue });
             setEditing(!editing);
           }}
         >
@@ -598,22 +643,31 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
       {editing && (
         <form
           className="flex flex-col gap-3 border-t border-border bg-surface-secondary/60 px-4 py-4 sm:px-5 sm:pl-13"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (error === null) update.mutate();
-          }}
+          noValidate
+          onSubmit={submitHandler(form)}
         >
-          <ValueInput valueType={feature.valueType} value={value} onChange={setValue} label={t("shared.defaultValue")} />
-          {update.error !== null && <p className="text-meta text-danger">{errorMessage(update.error)}</p>}
+          {/* ValueInput shows its own validation message; the validator only blocks submit */}
+          <form.AppField name="value" validators={{ onChange: ({ value }) => valueIssue(feature.valueType, value) ?? undefined }}>
+            {(field) => (
+              <ValueInput valueType={feature.valueType} value={field.state.value} onChange={field.handleChange} label={t("shared.defaultValue")} />
+            )}
+          </form.AppField>
+          <form.Subscribe selector={(s) => errorText(s.errors)}>
+            {(error) => error !== "" && <p className="text-meta text-danger">{error}</p>}
+          </form.Subscribe>
           <div className="flex items-center justify-between gap-3">
             <p className="text-meta text-muted">{t("defaultRow.help")}</p>
             <div className="flex gap-2">
               <Button size="sm" variant="tertiary" onPress={() => setEditing(false)}>
                 {t("common:actions.cancel")}
               </Button>
-              <Button size="sm" type="submit" isPending={update.isPending} isDisabled={error !== null || value === feature.defaultValue}>
-                {t("defaultRow.save")}
-              </Button>
+              <form.Subscribe selector={(s) => [s.isSubmitting, s.isFieldsValid && s.values.value !== feature.defaultValue] as const}>
+                {([isSubmitting, canSave]) => (
+                  <Button size="sm" type="submit" isPending={isSubmitting} isDisabled={!canSave}>
+                    {t("defaultRow.save")}
+                  </Button>
+                )}
+              </form.Subscribe>
             </div>
           </div>
         </form>

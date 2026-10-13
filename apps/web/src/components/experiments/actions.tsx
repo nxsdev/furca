@@ -1,18 +1,20 @@
 import { type Experiment, trafficChangeNeedsNewPhase } from "@furca/core/experiments/Experiment";
 import type { Feature } from "@furca/core/features/Feature";
-import { Button, Description, Label, NumberField, Switch, TextArea, TextField } from "@heroui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Button, Description, FieldError, Label, NumberField, Switch, TextArea, TextField } from "@heroui/react";
+import { useStore } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { Info, RotateCcw } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { ValuePreview } from "~/components/flags/ValueInput";
+import { errorText, setServerError, useAppForm, useRequired } from "~/components/form/form";
 import { formatList } from "~/components/results/format";
 import { ConditionBuilder, type ConditionValue, conditionIssue } from "~/components/targeting/ConditionBuilder";
 import { Segmented } from "~/components/ui/Segmented";
 import { intlLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
-import { errorMessage, orpc } from "~/lib/rpc";
-import { CoverageField, currentPhase, evenPercents, VariationSwatch } from "./parts";
+import { client, orpc } from "~/lib/rpc";
+import { CoverageField, currentPhase, evenPercents, shownError, VariationSwatch } from "./parts";
 
 /** Puts the saved experiment in the cache and refreshes everything derived from it */
 function useSaved(onDone: () => void) {
@@ -44,44 +46,77 @@ function ActionPanel({ title, description, children, footer }: { title: string; 
 const sameWeights = (a: ReadonlyArray<number>, b: ReadonlyArray<number>) =>
   a.length === b.length && a.every((w, i) => Math.abs(w - (b[i] ?? 0)) < 1e-9);
 
+interface TrafficValues {
+  coverage: number;
+  /** Even split ignores percents; toggling it resets them to an even spread */
+  even: boolean;
+  percents: ReadonlyArray<number>;
+  conditions: ReadonlyArray<ConditionValue>;
+  reason: string;
+}
+
 export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; onDone: () => void }) {
   const { t } = useTranslation(["experiments", "common"]);
+  const onSaved = useSaved(onDone);
   const phase = currentPhase(experiment);
   const n = experiment.variations.length;
-  const [coverage, setCoverage] = useState(phase?.coverage ?? experiment.coverage);
-  const [even, setEven] = useState(() => (phase?.weights ?? []).every((w) => Math.abs(w - 1 / n) < 1e-3));
-  const [percents, setPercents] = useState(() => (phase?.weights ?? []).map((w) => Number((w * 100).toFixed(2))));
-  const [conditions, setConditions] = useState<ReadonlyArray<ConditionValue>>(phase?.conditions ?? []);
-  const [reason, setReason] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const save = useMutation(orpc.experiments.updateTraffic.mutationOptions({ onSuccess: useSaved(onDone) }));
+  const weightsOf = (v: TrafficValues) => (v.even ? experiment.variations.map(() => 1 / n) : v.percents.map((p) => (Number.isFinite(p) ? p / 100 : 0)));
+  const needsNewPhase = (v: TrafficValues) =>
+    phase !== null && trafficChangeNeedsNewPhase(phase, { coverage: v.coverage, weights: weightsOf(v), conditions: v.conditions });
+  const defaultValues: TrafficValues = {
+    coverage: phase?.coverage ?? experiment.coverage,
+    even: (phase?.weights ?? []).every((w) => Math.abs(w - 1 / n) < 1e-3),
+    percents: (phase?.weights ?? []).map((w) => Number((w * 100).toFixed(2))),
+    conditions: phase?.conditions ?? [],
+    reason: "",
+  };
+  const form = useAppForm({
+    defaultValues,
+    validators: {
+      onChange: ({ value }) => {
+        const weights = weightsOf(value);
+        const total = weights.reduce((a, b) => a + b, 0);
+        const fields = {
+          percents:
+            Math.abs(total - 1) > 1e-4
+              ? t("traffic.weightsTotal", { percent: Number((total * 100).toFixed(2)) })
+              : weights.some((w) => w <= 0)
+                ? t("traffic.weightZero")
+                : undefined,
+          conditions: value.conditions.map((c) => conditionIssue(c)).find((m) => m !== null) ?? undefined,
+          reason: needsNewPhase(value) && value.reason.trim() === "" ? t("common:form.required") : undefined,
+        };
+        return Object.values(fields).some((m) => m !== undefined) ? { fields } : undefined;
+      },
+    },
+    onSubmit: async ({ value, formApi }) => {
+      const saved = await client.experiments
+        .updateTraffic({
+          id: experiment.id,
+          coverage: value.coverage,
+          weights: weightsOf(value),
+          conditions: value.conditions.map((c) => ({ ...c, values: [...c.values] })),
+          reason: value.reason.trim(),
+        })
+        .catch((error: unknown) => {
+          setServerError(formApi, error);
+          return null;
+        });
+      if (saved !== null) onSaved(saved);
+    },
+  });
+  const { values: v, submissionAttempts, isFieldsValid, isSubmitting } = useStore(form.store, (s) => s);
   if (phase === null) return null;
 
-  const weights = even ? experiment.variations.map(() => 1 / n) : percents.map((p) => (Number.isFinite(p) ? p / 100 : 0));
-  const total = weights.reduce((a, b) => a + b, 0);
-  const next = { coverage, weights, conditions };
+  const weights = weightsOf(v);
   const changes = [
-    coverage < phase.coverage - 1e-9 && t("traffic.changes.coverageDown"),
+    v.coverage < phase.coverage - 1e-9 && t("traffic.changes.coverageDown"),
     !sameWeights(weights, phase.weights) && t("traffic.changes.split"),
-    JSON.stringify(conditions) !== JSON.stringify(phase.conditions) && t("traffic.changes.targeting"),
+    JSON.stringify(v.conditions) !== JSON.stringify(phase.conditions) && t("traffic.changes.targeting"),
   ].filter((c): c is string => c !== false);
-  const changed = changes.length > 0 || Math.abs(coverage - phase.coverage) > 1e-9;
-  const newPhase = trafficChangeNeedsNewPhase(phase, next);
+  const changed = changes.length > 0 || Math.abs(v.coverage - phase.coverage) > 1e-9;
+  const newPhase = needsNewPhase(v);
   const phaseNo = experiment.phases.length;
-  const invalid =
-    Math.abs(total - 1) > 1e-4 || weights.some((w) => w <= 0) || conditions.some((c) => conditionIssue(c) !== null) || (newPhase && reason.trim() === "");
-
-  const apply = () => {
-    setSubmitted(true);
-    if (invalid || !changed) return;
-    save.mutate({
-      id: experiment.id,
-      coverage,
-      weights,
-      conditions: conditions.map((c) => ({ ...c, values: [...c.values] })),
-      reason: reason.trim(),
-    });
-  };
 
   return (
     <ActionPanel
@@ -89,69 +124,88 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
       description={t("traffic.description", { phase: phaseNo })}
       footer={
         <>
-          {save.error !== null && (
-            <p role="alert" className="text-label text-danger sm:mr-auto">
-              {errorMessage(save.error)}
-            </p>
-          )}
-          <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={save.isPending}>
+          <form.AppForm>
+            <form.FormError className="sm:mr-auto" />
+          </form.AppForm>
+          <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={isSubmitting}>
             {t("common:actions.cancel")}
           </Button>
-          <Button size="sm" onPress={apply} isPending={save.isPending} isDisabled={!changed || (submitted && invalid)}>
+          {/* No <form>: Enter in a number field must not apply a change that can re-randomize users */}
+          <Button size="sm" onPress={() => void form.handleSubmit()} isPending={isSubmitting} isDisabled={!changed || (submissionAttempts > 0 && !isFieldsValid)}>
             {newPhase ? t("traffic.startPhase", { phase: phaseNo + 1 }) : t("traffic.apply")}
           </Button>
         </>
       }
     >
-      <CoverageField value={coverage} onChange={setCoverage} description={t("traffic.coverageHelp", { percent: Math.round(phase.coverage * 100) })} />
+      <form.AppField name="coverage">
+        {(field) => (
+          <CoverageField
+            value={field.state.value}
+            onChange={field.handleChange}
+            description={t("traffic.coverageHelp", { percent: Math.round(phase.coverage * 100) })}
+          />
+        )}
+      </form.AppField>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
           <p className="text-label font-medium">{t("traffic.split")}</p>
-          <Switch
-            size="sm"
-            isSelected={even}
-            onChange={(v) => {
-              setEven(v);
-              setPercents(evenPercents(n));
-            }}
-          >
-            <Switch.Content>
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-              <span className="text-label">{t("traffic.evenSplit")}</span>
-            </Switch.Content>
-          </Switch>
+          <form.AppField name="even" listeners={{ onChange: () => form.setFieldValue("percents", evenPercents(n)) }}>
+            {(field) => (
+              <Switch size="sm" isSelected={field.state.value} onChange={field.handleChange}>
+                <Switch.Content>
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                  <span className="text-label">{t("traffic.evenSplit")}</span>
+                </Switch.Content>
+              </Switch>
+            )}
+          </form.AppField>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {experiment.variations.map((v, i) => (
-            <NumberField
-              key={v.key}
-              value={even ? Number((100 / n).toFixed(1)) : percents[i]}
-              onChange={(p) => setPercents(percents.map((x, j) => (j === i ? p : x)))}
-              isDisabled={even}
-              minValue={0}
-              maxValue={100}
-              step={0.1}
-              aria-label={t("traffic.weight", { name: v.name })}
-            >
-              <NumberField.Group className="grid-cols-[auto_1fr_auto]">
-                <span className="flex items-center gap-2 pl-3 text-label whitespace-nowrap">
-                  <VariationSwatch index={i} />
-                  {v.name}
-                </span>
-                <NumberField.Input className="text-right tabular" />
-                <span className="pr-3 text-label text-muted">%</span>
-              </NumberField.Group>
-            </NumberField>
-          ))}
-        </div>
-        {Math.abs(total - 1) > 1e-4 && <p className="text-meta text-danger">{t("traffic.weightsTotal", { percent: Number((total * 100).toFixed(2)) })}</p>}
+        <form.AppField name="percents">
+          {(field) => {
+            const error = shownError(field.state.meta);
+            return (
+              <>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {experiment.variations.map((variation, i) => (
+                    <NumberField
+                      key={variation.key}
+                      value={v.even ? Number((100 / n).toFixed(1)) : field.state.value[i]}
+                      onChange={(p) => field.handleChange(field.state.value.map((x, j) => (j === i ? p : x)))}
+                      isDisabled={v.even}
+                      minValue={0}
+                      maxValue={100}
+                      step={0.1}
+                      aria-label={t("traffic.weight", { name: variation.name })}
+                    >
+                      <NumberField.Group className="grid-cols-[auto_1fr_auto]">
+                        <span className="flex items-center gap-2 pl-3 text-label whitespace-nowrap">
+                          <VariationSwatch index={i} />
+                          {variation.name}
+                        </span>
+                        <NumberField.Input className="text-right tabular" />
+                        <span className="pr-3 text-label text-muted">%</span>
+                      </NumberField.Group>
+                    </NumberField>
+                  ))}
+                </div>
+                {error !== null && <p className="text-meta text-danger">{error}</p>}
+              </>
+            );
+          }}
+        </form.AppField>
       </div>
-      <div className="flex flex-col gap-2">
-        <p className="text-label font-medium">{t("traffic.whoCanEnter")}</p>
-        <ConditionBuilder value={conditions} onChange={setConditions} />
-      </div>
+      <form.AppField name="conditions">
+        {(field) => (
+          <div className="flex flex-col gap-2">
+            <p className="text-label font-medium">{t("traffic.whoCanEnter")}</p>
+            <ConditionBuilder value={field.state.value} onChange={field.handleChange} />
+            {/* Format problems show inline in the builder; missing parts are reported once a save was tried */}
+            {submissionAttempts > 0 && field.state.meta.errors.length > 0 && <p className="text-meta text-danger">{errorText(field.state.meta.errors)}</p>}
+          </div>
+        )}
+      </form.AppField>
 
       {changed && (
         <div
@@ -177,11 +231,25 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
           )}
         </div>
       )}
-      <TextField value={reason} onChange={setReason} isRequired={newPhase} isInvalid={submitted && newPhase && reason.trim() === ""}>
-        <Label>{newPhase ? t("traffic.reason") : t("traffic.reasonOptional")}</Label>
-        <TextArea rows={2} placeholder={t("traffic.reasonPlaceholder")} className="resize-y" />
-        <Description>{t("traffic.reasonHelp")}</Description>
-      </TextField>
+      <form.AppField name="reason">
+        {(field) => {
+          const error = shownError(field.state.meta);
+          return (
+            <TextField
+              value={field.state.value}
+              onChange={field.handleChange}
+              onBlur={field.handleBlur}
+              isRequired={newPhase}
+              isInvalid={error !== null}
+            >
+              <Label>{newPhase ? t("traffic.reason") : t("traffic.reasonOptional")}</Label>
+              <TextArea rows={2} placeholder={t("traffic.reasonPlaceholder")} className="resize-y" />
+              <Description>{t("traffic.reasonHelp")}</Description>
+              <FieldError>{error}</FieldError>
+            </TextField>
+          );
+        }}
+      </form.AppField>
     </ActionPanel>
   );
 }
@@ -200,12 +268,30 @@ export function StopPanel({
 }) {
   const { t } = useTranslation(["experiments", "common"]);
   const { environments } = useEnvironment();
-  const [choice, setChoice] = useState(suggestion ?? "");
-  const [reason, setReason] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const stop = useMutation(orpc.experiments.stop.mutationOptions({ onSuccess: useSaved(onDone) }));
-  const shipKey = choice.startsWith("ship:") ? choice.slice(5) : null;
-  const shipped = experiment.variations.find((v) => v.key === shipKey);
+  const required = useRequired();
+  const onSaved = useSaved(onDone);
+  const shipKeyOf = (choice: string) => (choice.startsWith("ship:") ? choice.slice(5) : null);
+  const form = useAppForm({
+    defaultValues: { choice: suggestion ?? "", reason: "" },
+    onSubmit: async ({ value, formApi }) => {
+      const shipKey = shipKeyOf(value.choice);
+      const saved = await client.experiments
+        .stop({
+          id: experiment.id,
+          outcome: shipKey === null ? (value.choice as "rollback" | "inconclusive") : "ship",
+          variationKey: shipKey,
+          reason: value.reason.trim(),
+        })
+        .catch((error: unknown) => {
+          setServerError(formApi, error);
+          return null;
+        });
+      if (saved !== null) onSaved(saved);
+    },
+  });
+  const { values, submissionAttempts, isFieldsValid, isSubmitting } = useStore(form.store, (s) => s);
+  const choice = values.choice;
+  const shipped = experiment.variations.find((v) => v.key === shipKeyOf(choice));
   const envNames = formatList(environments.filter((e) => experiment.environmentIds.includes(e.id)).map((e) => e.name));
   const suggested = <span className="ml-1.5 rounded-sm bg-default px-1 py-px text-[11px] font-medium text-muted">{t("stop.suggested")}</span>;
   const preview = (value: string) =>
@@ -236,39 +322,36 @@ export function StopPanel({
     { value: "inconclusive", label: t("stop.inconclusive"), description: t("stop.inconclusiveHelp") },
   ];
 
-  const submit = () => {
-    setSubmitted(true);
-    if (choice === "" || reason.trim() === "") return;
-    stop.mutate({
-      id: experiment.id,
-      outcome: shipKey === null ? (choice as "rollback" | "inconclusive") : "ship",
-      variationKey: shipKey,
-      reason: reason.trim(),
-    });
-  };
-
   return (
     <ActionPanel
       title={t("stop.title")}
       description={t("stop.description")}
       footer={
         <>
-          {stop.error !== null && (
-            <p role="alert" className="text-label text-danger sm:mr-auto">
-              {errorMessage(stop.error)}
-            </p>
-          )}
-          <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={stop.isPending}>
+          <form.AppForm>
+            <form.FormError className="sm:mr-auto" />
+          </form.AppForm>
+          <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={isSubmitting}>
             {t("common:actions.cancel")}
           </Button>
-          <Button size="sm" onPress={submit} isPending={stop.isPending} isDisabled={submitted && (choice === "" || reason.trim() === "")}>
+          {/* No <form>: stopping can't be undone, so only this button submits */}
+          <Button size="sm" onPress={() => void form.handleSubmit()} isPending={isSubmitting} isDisabled={submissionAttempts > 0 && !isFieldsValid}>
             {shipped !== undefined ? t("stop.stopAndShip", { name: shipped.name }) : t("stop.stopExperiment")}
           </Button>
         </>
       }
     >
-      <Segmented label={t("stop.decision")} value={choice} onChange={setChoice} options={options} />
-      {submitted && choice === "" && <p className="-mt-3 text-meta text-danger">{t("stop.chooseDecision")}</p>}
+      <form.AppField name="choice" validators={{ onChange: ({ value }) => (value === "" ? t("stop.chooseDecision") : undefined) }}>
+        {(field) => {
+          const error = shownError(field.state.meta);
+          return (
+            <>
+              <Segmented label={t("stop.decision")} value={field.state.value} onChange={field.handleChange} options={options} />
+              {error !== null && <p className="-mt-3 text-meta text-danger">{error}</p>}
+            </>
+          );
+        }}
+      </form.AppField>
       {choice !== "" && (
         <p className="rounded-lg border border-border bg-surface-secondary px-4 py-3 text-label" aria-live="polite">
           {shipped !== undefined ? (
@@ -291,11 +374,19 @@ export function StopPanel({
           )}
         </p>
       )}
-      <TextField value={reason} onChange={setReason} isRequired isInvalid={submitted && reason.trim() === ""}>
-        <Label>{t("stop.why")}</Label>
-        <TextArea rows={3} placeholder={t("stop.whyPlaceholder")} className="resize-y" />
-        <Description>{t("stop.whyHelp")}</Description>
-      </TextField>
+      <form.AppField name="reason" validators={{ onChange: required }}>
+        {(field) => {
+          const error = shownError(field.state.meta);
+          return (
+            <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} isRequired isInvalid={error !== null}>
+              <Label>{t("stop.why")}</Label>
+              <TextArea rows={3} placeholder={t("stop.whyPlaceholder")} className="resize-y" />
+              <Description>{t("stop.whyHelp")}</Description>
+              <FieldError>{error}</FieldError>
+            </TextField>
+          );
+        }}
+      </form.AppField>
     </ActionPanel>
   );
 }

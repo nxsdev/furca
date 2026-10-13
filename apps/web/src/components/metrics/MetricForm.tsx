@@ -12,29 +12,32 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import type { EventNameStat } from "@furca/api/contract";
+import { type EventNameStat, Key } from "@furca/api/contract";
 import { BUILTIN_DATA_SOURCE_ID, type DataSource } from "@furca/core/datasources/DataSource";
 import type { EventAggregation, Metric, MetricType } from "@furca/core/metrics/Metric";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { type AnyFieldApi, type DeepKeys, useStore } from "@tanstack/react-form";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Schema } from "effect";
+import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { dataSourceName } from "~/components/datasources/name";
+import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
 import { formatCount } from "~/components/results/format";
 import { RelativeTime } from "~/components/ui/primitives";
 import { Segmented } from "~/components/ui/Segmented";
 import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
-import { type client, errorMessage, orpc } from "~/lib/rpc";
+import { client, errorMessage, orpc } from "~/lib/rpc";
 import { Direction, formatHours, metricTypeLabel, MetricSentence } from "./describe";
+import { slugify } from "./slugify";
 
 type MetricInput = Omit<Parameters<typeof client.metrics.create>[0], "key">;
 type WindowChoice = "24" | "72" | "168" | "none" | "custom";
 type CapType = Metric["capping"]["type"];
 
-interface Draft {
+interface Values {
   name: string;
   key: string;
-  keyEdited: boolean;
   description: string;
   type: MetricType;
   dataSourceId: string;
@@ -51,24 +54,14 @@ interface Draft {
   capPercentile: number;
 }
 
-const KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
-export const slugify = (s: string) =>
-  s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
-
 const presetWindows: ReadonlyArray<WindowChoice> = ["24", "72", "168"];
 
-const toDraft = (m: Metric | undefined): Draft => {
+const toValues = (m: Metric | undefined): Values => {
   const d = m?.definition;
   const w = m?.windowHours ?? null;
   return {
     name: m?.name ?? "",
     key: m?.key ?? "",
-    keyEdited: m !== undefined,
     description: m?.description ?? "",
     type: m?.type ?? "proportion",
     dataSourceId: m?.dataSourceId ?? BUILTIN_DATA_SOURCE_ID,
@@ -86,10 +79,10 @@ const toDraft = (m: Metric | undefined): Draft => {
   };
 };
 
-const windowHoursOf = (d: Draft): number | null =>
+const windowHoursOf = (d: Values): number | null =>
   d.window === "none" ? null : d.window === "custom" ? d.customWindow : Number(d.window);
 
-const toInput = (d: Draft, isSql: boolean): MetricInput => ({
+const toInput = (d: Values, isSql: boolean): MetricInput => ({
   name: d.name.trim(),
   description: d.description.trim(),
   type: d.type,
@@ -112,30 +105,35 @@ const toInput = (d: Draft, isSql: boolean): MetricInput => ({
         : { type: "percentile", value: d.capPercentile / 100 },
 });
 
-type Errors = Partial<Record<"name" | "key" | "num" | "den" | "window" | "delay" | "cap", string>>;
+type FieldErrors = Partial<Record<DeepKeys<Values>, string>>;
 
-const validate = (d: Draft, isSql: boolean, isEdit: boolean): Errors => {
-  const e: Errors = {};
+/** Whole-form rules (they cross fields: type, source, window and delay), run as a form-level validator */
+const validate = (d: Values, isSql: boolean, isEdit: boolean): FieldErrors => {
+  const e: FieldErrors = {};
   if (d.name.trim() === "") e.name = i18n.t("metrics:form.errors.name");
-  if (!isEdit && !KEY_PATTERN.test(d.key)) e.key = i18n.t("metrics:form.errors.key");
+  if (!isEdit && !Schema.is(Key)(d.key)) e.key = i18n.t("metrics:form.errors.key");
   if (isSql) {
-    if (d.numSql.trim() === "") e.num = i18n.t("metrics:form.errors.numSql");
-    if (d.type === "ratio" && d.denSql.trim() === "") e.den = i18n.t("metrics:form.errors.denSql");
+    if (d.numSql.trim() === "") e.numSql = i18n.t("metrics:form.errors.numSql");
+    if (d.type === "ratio" && d.denSql.trim() === "") e.denSql = i18n.t("metrics:form.errors.denSql");
   } else {
-    if (d.num.event.trim() === "") e.num = i18n.t("metrics:form.errors.numEvent");
-    if (d.type === "ratio" && d.den.event.trim() === "") e.den = i18n.t("metrics:form.errors.denEvent");
+    if (d.num.event.trim() === "") e["num.event"] = i18n.t("metrics:form.errors.numEvent");
+    if (d.type === "ratio" && d.den.event.trim() === "") e["den.event"] = i18n.t("metrics:form.errors.denEvent");
   }
   const w = windowHoursOf(d);
-  if (w !== null && !(w > 0)) e.window = i18n.t("metrics:form.errors.window");
-  if (!(d.delayHours >= 0)) e.delay = i18n.t("metrics:form.errors.delayNegative");
-  else if (w !== null && d.delayHours >= w) e.delay = i18n.t("metrics:form.errors.delayTooLong");
+  if (w !== null && !(w > 0)) e.customWindow = i18n.t("metrics:form.errors.window");
+  if (!(d.delayHours >= 0)) e.delayHours = i18n.t("metrics:form.errors.delayNegative");
+  else if (w !== null && d.delayHours >= w) e.delayHours = i18n.t("metrics:form.errors.delayTooLong");
   if (d.type !== "proportion") {
-    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.cap = i18n.t("metrics:form.errors.capAbsolute");
+    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.capAbsolute = i18n.t("metrics:form.errors.capAbsolute");
     if (d.capType === "percentile" && !(d.capPercentile >= 50 && d.capPercentile < 100))
-      e.cap = i18n.t("metrics:form.errors.capPercentile");
+      e.capPercentile = i18n.t("metrics:form.errors.capPercentile");
   }
   return e;
 };
+
+/** The kit's rule for custom inputs: show the error once the field was touched or a submit was tried */
+const shown = (field: AnyFieldApi): string | undefined =>
+  field.state.meta.isTouched || field.form.state.submissionAttempts > 0 ? errorText(field.state.meta.errors) || undefined : undefined;
 
 const sqlTemplate = (bq: DataSource["bigquery"], event: string) => `-- One row per event. Required columns:
 --   user_id STRING, timestamp TIMESTAMP, value FLOAT64 (use 1 to count)
@@ -162,14 +160,16 @@ function EventField({
   label,
   value,
   onChange,
+  onBlur,
   names,
   error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur: () => void;
   names: ReadonlyArray<EventNameStat>;
-  error?: string;
+  error?: string | undefined;
 }) {
   return (
     <ComboBox
@@ -177,6 +177,7 @@ function EventField({
       menuTrigger="focus"
       inputValue={value}
       onInputChange={onChange}
+      onBlur={onBlur}
       items={names}
       isInvalid={error !== undefined}
       className="min-w-0 flex-1"
@@ -227,18 +228,20 @@ function SqlField({
   label,
   value,
   onChange,
+  onBlur,
   onTemplate,
   error,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur: () => void;
   onTemplate: () => void;
-  error?: string;
+  error?: string | undefined;
 }) {
   const { t } = useTranslation("metrics");
   return (
-    <TextField value={value} onChange={onChange} isInvalid={error !== undefined} className="w-full">
+    <TextField value={value} onChange={onChange} onBlur={onBlur} isInvalid={error !== undefined} className="w-full">
       <div className="flex items-end justify-between gap-3">
         <Label>{label}</Label>
         <Button size="sm" variant="ghost" className="h-7 text-label" onPress={onTemplate}>
@@ -275,9 +278,6 @@ export function MetricForm({
   const isEdit = metric !== undefined;
   const queryClient = useQueryClient();
   const { current: env } = useEnvironment();
-  const [d, setDraft] = useState(() => toDraft(metric));
-  const [submitted, setSubmitted] = useState(false);
-  const set = (patch: Partial<Draft>) => setDraft((prev) => ({ ...prev, ...patch }));
 
   const sources = useQuery(orpc.dataSources.list.queryOptions());
   const names = useQuery({
@@ -285,131 +285,173 @@ export function MetricForm({
     enabled: env !== null,
   });
   const sourceList = sources.data ?? [];
-  const source = sourceList.find((s) => s.id === d.dataSourceId);
-  const isSql = d.dataSourceId !== BUILTIN_DATA_SOURCE_ID && source?.type !== "builtin";
+  const isSqlSource = (id: string) => id !== BUILTIN_DATA_SOURCE_ID && sourceList.find((s) => s.id === id)?.type !== "builtin";
   const eventNames = names.data ?? [];
 
-  const onSuccess = (saved: Metric) => {
-    void queryClient.invalidateQueries({ queryKey: orpc.metrics.key() });
-    void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-    onSaved(saved);
-  };
-  const create = useMutation(orpc.metrics.create.mutationOptions({ onSuccess }));
-  const update = useMutation(orpc.metrics.update.mutationOptions({ onSuccess }));
-  const save = isEdit ? update : create;
-
-  const errors = submitted ? validate(d, isSql, isEdit) : {};
+  const form = useAppForm({
+    defaultValues: toValues(metric),
+    validators: {
+      onChange: ({ value }) => {
+        const fields = validate(value, isSqlSource(value.dataSourceId), isEdit);
+        return Object.keys(fields).length > 0 ? { fields } : undefined;
+      },
+      // Clears the last server error on the next submit, so an unchanged form can be retried
+      onSubmit: () => undefined,
+    },
+    // A blocked submit skips the form-level rules, so errors of fields mounted since the last change
+    // (e.g. the denominator after switching to Ratio) would stay hidden: rerun them to show every error
+    onSubmitInvalid: ({ formApi }) => void formApi.validate("change"),
+    onSubmit: async ({ value, formApi }) => {
+      const input = toInput(value, isSqlSource(value.dataSourceId));
+      try {
+        const saved =
+          metric !== undefined
+            ? await client.metrics.update({ id: metric.id, ...input })
+            : await client.metrics.create({ key: value.key, ...input });
+        void queryClient.invalidateQueries({ queryKey: orpc.metrics.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+        onSaved(saved);
+      } catch (error) {
+        // ponytail: the API's only key error is the duplicate check ("A metric with key … already exists")
+        setServerError(formApi, error, !isEdit && errorMessage(error).includes("already exists") ? "key" : undefined);
+      }
+    },
+  });
+  const d = useStore(form.store, (s) => s.values);
+  const source = sourceList.find((s) => s.id === d.dataSourceId);
+  const isSql = isSqlSource(d.dataSourceId);
   const input = toInput(d, isSql);
 
-  const submit = () => {
-    setSubmitted(true);
-    if (Object.keys(validate(d, isSql, isEdit)).length > 0) return;
-    if (isEdit) update.mutate({ id: metric.id, ...input });
-    else create.mutate({ key: d.key, ...input });
+  // Follow the name until the user edits the key; a name with no ASCII slug (e.g. Japanese) leaves the key alone
+  const suggestKey = (name: string) => {
+    const slug = slugify(name);
+    if (slug !== "" && form.getFieldMeta("key")?.isDirty !== true) form.setFieldValue("key", slug, { dontUpdateMeta: true });
   };
 
-  const changeType = (type: MetricType) =>
-    set({ type, num: type === "proportion" ? { ...d.num, aggregation: "count" } : d.num });
-
   return (
-    <form
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-      className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]"
-    >
+    <form noValidate onSubmit={submitHandler(form)} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <section className="min-w-0 rounded-[10px] border border-border bg-surface">
         <Section title={t("form.sections.basics")}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              value={d.name}
-              onChange={(name) => set({ name, key: d.keyEdited ? d.key : slugify(name) })}
-              isInvalid={errors.name !== undefined}
-              isRequired
-              autoFocus={!isEdit}
-            >
-              <Label>{t("form.name.label")}</Label>
-              <Input placeholder={t("form.name.placeholder")} />
-              <FieldError>{errors.name}</FieldError>
-            </TextField>
-            <TextField
-              value={d.key}
-              onChange={(key) => set({ key, keyEdited: true })}
-              isInvalid={errors.key !== undefined}
-              isReadOnly={isEdit}
-              isRequired={!isEdit}
-            >
-              <Label>{t("form.key.label")}</Label>
-              <Input placeholder="checkout-conversion" spellCheck={false} className="font-mono" />
-              <Description>{isEdit ? t("form.key.readOnly") : t("form.key.help")}</Description>
-              <FieldError>{errors.key}</FieldError>
-            </TextField>
+            <form.AppField name="name" listeners={isEdit ? undefined : { onChange: ({ value }) => suggestKey(value) }}>
+              {(field) => (
+                <TextField
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                  onBlur={field.handleBlur}
+                  isInvalid={shown(field) !== undefined}
+                  isRequired
+                  autoFocus={!isEdit}
+                >
+                  <Label>{t("form.name.label")}</Label>
+                  <Input placeholder={t("form.name.placeholder")} />
+                  <FieldError>{shown(field)}</FieldError>
+                </TextField>
+              )}
+            </form.AppField>
+            <form.AppField name="key">
+              {(field) => (
+                <TextField
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                  onBlur={field.handleBlur}
+                  isInvalid={shown(field) !== undefined}
+                  isReadOnly={isEdit}
+                  isRequired={!isEdit}
+                >
+                  <Label>{t("form.key.label")}</Label>
+                  <Input placeholder="checkout-conversion" spellCheck={false} className="font-mono" />
+                  <Description>{isEdit ? t("form.key.readOnly") : t("form.key.help")}</Description>
+                  <FieldError>{shown(field)}</FieldError>
+                </TextField>
+              )}
+            </form.AppField>
           </div>
-          <TextField value={d.description} onChange={(description) => set({ description })}>
-            <Label>{t("form.description.label")}</Label>
-            <TextArea rows={2} placeholder={t("form.description.placeholder")} className="resize-y" />
-          </TextField>
+          <form.AppField name="description">
+            {(field) => <field.TextAreaField label={t("form.description.label")} rows={2} placeholder={t("form.description.placeholder")} />}
+          </form.AppField>
         </Section>
 
         <Section title={t("form.sections.measure")}>
-          <Segmented
-            label={t("form.type.label")}
-            value={d.type}
-            onChange={changeType}
-            options={(["proportion", "mean", "ratio"] as const).map((type) => ({
-              value: type,
-              label: metricTypeLabel(type),
-              description: t(`form.type.${type}`),
-            }))}
-          />
-          <Select
-            value={d.dataSourceId}
-            onChange={(id) => typeof id === "string" && set({ dataSourceId: id })}
-            className="sm:max-w-sm"
+          <form.AppField
+            name="type"
+            listeners={{
+              onChange: ({ value }) => {
+                if (value === "proportion") form.setFieldValue("num.aggregation", "count");
+              },
+            }}
           >
-            <Label>{t("form.dataSource.label")}</Label>
-            <Select.Trigger>
-              <Select.Value>{({ selectedText }) => selectedText}</Select.Value>
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Popover>
-              <ListBox>
-                {(sourceList.length > 0
-                  ? sourceList
-                  : [{ id: BUILTIN_DATA_SOURCE_ID, name: t("builtinEvents"), type: "builtin" as const }]
-                ).map((s) => (
-                  <ListBox.Item key={s.id} id={s.id} textValue={dataSourceName(s)}>
-                    <span className="flex-1 truncate">{dataSourceName(s)}</span>
-                    <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : "BigQuery"}</span>
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                ))}
-              </ListBox>
-            </Select.Popover>
-            <Description>
-              {isSql ? t("form.dataSource.sqlHelp") : t("form.dataSource.sdkHelp")}
-            </Description>
-          </Select>
+            {(field) => (
+              <Segmented
+                label={t("form.type.label")}
+                value={field.state.value}
+                onChange={field.handleChange}
+                options={(["proportion", "mean", "ratio"] as const).map((type) => ({
+                  value: type,
+                  label: metricTypeLabel(type),
+                  description: t(`form.type.${type}`),
+                }))}
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="dataSourceId">
+            {(field) => (
+              <Select
+                value={field.state.value}
+                onChange={(id) => typeof id === "string" && field.handleChange(id)}
+                className="sm:max-w-sm"
+              >
+                <Label>{t("form.dataSource.label")}</Label>
+                <Select.Trigger>
+                  <Select.Value>{({ selectedText }) => selectedText}</Select.Value>
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    {(sourceList.length > 0
+                      ? sourceList
+                      : [{ id: BUILTIN_DATA_SOURCE_ID, name: t("builtinEvents"), type: "builtin" as const }]
+                    ).map((s) => (
+                      <ListBox.Item key={s.id} id={s.id} textValue={dataSourceName(s)}>
+                        <span className="flex-1 truncate">{dataSourceName(s)}</span>
+                        <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : "BigQuery"}</span>
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+                <Description>{isSql ? t("form.dataSource.sqlHelp") : t("form.dataSource.sdkHelp")}</Description>
+              </Select>
+            )}
+          </form.AppField>
 
           {isSql ? (
             <>
-              <SqlField
-                label={d.type === "ratio" ? t("form.sql.numerator") : t("form.sql.event")}
-                value={d.numSql}
-                onChange={(numSql) => set({ numSql })}
-                onTemplate={() => set({ numSql: sqlTemplate(source?.bigquery ?? null, "purchase") })}
-                error={errors.num}
-              />
+              <form.AppField name="numSql">
+                {(field) => (
+                  <SqlField
+                    label={d.type === "ratio" ? t("form.sql.numerator") : t("form.sql.event")}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    onBlur={field.handleBlur}
+                    onTemplate={() => field.handleChange(sqlTemplate(source?.bigquery ?? null, "purchase"))}
+                    error={shown(field)}
+                  />
+                )}
+              </form.AppField>
               {d.type === "ratio" && (
-                <SqlField
-                  label={t("form.sql.denominator")}
-                  value={d.denSql}
-                  onChange={(denSql) => set({ denSql })}
-                  onTemplate={() => set({ denSql: sqlTemplate(source?.bigquery ?? null, "add_to_cart") })}
-                  error={errors.den}
-                />
+                <form.AppField name="denSql">
+                  {(field) => (
+                    <SqlField
+                      label={t("form.sql.denominator")}
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                      onBlur={field.handleBlur}
+                      onTemplate={() => field.handleChange(sqlTemplate(source?.bigquery ?? null, "add_to_cart"))}
+                      error={shown(field)}
+                    />
+                  )}
+                </form.AppField>
               )}
             </>
           ) : (
@@ -417,19 +459,23 @@ export function MetricForm({
               <div className="flex flex-col gap-4">
                 {d.type === "ratio" && <p className="-mb-2 text-label font-medium text-muted">{t("form.event.numerator")}</p>}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <EventField
-                    label={t("form.event.label")}
-                    value={d.num.event}
-                    onChange={(event) => set({ num: { ...d.num, event } })}
-                    names={eventNames}
-                    error={errors.num}
-                  />
+                  <form.AppField name="num.event">
+                    {(field) => (
+                      <EventField
+                        label={t("form.event.label")}
+                        value={field.state.value}
+                        onChange={field.handleChange}
+                        onBlur={field.handleBlur}
+                        names={eventNames}
+                        error={shown(field)}
+                      />
+                    )}
+                  </form.AppField>
                   {d.type !== "proportion" && (
                     <div className="sm:w-[260px]">
-                      <AggregationField
-                        value={d.num.aggregation}
-                        onChange={(aggregation) => set({ num: { ...d.num, aggregation } })}
-                      />
+                      <form.AppField name="num.aggregation">
+                        {(field) => <AggregationField value={field.state.value} onChange={field.handleChange} />}
+                      </form.AppField>
                     </div>
                   )}
                 </div>
@@ -438,18 +484,22 @@ export function MetricForm({
                 <div className="flex flex-col gap-4 border-t border-border pt-4">
                   <p className="-mb-2 text-label font-medium text-muted">{t("form.event.denominator")}</p>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <EventField
-                      label={t("form.event.label")}
-                      value={d.den.event}
-                      onChange={(event) => set({ den: { ...d.den, event } })}
-                      names={eventNames}
-                      error={errors.den}
-                    />
+                    <form.AppField name="den.event">
+                      {(field) => (
+                        <EventField
+                          label={t("form.event.label")}
+                          value={field.state.value}
+                          onChange={field.handleChange}
+                          onBlur={field.handleBlur}
+                          names={eventNames}
+                          error={shown(field)}
+                        />
+                      )}
+                    </form.AppField>
                     <div className="sm:w-[260px]">
-                      <AggregationField
-                        value={d.den.aggregation}
-                        onChange={(aggregation) => set({ den: { ...d.den, aggregation } })}
-                      />
+                      <form.AppField name="den.aggregation">
+                        {(field) => <AggregationField value={field.state.value} onChange={field.handleChange} />}
+                      </form.AppField>
                     </div>
                   </div>
                 </div>
@@ -466,115 +516,152 @@ export function MetricForm({
         </Section>
 
         <Section title={t("form.sections.window")} description={t("form.sections.windowDescription")}>
-          <div className="flex flex-wrap items-end gap-4">
-            <Segmented
-              label={t("form.window.label")}
-              value={d.window}
-              onChange={(window) => set({ window })}
-              options={[
-                ...presetWindows.map((w) => ({ value: w, label: formatHours(Number(w)) })),
-                { value: "none", label: t("common:states.none") },
-                { value: "custom", label: t("form.window.custom") },
-              ]}
-            />
-            {d.window === "custom" && (
-              <NumberField
-                value={d.customWindow}
-                onChange={(customWindow) => set({ customWindow })}
-                minValue={1}
-                isInvalid={errors.window !== undefined}
-                className="w-32"
-                aria-label={t("form.window.customLabel")}
-              >
-                <NumberField.Group className="grid-cols-[1fr_auto]">
-                  <NumberField.Input className="tabular" />
-                  <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
-                </NumberField.Group>
-              </NumberField>
+          <form.AppField name="customWindow">
+            {(custom) => (
+              <>
+                <div className="flex flex-wrap items-end gap-4">
+                  <form.AppField name="window">
+                    {(field) => (
+                      <Segmented
+                        label={t("form.window.label")}
+                        value={field.state.value}
+                        onChange={field.handleChange}
+                        options={[
+                          ...presetWindows.map((w) => ({ value: w, label: formatHours(Number(w)) })),
+                          { value: "none", label: t("common:states.none") },
+                          { value: "custom", label: t("form.window.custom") },
+                        ]}
+                      />
+                    )}
+                  </form.AppField>
+                  {d.window === "custom" && (
+                    <NumberField
+                      value={custom.state.value}
+                      onChange={custom.handleChange}
+                      onBlur={custom.handleBlur}
+                      minValue={1}
+                      isInvalid={shown(custom) !== undefined}
+                      className="w-32"
+                      aria-label={t("form.window.customLabel")}
+                    >
+                      <NumberField.Group className="grid-cols-[1fr_auto]">
+                        <NumberField.Input className="tabular" />
+                        <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
+                      </NumberField.Group>
+                    </NumberField>
+                  )}
+                </div>
+                {shown(custom) !== undefined && <p className="-mt-2 text-xs text-danger">{shown(custom)}</p>}
+              </>
             )}
-          </div>
-          {errors.window !== undefined && <p className="-mt-2 text-xs text-danger">{errors.window}</p>}
-          <NumberField
-            value={d.delayHours}
-            onChange={(delayHours) => set({ delayHours: Number.isNaN(delayHours) ? 0 : delayHours })}
-            minValue={0}
-            isInvalid={errors.delay !== undefined}
-            className="w-full sm:max-w-sm"
+          </form.AppField>
+          <form.AppField
+            name="delayHours"
+            listeners={{
+              // A cleared input means no delay
+              onChange: ({ value, fieldApi }) => {
+                if (Number.isNaN(value)) fieldApi.setValue(0);
+              },
+            }}
           >
-            <Label>{t("form.window.delay")}</Label>
-            <NumberField.Group className="grid-cols-[1fr_auto]">
-              <NumberField.Input className="tabular" />
-              <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
-            </NumberField.Group>
-            <Description>{t("form.window.delayHelp")}</Description>
-            <FieldError>{errors.delay}</FieldError>
-          </NumberField>
+            {(field) => (
+              <field.NumberField
+                label={t("form.window.delay")}
+                minValue={0}
+                suffix={t("form.window.hours")}
+                description={t("form.window.delayHelp")}
+                className="w-full sm:max-w-sm"
+              />
+            )}
+          </form.AppField>
         </Section>
 
         <Section title={t("form.sections.analysis")}>
-          <Switch isSelected={d.inverse} onChange={(inverse) => set({ inverse })} className="[--switch-control-bg:oklch(0.9_0_0)] dark:[--switch-control-bg:var(--default)]">
-            <Switch.Content>
-              <Switch.Control>
-                <Switch.Thumb className={d.inverse ? "" : "dark:bg-[oklch(0.62_0_0)]"} />
-              </Switch.Control>
-              {t("direction.lowerIsBetter")}
-            </Switch.Content>
-            <Description>{t("form.inverseHelp")}</Description>
-          </Switch>
+          <form.AppField name="inverse">
+            {(field) => (
+              <Switch
+                isSelected={field.state.value}
+                onChange={field.handleChange}
+                className="[--switch-control-bg:oklch(0.9_0_0)] dark:[--switch-control-bg:var(--default)]"
+              >
+                <Switch.Content>
+                  <Switch.Control>
+                    <Switch.Thumb className={field.state.value ? "" : "dark:bg-[oklch(0.62_0_0)]"} />
+                  </Switch.Control>
+                  {t("direction.lowerIsBetter")}
+                </Switch.Content>
+                <Description>{t("form.inverseHelp")}</Description>
+              </Switch>
+            )}
+          </form.AppField>
           {d.type !== "proportion" && (
             <div className="flex flex-col gap-3">
-              <Segmented
-                label={t("form.capping.label")}
-                value={d.capType}
-                onChange={(capType) => set({ capType })}
-                options={[
-                  { value: "none", label: t("common:states.none") },
-                  { value: "absolute", label: t("form.capping.absolute") },
-                  { value: "percentile", label: t("form.capping.percentile") },
-                ]}
-                description={t("form.capping.help")}
-              />
-              {d.capType !== "none" && (
-                <NumberField
-                  value={d.capType === "absolute" ? d.capAbsolute : d.capPercentile}
-                  onChange={(v) => set(d.capType === "absolute" ? { capAbsolute: v } : { capPercentile: v })}
-                  minValue={0}
-                  step={d.capType === "absolute" ? 1 : 0.1}
-                  isInvalid={errors.cap !== undefined}
-                  className="w-full sm:max-w-sm"
-                >
-                  <Label>{d.capType === "absolute" ? t("form.capping.absoluteLabel") : t("form.capping.percentileLabel")}</Label>
-                  <NumberField.Group className={d.capType === "percentile" ? "grid-cols-[1fr_auto]" : undefined}>
-                    <NumberField.Input className="tabular" />
-                    {d.capType === "percentile" && <span className="pr-3 text-label text-muted">{t("form.capping.percentileSuffix")}</span>}
-                  </NumberField.Group>
-                  <Description>
-                    {d.capType === "absolute" ? t("form.capping.absoluteHelp") : t("form.capping.percentileHelp")}
-                  </Description>
-                  <FieldError>{errors.cap}</FieldError>
-                </NumberField>
+              <form.AppField name="capType">
+                {(field) => (
+                  <Segmented
+                    label={t("form.capping.label")}
+                    value={field.state.value}
+                    onChange={field.handleChange}
+                    options={[
+                      { value: "none", label: t("common:states.none") },
+                      { value: "absolute", label: t("form.capping.absolute") },
+                      { value: "percentile", label: t("form.capping.percentile") },
+                    ]}
+                    description={t("form.capping.help")}
+                  />
+                )}
+              </form.AppField>
+              {d.capType === "absolute" && (
+                <form.AppField name="capAbsolute">
+                  {(field) => (
+                    <field.NumberField
+                      label={t("form.capping.absoluteLabel")}
+                      description={t("form.capping.absoluteHelp")}
+                      minValue={0}
+                      step={1}
+                      className="w-full sm:max-w-sm"
+                    />
+                  )}
+                </form.AppField>
+              )}
+              {d.capType === "percentile" && (
+                <form.AppField name="capPercentile">
+                  {(field) => (
+                    <field.NumberField
+                      label={t("form.capping.percentileLabel")}
+                      description={t("form.capping.percentileHelp")}
+                      minValue={0}
+                      step={0.1}
+                      suffix={t("form.capping.percentileSuffix")}
+                      className="w-full sm:max-w-sm"
+                    />
+                  )}
+                </form.AppField>
               )}
             </div>
           )}
         </Section>
 
         <footer className="flex flex-wrap items-center justify-end gap-3 px-5 py-4">
-          {save.error !== null && (
-            <p role="alert" className="basis-full text-label text-danger sm:mr-auto sm:basis-auto">
-              {errorMessage(save.error)}
-            </p>
-          )}
-          {submitted && Object.keys(errors).length > 0 && save.error === null && (
-            <p role="alert" className="basis-full text-label text-danger sm:mr-auto sm:basis-auto">
-              {t("form.errors.fixFields")}
-            </p>
-          )}
-          <Button variant="tertiary" size="sm" onPress={onCancel} isDisabled={save.isPending}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button type="submit" size="sm" isPending={save.isPending}>
-            {isEdit ? t("form.saveChanges") : t("form.create")}
-          </Button>
+          <form.Subscribe
+            selector={(s) => [errorText([s.errorMap.onServer ?? s.errorMap.onSubmit]), s.submissionAttempts > 0 && !s.isFieldsValid, s.isSubmitting] as const}
+          >
+            {([serverError, invalid, isSubmitting]) => (
+              <>
+                {(serverError !== "" || invalid) && (
+                  <p role="alert" className="basis-full text-label text-danger sm:mr-auto sm:basis-auto">
+                    {serverError || t("form.errors.fixFields")}
+                  </p>
+                )}
+                <Button variant="tertiary" size="sm" onPress={onCancel} isDisabled={isSubmitting}>
+                  {t("common:actions.cancel")}
+                </Button>
+              </>
+            )}
+          </form.Subscribe>
+          <form.AppForm>
+            <form.SubmitButton label={isEdit ? t("form.saveChanges") : t("form.create")} size="sm" />
+          </form.AppForm>
         </footer>
       </section>
 

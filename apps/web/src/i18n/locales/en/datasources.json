@@ -129,6 +129,7 @@
       "name": "Name the data source",
       "projectId": "Enter the Google Cloud project id",
       "dataset": "Enter the default dataset",
+      "location": "Enter the dataset location, e.g. US",
       "credentials": "Paste or drop the service account key",
       "sql": "Write the exposure query, or start from a template"
     },

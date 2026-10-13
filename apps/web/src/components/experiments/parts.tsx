@@ -3,6 +3,7 @@ import { NumberField, Slider } from "@heroui/react";
 import { CircleSlash, Rocket, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { errorText } from "~/components/form/form";
 
 /** Literal class names so Tailwind generates them; variation colors are for identity only */
 export const variationBg = ["bg-variation-0", "bg-variation-1", "bg-variation-2", "bg-variation-3", "bg-variation-4"];
@@ -59,6 +60,10 @@ export const evenPercents = (n: number): Array<number> => {
   const base = Math.floor(10000 / n) / 100;
   return Array.from({ length: n }, (_, i) => (i === 0 ? Number((100 - base * (n - 1)).toFixed(2)) : base));
 };
+
+/** A custom input's error once the field was touched (a submit attempt touches every field), as the form kit shows it */
+export const shownError = (meta: { readonly isTouched: boolean; readonly errors: ReadonlyArray<unknown> }): string | null =>
+  meta.isTouched ? errorText(meta.errors) || null : null;
 
 export const weightLabel = (w: number) => `${Number((w * 100).toFixed(1))}%`;
 

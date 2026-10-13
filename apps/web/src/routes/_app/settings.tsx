@@ -1,15 +1,17 @@
-import { Button, Input, Label, TextField, toast } from "@heroui/react";
+import { Button, toast } from "@heroui/react";
 import type { Invitation, Member } from "@furca/core/members/Member";
+import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, Link2 } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { setServerError, submitHandler, useAppForm, useRequired } from "~/components/form/form";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { CopyButton, ListSkeleton, PageHeader, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n, intlLocale } from "~/i18n";
-import { errorMessage, orpc } from "~/lib/rpc";
+import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: i18n.t("settings:pageTitle") }] }),
@@ -20,43 +22,69 @@ const REPO = "https://github.com/nxsdev/furca";
 const fullUrl = (inv: Invitation) => new URL(inv.url, window.location.origin).toString();
 const formatJoined = (d: Date) => d.toLocaleDateString(intlLocale(), { month: "short", day: "numeric", year: "numeric" });
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
-  const { t } = useTranslation("settings");
+  const { t } = useTranslation(["settings", "common"]);
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState("");
-  const invite = useMutation(
-    orpc.members.invite.mutationOptions({
-      onSuccess: (inv) => {
+  const required = useRequired();
+  const form = useAppForm({
+    defaultValues: { email: "" },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        const inv = await client.members.invite({ email: value.email.trim() });
         void queryClient.invalidateQueries({ queryKey: orpc.members.key() });
-        setEmail("");
+        formApi.reset();
         onCreated(inv);
-      },
-    }),
-  );
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+      } catch (e) {
+        // BAD_REQUEST: invalid address or already a member
+        setServerError(formApi, e, e instanceof ORPCError && e.code === "BAD_REQUEST" ? "email" : undefined);
+      }
+    },
+  });
   return (
-    <form
-      className="flex flex-col gap-2 border-b border-border px-5 py-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (valid) invite.mutate({ email: email.trim() });
-      }}
-    >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <TextField value={email} onChange={setEmail} type="email" className="sm:w-80" autoComplete="off">
-          <Label>{t("invite.label")}</Label>
-          <Input placeholder="teammate@company.com" />
-        </TextField>
-        <Button type="submit" size="sm" isPending={invite.isPending} isDisabled={!valid} className="h-9">
-          <Link2 className="size-4" />
-          {t("invite.submit")}
-        </Button>
+    <form noValidate className="flex flex-col gap-2 border-b border-border px-5 py-4" onSubmit={submitHandler(form)}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+        <form.AppField
+          name="email"
+          validators={{
+            // Empty is only an error on submit, so tabbing through the field stays quiet
+            onBlur: ({ value }) => (value.trim() === "" || EMAIL.test(value.trim()) ? undefined : t("common:form.email")),
+            onSubmit: required,
+          }}
+          // Once the format error shows, re-check while typing so it clears as soon as the address is valid
+          listeners={{
+            onChange: ({ fieldApi }) => {
+              if (fieldApi.state.meta.errorMap.onBlur !== undefined) fieldApi.validate("blur");
+            },
+          }}
+        >
+          {(field) => (
+            <field.TextField
+              label={t("invite.label")}
+              type="email"
+              placeholder="teammate@company.com"
+              autoComplete="off"
+              className="sm:w-80"
+            />
+          )}
+        </form.AppField>
+        <form.AppForm>
+          <form.SubmitButton
+            size="sm"
+            className="h-9 sm:mt-6"
+            label={
+              <>
+                <Link2 className="size-4" />
+                {t("invite.submit")}
+              </>
+            }
+          />
+        </form.AppForm>
       </div>
-      {invite.error !== null && (
-        <p role="alert" className="text-label text-danger">
-          {errorMessage(invite.error)}
-        </p>
-      )}
+      <form.AppForm>
+        <form.FormError />
+      </form.AppForm>
       <p className="text-xs text-muted">{t("invite.help")}</p>
     </form>
   );

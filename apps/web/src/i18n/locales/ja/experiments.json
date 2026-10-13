@@ -180,6 +180,7 @@
       "coverageHelp": "条件に一致するユーザーのうち、実験に参加する割合です。残りのユーザーにはフラグの他のルールが適用されます。実験をやり直さずに後から引き上げられます。",
       "environments": "環境",
       "environmentsHelp": "選択した各環境で、フラグに実験ルールが追加されます。",
+      "environmentsError": "環境を 1 つ以上選択してください。",
       "analyzeFrom": "露出を分析する環境",
       "analyzeHelp": "通常は本番環境です。その他の環境は QA 用です。",
       "assignBy": "振り分け属性",
@@ -282,6 +283,7 @@
     "evenSplit": "均等に配分",
     "weight": "{{name}} の配分",
     "weightsTotal": "配分の合計が {{percent}}% です。合計を 100% にしてください。",
+    "weightZero": "すべてのバリエーションに 0% より大きい配分を設定してください。",
     "whoCanEnter": "参加できるユーザー",
     "changes": {
       "coverageDown": "対象割合の引き下げ",
