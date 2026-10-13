@@ -329,17 +329,21 @@ describe("ExperimentAnalysisService.refresh", () => {
     expect(latest).toEqual(snapshot);
   });
 
-  it("Holm-adjusts p-values across primary and secondary metrics only when correction is holm", async () => {
+  it("Holm-corrects primary and secondary metrics as separate families, so secondaries never cost the primary power", async () => {
     const stats = (correction: "none" | "holm") => ({ ...StatsSettings.make({ ...defaultStatsSettings(), sequential: false, correction }) });
-    await db.update(experiments).set({ secondaryMetricIds: ["purchase_again"], stats: stats("none") }).where(eq(experiments.id, "checkout"));
+    // Two secondary comparisons form their own family; the primary is alone in its family
+    await db.update(experiments).set({ secondaryMetricIds: ["purchase_again", "purchase_again"], stats: stats("none") }).where(eq(experiments.id, "checkout"));
     const raw = (await refresh("checkout")).metrics.map((m) => m.comparisons[0]!);
     await db.update(experiments).set({ stats: stats("holm") }).where(eq(experiments.id, "checkout"));
     const adjusted = (await refresh("checkout")).metrics.map((m) => m.comparisons[0]!);
 
-    expect(adjusted[0]!.pValue).toBeCloseTo(2 * raw[0]!.pValue!, 12);
-    expect(adjusted[1]!.pValue).toBeCloseTo(2 * raw[1]!.pValue!, 12);
-    expect(adjusted[0]!.ci![0]).toBeLessThan(raw[0]!.ci![0]);
-    expect(adjusted[0]!.ci![1]).toBeGreaterThan(raw[0]!.ci![1]);
+    expect(adjusted[0]!.pValue).toBeCloseTo(raw[0]!.pValue!, 12);
+    expect(adjusted[0]!.ci).toEqual(raw[0]!.ci);
+    expect(adjusted[1]!.pValue).toBeCloseTo(Math.min(1, 2 * raw[1]!.pValue!), 12);
+    expect(adjusted[2]!.pValue).toBeCloseTo(Math.min(1, 2 * raw[2]!.pValue!), 12);
+    expect(adjusted[1]!.ci![0]).toBeLessThan(raw[1]!.ci![0]);
+    expect(adjusted[1]!.ci![1]).toBeGreaterThan(raw[1]!.ci![1]);
+    await db.update(experiments).set({ secondaryMetricIds: ["purchase_again"] }).where(eq(experiments.id, "checkout"));
   });
 
   it("fails the SRM check when a 50/50 split delivers 1,000 vs 1,200 users", async () => {

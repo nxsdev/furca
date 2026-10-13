@@ -154,7 +154,7 @@ const inconclusive = (variationKey: string, message: string) =>
 
 /**
  * Moments rows -> per-variation summaries, comparisons vs control (index 0) and the cumulative
- * timeseries. Holm-corrects frequentist p-values across non-guardrail metric x treatment pairs
+ * timeseries. Holm-corrects frequentist p-values per family (primary, secondary)
  */
 export const analyzeMetrics = (measured: ReadonlyArray<Measured>, experiment: Experiment): MetricResult[] => {
   const { stats } = experiment;
@@ -190,14 +190,20 @@ export const analyzeMetrics = (measured: ReadonlyArray<Measured>, experiment: Ex
     return { ...m, kind, points, totals, outcomes: compare(totals), compare };
   });
 
+  // Holm families: the primary metric (across treatments) and the secondary metrics (metrics x
+  // treatments) are corrected separately, so adding exploratory metrics never costs the decision
+  // metric power. Guardrails are uncorrected: a missed regression is the costlier error there
   const adjusted = new Map<string, number>();
   if (stats.engine === "frequentist" && stats.correction === "holm") {
-    const tests = computed.flatMap((c, mi) =>
-      "error" in c || c.role === "guardrail"
-        ? []
-        : c.outcomes.flatMap((o, i) => (o.ok && o.result.pValue !== null ? [{ key: `${mi}:${i}`, p: o.result.pValue }] : [])),
-    );
-    holmAdjust(tests.map((t) => t.p)).forEach((p, i) => adjusted.set(tests[i]!.key, p));
+    for (const role of ["primary", "secondary"] as const) {
+      const tests = computed.flatMap((c, mi) =>
+        "error" in c || c.role !== role
+          ? []
+          : c.outcomes.flatMap((o, i) => (o.ok && o.result.pValue !== null ? [{ key: `${mi}:${i}`, p: o.result.pValue }] : [])),
+      );
+      // A family of one needs no correction (and must keep its exact interval)
+      if (tests.length > 1) holmAdjust(tests.map((t) => t.p)).forEach((p, i) => adjusted.set(tests[i]!.key, p));
+    }
   }
 
   return computed.map((c, mi) => {
