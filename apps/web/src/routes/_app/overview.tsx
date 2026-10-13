@@ -1,17 +1,19 @@
 import { buttonVariants, Skeleton } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Trans, useTranslation } from "react-i18next";
 import { AuditList } from "~/components/audit/AuditList";
 import { apiHost, CodeBlock, INSTALL } from "~/components/environments/Quickstart";
 import { Onboarding, type OnboardingStep } from "~/components/overview/Onboarding";
 import { RunningExperiments } from "~/components/overview/RunningExperiments";
 import { TrafficChart } from "~/components/overview/TrafficChart";
 import { PageHeader, Panel, PanelHeader, QueryError } from "~/components/ui/primitives";
+import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/overview")({
-  head: () => ({ meta: [{ title: "Overview · furca" }] }),
+  head: () => ({ meta: [{ title: i18n.t("overview:pageTitle") }] }),
   component: Page,
 });
 
@@ -31,6 +33,7 @@ if (furca.isOn("${flagKey}")) {
 }`;
 
 function Page() {
+  const { t } = useTranslation("overview");
   const { current } = useEnvironment();
   const envInput = { input: { environmentId: current?.id ?? "" } };
   const features = useQuery(orpc.features.list.queryOptions({ input: { includeArchived: false } }));
@@ -41,8 +44,8 @@ function Page() {
 
   const header = (
     <PageHeader
-      title="Overview"
-      description={`Running experiments, recent changes and SDK traffic${current === null ? "" : ` in ${current.name}`}.`}
+      title={t("page.title")}
+      description={current === null ? t("page.description") : t("page.descriptionIn", { name: current.name })}
     />
   );
   const core = [features, experiments, metrics] as const;
@@ -62,7 +65,7 @@ function Page() {
       <>
         {header}
         <QueryError
-          message={`Couldn't load the overview. ${errorMessage(failed?.error)}`}
+          message={t("page.loadFailed", { message: errorMessage(failed?.error) })}
           onRetry={() => core.forEach((q) => void q.refetch())}
         />
       </>
@@ -74,68 +77,68 @@ function Page() {
   const steps: ReadonlyArray<OnboardingStep> = [
     {
       id: "flag",
-      title: "Create a flag",
-      description: features.data.length > 0
-        ? `${features.data.length} ${features.data.length === 1 ? "flag" : "flags"} so far.`
-        : "A flag wraps the code you want to change. Start with an on/off flag around one new behavior.",
+      title: t("steps.flag.title"),
+      description:
+        features.data.length > 0 ? t("steps.flag.doneDescription", { count: features.data.length }) : t("steps.flag.description"),
       done: features.data.length > 0,
       action: (v) => (
         <Link to="/flags" search={{ new: "1" }} className={buttonVariants({ size: "sm", variant: v })}>
-          Create flag
+          {t("steps.flag.action")}
         </Link>
       ),
     },
     {
       id: "sdk",
-      title: "Install the SDK",
-      description: sawTraffic
-        ? `${current?.name ?? "This environment"} is receiving SDK traffic.`
-        : `Add @furca/sdk to your app with the ${current?.name ?? ""} key. It downloads one payload and evaluates flags locally, with no request per check.`,
+      title: t("steps.sdk.title"),
+      // ponytail: sawTraffic implies a selected environment (its queries are disabled otherwise)
+      description: t(sawTraffic ? "steps.sdk.doneDescription" : "steps.sdk.description", { name: current?.name ?? "" }),
       done: sawTraffic,
       body:
         current === null ? undefined : (
           <div className="flex w-full max-w-[720px] flex-col gap-2">
-            <CodeBlock code={INSTALL} label="Copy install command" />
+            <CodeBlock code={INSTALL} label={t("steps.sdk.copyInstall")} />
             <CodeBlock code={firstSnippet(current.sdkKey, flagKey)} />
             <Link to="/environments" className={`${linkCls} w-fit`}>
-              Cloudflare Workers, Node and other environments
+              {t("steps.sdk.otherRuntimes")}
             </Link>
           </div>
         ),
     },
     {
       id: "metric",
-      title: "Send events and define a metric",
+      title: t("steps.metric.title"),
       description:
         metrics.data.length > 0 ? (
-          `${metrics.data.length} ${metrics.data.length === 1 ? "metric" : "metrics"} defined.`
+          t("steps.metric.doneDescription", { count: metrics.data.length })
         ) : (
-          <>
-            Call <code className="font-mono text-foreground">furca.track("purchase")</code> where the outcome happens, then turn
-            that event into a metric like "share of users who purchased".
-            {eventNames.length > 0 &&
-              ` Received so far: ${eventNames
+          <Trans
+            t={t}
+            i18nKey={eventNames.length > 0 ? "steps.metric.descriptionWithEvents" : "steps.metric.description"}
+            values={{
+              call: 'furca.track("purchase")',
+              names: `${eventNames
                 .slice(0, 3)
                 .map((n) => n.name)
-                .join(", ")}${eventNames.length > 3 ? "…" : ""}.`}
-          </>
+                .join(", ")}${eventNames.length > 3 ? "…" : ""}`,
+            }}
+            components={{ code: <code className="font-mono text-foreground" /> }}
+          />
         ),
       done: metrics.data.length > 0,
       action: (v) => (
         <Link to="/metrics" search={{ new: true }} className={buttonVariants({ size: "sm", variant: v })}>
-          Define a metric
+          {t("steps.metric.action")}
         </Link>
       ),
     },
     {
       id: "experiment",
-      title: "Start an experiment",
-      description:
-        "Pick the flag, a primary metric and the traffic split. furca assigns users deterministically and tells you when the result is real.",
+      title: t("steps.experiment.title"),
+      description: t("steps.experiment.description"),
       done: experiments.data.some((x) => x.status !== "draft"),
       action: (v) => (
         <Link to="/experiments/new" className={buttonVariants({ size: "sm", variant: v })}>
-          Create experiment
+          {t("steps.experiment.action")}
         </Link>
       ),
     },
@@ -154,11 +157,11 @@ function Page() {
             {current !== null && (
               <Panel>
                 <PanelHeader
-                  title="SDK traffic"
-                  description={`Exposures and tracked events per hour in ${current.name}, last 24 hours.`}
+                  title={t("traffic.title")}
+                  description={t("traffic.description", { name: current.name })}
                   actions={
                     <Link to="/data-sources/$dataSourceId" params={{ dataSourceId: "builtin" }} className={`${linkCls} shrink-0`}>
-                      Event store
+                      {t("traffic.eventStore")}
                     </Link>
                   }
                 />
@@ -167,10 +170,10 @@ function Page() {
             )}
             <Panel>
               <PanelHeader
-                title="Recent changes"
+                title={t("recentChanges.title")}
                 actions={
                   <Link to="/audit" className={`${linkCls} shrink-0`}>
-                    Audit log
+                    {t("recentChanges.auditLog")}
                   </Link>
                 }
               />

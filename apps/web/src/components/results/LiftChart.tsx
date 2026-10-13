@@ -1,14 +1,17 @@
 import type { Experiment } from "@furca/core/experiments/Experiment";
 import type { MetricResult } from "@furca/core/results/ExperimentResult";
+import { useTranslation } from "react-i18next";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { VariationSwatch, variationColor } from "~/components/experiments/parts";
+import { intlLocale } from "~/i18n";
 import { formatCi, formatCount, formatLift } from "./format";
 
 const shortDate = (iso: string) =>
-  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString(intlLocale(), { month: "short", day: "numeric", timeZone: "UTC" });
 
 /** Cumulative relative lift by first-exposure date, one line + interval band per treatment */
 export function LiftChart({ experiment, result }: { experiment: Experiment; result: MetricResult }) {
+  const { t } = useTranslation("results");
   const treatments = experiment.variations.map((v, index) => ({ ...v, index })).slice(1);
   const rows = result.timeseries.map((p) => {
     const row: Record<string, unknown> = { date: p.date, users: p.users };
@@ -29,7 +32,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
   if (rows.length < 2) {
     return (
       <p className="px-5 py-10 text-center text-body text-muted">
-        The trend appears after users from at least two days have been analyzed.
+        {t("chart.tooFewDays")}
       </p>
     );
   }
@@ -37,7 +40,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
   return (
     <div className="flex flex-col gap-3 px-2 pt-4 pb-2 sm:px-4">
       {treatments.length > 1 && (
-        <ul className="flex flex-wrap gap-x-4 gap-y-1 px-3 text-meta text-muted" aria-label="Legend">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 px-3 text-meta text-muted" aria-label={t("chart.legend")}>
           {treatments.map((t) => (
             <li key={t.key} className="inline-flex items-center gap-1.5">
               <VariationSwatch index={t.index} />
@@ -100,7 +103,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
                 return (
                   <div className="min-w-48 rounded-md border border-border bg-overlay px-3 py-2 text-meta shadow-overlay">
                     <div className="mb-1 font-medium">
-                      {shortDate(String(label))} · {formatCount(Number(row.users))} users
+                      {shortDate(String(label))} · {t("users", { count: Number(row.users), users: formatCount(Number(row.users)) })}
                     </div>
                     {treatments.map((t) => {
                       const lift = row[`lift:${t.key}`] as number | null | undefined;
@@ -126,14 +129,14 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
       </div>
       <details className="group px-3 pb-2 text-meta">
         <summary className="cursor-pointer select-none text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus">
-          Show as table
+          {t("chart.showTable")}
         </summary>
         <div className="mt-2 max-h-64 overflow-auto">
           <table className="w-full font-mono tabular">
             <thead className="text-muted">
               <tr className="[&>th]:py-1 [&>th]:pr-4 [&>th]:text-left [&>th]:font-normal">
-                <th scope="col" className="font-sans">First exposure</th>
-                <th scope="col" className="font-sans">Users</th>
+                <th scope="col" className="font-sans">{t("chart.firstExposure")}</th>
+                <th scope="col" className="font-sans">{t("chart.users")}</th>
                 {treatments.map((t) => (
                   <th key={t.key} scope="col" className="font-sans">
                     {t.name}

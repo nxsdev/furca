@@ -1,5 +1,7 @@
 import { type FeatureValueType, validateFeatureValue } from "@furca/core/features/Feature";
 import { Button, Input, Label, NumberField, TextArea, TextField } from "@heroui/react";
+import { useTranslation } from "react-i18next";
+import { i18n } from "~/i18n";
 import { Segmented } from "./Segmented";
 
 const parse = (json: string): unknown => {
@@ -13,6 +15,17 @@ const parse = (json: string): unknown => {
 /** JSON-encoded starting value for a new flag or rule of this type */
 export const defaultValueFor = (valueType: FeatureValueType): string =>
   valueType === "boolean" ? "false" : valueType === "string" ? '""' : valueType === "number" ? "0" : "{}";
+
+/** validateFeatureValue (core, English) with a translated message */
+export const valueIssue = (valueType: FeatureValueType, json: string): string | null => {
+  if (validateFeatureValue(valueType, json) === null) return null;
+  if (parse(json) === undefined) return i18n.t("flags:value.invalidJson");
+  return valueType === "boolean"
+    ? i18n.t("flags:value.expectedBoolean")
+    : valueType === "string"
+      ? i18n.t("flags:value.expectedString")
+      : i18n.t("flags:value.expectedNumber");
+};
 
 /**
  * Edits a JSON-encoded flag value: true/false toggle, text, number, or a JSON document with live
@@ -31,7 +44,8 @@ export function ValueInput({
   label?: string;
   isDisabled?: boolean;
 }) {
-  const error = validateFeatureValue(valueType, value);
+  const { t } = useTranslation("flags");
+  const error = valueIssue(valueType, value);
 
   if (valueType === "boolean") {
     const parsed = parse(value);
@@ -39,7 +53,7 @@ export function ValueInput({
       <div className="flex flex-col gap-1.5">
         {label !== undefined && <Label>{label}</Label>}
         <Segmented
-          aria-label={label ?? "Value"}
+          aria-label={label ?? t("value.label")}
           value={parsed === true ? "true" : parsed === false ? "false" : ("" as "true")}
           onChange={(v) => onChange(v)}
           isDisabled={isDisabled}
@@ -57,13 +71,13 @@ export function ValueInput({
     const parsed = parse(value);
     return (
       <TextField
-        aria-label={label === undefined ? "Value" : undefined}
+        aria-label={label === undefined ? t("value.label") : undefined}
         value={typeof parsed === "string" ? parsed : ""}
         onChange={(text) => onChange(JSON.stringify(text))}
         isDisabled={isDisabled}
       >
         {label !== undefined && <Label>{label}</Label>}
-        <Input className="font-mono text-base sm:text-label" placeholder="Empty string" />
+        <Input className="font-mono text-base sm:text-label" placeholder={t("value.emptyString")} />
       </TextField>
     );
   }
@@ -72,7 +86,7 @@ export function ValueInput({
     const parsed = parse(value);
     return (
       <NumberField
-        aria-label={label === undefined ? "Value" : undefined}
+        aria-label={label === undefined ? t("value.label") : undefined}
         value={typeof parsed === "number" ? parsed : Number.NaN}
         onChange={(n) => onChange(Number.isFinite(n) ? String(n) : "")}
         formatOptions={{ useGrouping: false, maximumFractionDigits: 10 }}
@@ -85,7 +99,7 @@ export function ValueInput({
           <NumberField.Input className="font-mono text-base sm:text-label tabular" />
           <NumberField.IncrementButton />
         </NumberField.Group>
-        {error !== null && <p className="text-meta text-danger">Enter a number</p>}
+        {error !== null && <p className="text-meta text-danger">{t("value.enterNumber")}</p>}
       </NumberField>
     );
   }
@@ -94,7 +108,7 @@ export function ValueInput({
   const pretty = parsed === undefined ? null : JSON.stringify(parsed, null, 2);
   return (
     <TextField
-      aria-label={label === undefined ? "Value" : undefined}
+      aria-label={label === undefined ? t("value.label") : undefined}
       value={value}
       onChange={onChange}
       isInvalid={error !== null}
@@ -105,7 +119,7 @@ export function ValueInput({
         {label !== undefined ? <Label>{label}</Label> : <span />}
         {pretty !== null && pretty !== value && (
           <Button size="sm" variant="ghost" className="h-6 px-1.5 text-meta text-muted" onPress={() => onChange(pretty)} isDisabled={isDisabled}>
-            Format
+            {t("value.format")}
           </Button>
         )}
       </div>
@@ -116,7 +130,7 @@ export function ValueInput({
         placeholder='{ "variant": "a" }'
       />
       <p className={`text-meta ${error === null ? "text-muted" : "text-danger"}`} aria-live="polite">
-        {error ?? "Valid JSON"}
+        {error ?? t("value.validJson")}
       </p>
     </TextField>
   );

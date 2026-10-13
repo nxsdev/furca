@@ -1,0 +1,232 @@
+{
+  "pageTitle": "Metrics · furca",
+  "detailPageTitle": "Metric · furca",
+  "builtinEvents": "Built-in events",
+  "archived": "Archived",
+  "types": {
+    "proportion": "Conversion",
+    "mean": "Mean",
+    "ratio": "Ratio"
+  },
+  "direction": {
+    "lowerIsBetter": "Lower is better",
+    "higherIsBetter": "Higher is better"
+  },
+  "window": {
+    "none": "No window",
+    "withDelay": "{{window}} · {{delay}} delay"
+  },
+  "capping": {
+    "absolute": "At {{value}} per user",
+    "percentile": "At p{{percentile}} per user"
+  },
+  "sentence": {
+    "eventPlaceholder": "event",
+    "proportion": "Share of users with ≥1 <c>{{event}}</c>",
+    "meanCount": "Average number of <c>{{event}}</c> events per user",
+    "meanSum": "Average sum of <c>{{event}}</c> values per user",
+    "ratio": {
+      "countCount": "Count of <c>{{numerator}}</c> events ÷ count of <c>{{denominator}}</c> events, across users",
+      "countSum": "Count of <c>{{numerator}}</c> events ÷ sum of <c>{{denominator}}</c> values, across users",
+      "sumCount": "Sum of <c>{{numerator}}</c> values ÷ count of <c>{{denominator}}</c> events, across users",
+      "sumSum": "Sum of <c>{{numerator}}</c> values ÷ sum of <c>{{denominator}}</c> values, across users"
+    },
+    "sqlProportion": "Share of users with ≥1 row from the SQL",
+    "sqlMean": "Average sum of <c>value</c> per user from the SQL",
+    "sqlRatio": "Sum of numerator <c>value</c> ÷ sum of denominator <c>value</c>, across users",
+    "when": {
+      "anyTime": "any time after first exposure",
+      "fromDelay": "from {{delay}} after first exposure on",
+      "within": "within {{window}} of first exposure",
+      "between": "between {{delay}} and {{window}} after first exposure"
+    },
+    "cap": {
+      "absolute": ", each user capped at {{value}}",
+      "percentile": ", each user capped at the {{percentile}}th percentile"
+    },
+    "tail": " {{when}}{{cap}}."
+  },
+  "list": {
+    "title": "Metrics",
+    "description": "Reusable definitions of what success means. Experiments pick them as primary, secondary or guardrail metrics.",
+    "newMetric": "New metric",
+    "loadFailed": "Couldn't load metrics. {{error}}",
+    "emptyTitle": "No metrics yet",
+    "emptyDescription": "A metric turns events into a number an experiment is judged by, like checkout conversion or revenue per user. Start from events your app sends with track().",
+    "count_one": "{{count}} metric",
+    "count_other": "{{count}} metrics",
+    "showArchived": "Show archived",
+    "noArchived": "No archived metrics.",
+    "experimentCount_one": "{{count}} experiment",
+    "experimentCount_other": "{{count}} experiments",
+    "columns": {
+      "metric": "Metric",
+      "type": "Type",
+      "dataSource": "Data source",
+      "goal": "Goal",
+      "window": "Window",
+      "usedBy": "Used by"
+    }
+  },
+  "new": {
+    "breadcrumb": "New",
+    "title": "New metric",
+    "description": "Turn events into the number an experiment is judged by."
+  },
+  "detail": {
+    "fallbackTitle": "Metric",
+    "loadFailed": "Couldn't load this metric. {{error}}",
+    "editTitle": "Edit {{name}}",
+    "runningWarning_one": "{{count}} running experiment uses this metric ({{names}}). Changes apply from their next analysis.",
+    "runningWarning_other": "{{count}} running experiments use this metric ({{names}}). Changes apply from their next analysis.",
+    "archivedToast": "Metric archived",
+    "archivedToastDescription": "It's hidden from pickers. Experiments that use it keep it.",
+    "restoredToast": "Metric restored",
+    "updateFailed": "Couldn't update the metric",
+    "savedToast": "Metric saved",
+    "definition": "Definition",
+    "facts": {
+      "key": "Key",
+      "type": "Type",
+      "dataSource": "Data source",
+      "numerator": "Numerator",
+      "event": "Event",
+      "denominator": "Denominator",
+      "window": "Window",
+      "windowNone": "None (until analysis time)",
+      "delay": "Delay",
+      "capping": "Capping",
+      "goal": "Goal",
+      "updated": "Updated"
+    },
+    "aggregation": {
+      "count": "count",
+      "sum": "sum"
+    },
+    "sql": {
+      "numerator": "Numerator SQL",
+      "single": "SQL",
+      "denominator": "Denominator SQL"
+    },
+    "usedBy": {
+      "title": "Used by",
+      "description": "Experiments that read this metric. Results update at their next analysis.",
+      "loadFailed": "Couldn't load experiments. {{error}}",
+      "empty": "No experiment uses this metric yet. Choose it as the primary metric when you <link>create an experiment</link>.",
+      "columns": {
+        "experiment": "Experiment",
+        "status": "Status",
+        "role": "Role"
+      },
+      "roles": {
+        "primary": "Primary",
+        "guardrail": "Guardrail",
+        "secondary": "Secondary"
+      }
+    },
+    "history": {
+      "title": "History",
+      "description": "Every change to this metric's definition.",
+      "empty": "Edits to this metric will appear here with a diff of what changed."
+    }
+  },
+  "form": {
+    "sections": {
+      "basics": "Basics",
+      "measure": "What to measure",
+      "window": "Conversion window",
+      "windowDescription": "Counted from each user's first exposure to the experiment. Shorter windows give faster, cleaner reads.",
+      "analysis": "Analysis"
+    },
+    "name": {
+      "label": "Name",
+      "placeholder": "Checkout conversion"
+    },
+    "key": {
+      "label": "Key",
+      "readOnly": "Keys can't change once created.",
+      "help": "Used in URLs and the API."
+    },
+    "description": {
+      "label": "Description",
+      "placeholder": "Optional. What this metric tells you and when to use it."
+    },
+    "type": {
+      "label": "Type",
+      "proportion": "Share of users who did X at least once.",
+      "mean": "Average count or sum of X per user.",
+      "ratio": "Sum of X ÷ sum of Y across users."
+    },
+    "dataSource": {
+      "label": "Data source",
+      "sdkEvents": "SDK events",
+      "sqlHelp": "Events come from your BigQuery SQL.",
+      "sdkHelp": "Events your app sends with the SDK's track()."
+    },
+    "sql": {
+      "numerator": "Numerator SQL",
+      "event": "Event SQL",
+      "denominator": "Denominator SQL",
+      "insertTemplate": "Insert template",
+      "help": "One row per event with columns <c>user_id</c> STRING, <c>timestamp</c> TIMESTAMP, <c>value</c> FLOAT64 (use 1 to count). furca joins it to exposures by <c>user_id</c>."
+    },
+    "event": {
+      "label": "Event",
+      "numerator": "Numerator",
+      "denominator": "Denominator",
+      "thisEnvironment": "this environment",
+      "unavailable": "Event suggestions are unavailable right now. Type the event name you send with track().",
+      "suggestions": "Suggestions are events received in {{environment}} over the last 30 days. You can also type a name that hasn't arrived yet.",
+      "none": "No events received in {{environment}} yet. Type the name you will send with furca.track(\"purchase\")."
+    },
+    "aggregation": {
+      "label": "Aggregate",
+      "count": "Count",
+      "sum": "Sum of value",
+      "countHelp": "Counts each track() call.",
+      "sumHelp": "Adds up the <c>value</c> passed to <c>track(name, value)</c>, e.g. revenue in cents."
+    },
+    "window": {
+      "label": "Window",
+      "custom": "Custom",
+      "customLabel": "Window in hours",
+      "hours": "hours",
+      "delay": "Delay",
+      "delayHelp": "Ignore events in the first hours after exposure, e.g. to skip the visit that triggered it."
+    },
+    "inverseHelp": "For metrics you want to go down, like latency, errors or churn. A decrease then counts as winning.",
+    "capping": {
+      "label": "Capping",
+      "absolute": "Absolute",
+      "percentile": "Percentile",
+      "help": "Protects against a single whale: one user with an unusually large total can swing the average. Capping limits each user's total before variations are compared.",
+      "absoluteLabel": "Cap each user's total at",
+      "percentileLabel": "Cap each user at percentile",
+      "percentileSuffix": "th",
+      "absoluteHelp": "In the metric's own unit, e.g. 50000 for revenue in cents.",
+      "percentileHelp": "Computed across all variations at each analysis. 99 is a good default."
+    },
+    "errors": {
+      "name": "Give the metric a name",
+      "key": "Use lowercase letters, digits, - and _ (max 64)",
+      "numSql": "Write the SQL that returns one row per event",
+      "denSql": "Ratio metrics need a denominator query",
+      "numEvent": "Pick or type an event name",
+      "denEvent": "Ratio metrics need a denominator event",
+      "window": "The window must be longer than 0 hours",
+      "delayNegative": "Delay can't be negative",
+      "delayTooLong": "Delay must be shorter than the window",
+      "capAbsolute": "Cap must be greater than 0",
+      "capPercentile": "Use a percentile between 50 and 99.99",
+      "fixFields": "Fix the highlighted fields to continue."
+    },
+    "saveChanges": "Save changes",
+    "create": "Create metric",
+    "preview": {
+      "title": "Preview",
+      "type": "Type",
+      "goal": "Goal",
+      "source": "Source"
+    }
+  }
+}

@@ -2,32 +2,37 @@ import type { Experiment } from "@furca/core/experiments/Experiment";
 import type { Metric, MetricType } from "@furca/core/metrics/Metric";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { ReactNode } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { i18n, intlLocale } from "~/i18n";
 
-export const metricTypeLabel: Record<MetricType, string> = {
-  proportion: "Conversion",
-  mean: "Mean",
-  ratio: "Ratio",
+export const metricTypeLabel = (type: MetricType): string => i18n.t(`metrics:types.${type}`);
+
+/** 24h, 72h, 7d, 14d (24時間, 7日 in Japanese) */
+export const formatHours = (hours: number): string => {
+  const days = hours >= 168 && hours % 24 === 0;
+  return new Intl.NumberFormat(intlLocale(), {
+    style: "unit",
+    unit: days ? "day" : "hour",
+    unitDisplay: "narrow",
+    maximumFractionDigits: 2,
+  }).format(days ? hours / 24 : hours);
 };
-
-/** 24h, 72h, 7d, 14d */
-export const formatHours = (hours: number): string =>
-  hours >= 168 && hours % 24 === 0 ? `${hours / 24}d` : `${Number(hours.toFixed(2))}h`;
 
 export const windowLabel = (m: Pick<Metric, "windowHours" | "delayHours">): string => {
-  const window = m.windowHours === null ? "No window" : formatHours(m.windowHours);
-  return m.delayHours > 0 ? `${window} · ${formatHours(m.delayHours)} delay` : window;
+  const window = m.windowHours === null ? i18n.t("metrics:window.none") : formatHours(m.windowHours);
+  return m.delayHours > 0 ? i18n.t("metrics:window.withDelay", { window, delay: formatHours(m.delayHours) }) : window;
 };
+
+const percentileOf = (value: number) => Number((value * 100).toFixed(2));
 
 export const cappingLabel = (capping: Metric["capping"]): string =>
   capping.type === "none"
-    ? "None"
+    ? i18n.t("common:states.none")
     : capping.type === "absolute"
-      ? `At ${capping.value} per user`
-      : `At p${Number((capping.value * 100).toFixed(2))} per user`;
+      ? i18n.t("metrics:capping.absolute", { value: capping.value })
+      : i18n.t("metrics:capping.percentile", { percentile: percentileOf(capping.value) });
 
-const Tok = ({ children }: { children: string }) => (
-  <code className="rounded-[4px] bg-default px-1 py-px font-mono text-[0.92em]">{children}</code>
-);
+const tok = <code className="rounded-[4px] bg-default px-1 py-px font-mono text-[0.92em]" />;
 
 type Describable = Pick<Metric, "type" | "definition" | "windowHours" | "delayHours" | "capping">;
 
@@ -36,81 +41,77 @@ type Describable = Pick<Metric, "type" | "definition" | "windowHours" | "delayHo
  * exposure". Shared by the form preview, the list and the detail page so they never disagree
  */
 export function MetricSentence({ metric }: { metric: Describable }) {
+  const { t } = useTranslation("metrics");
   const d = metric.definition;
+  const ev = (name: string) => (name.trim() === "" ? t("sentence.eventPlaceholder") : name.trim());
   let what: ReactNode;
   if (d._tag === "event") {
-    const ev = (name: string) => <Tok>{name.trim() === "" ? "event" : name.trim()}</Tok>;
-    const agg = (s: { event: string; aggregation: "count" | "sum" }, first: boolean) =>
-      s.aggregation === "count" ? (
-        <>
-          {first ? "Count" : "count"} of {ev(s.event)} events
-        </>
-      ) : (
-        <>
-          {first ? "Sum" : "sum"} of {ev(s.event)} values
-        </>
-      );
-    if (metric.type === "proportion") what = <>Share of users with ≥1 {ev(d.numerator.event)}</>;
+    if (metric.type === "proportion")
+      what = <Trans t={t} i18nKey="sentence.proportion" values={{ event: ev(d.numerator.event) }} components={{ c: tok }} />;
     else if (metric.type === "mean")
-      what =
-        d.numerator.aggregation === "count" ? (
-          <>Average number of {ev(d.numerator.event)} events per user</>
-        ) : (
-          <>Average sum of {ev(d.numerator.event)} values per user</>
-        );
-    else
       what = (
-        <>
-          {agg(d.numerator, true)} ÷ {agg(d.denominator ?? { event: "", aggregation: "count" }, false)}, across users
-        </>
+        <Trans
+          t={t}
+          i18nKey={d.numerator.aggregation === "count" ? "sentence.meanCount" : "sentence.meanSum"}
+          values={{ event: ev(d.numerator.event) }}
+          components={{ c: tok }}
+        />
       );
+    else {
+      const den = d.denominator ?? { event: "", aggregation: "count" as const };
+      const combo = `${d.numerator.aggregation === "count" ? "count" : "sum"}${den.aggregation === "count" ? "Count" : "Sum"}` as const;
+      what = (
+        <Trans
+          t={t}
+          i18nKey={`sentence.ratio.${combo}`}
+          values={{ numerator: ev(d.numerator.event), denominator: ev(den.event) }}
+          components={{ c: tok }}
+        />
+      );
+    }
   } else {
-    what =
-      metric.type === "proportion" ? (
-        <>Share of users with ≥1 row from the SQL</>
-      ) : metric.type === "mean" ? (
-        <>
-          Average sum of <Tok>value</Tok> per user from the SQL
-        </>
-      ) : (
-        <>
-          Sum of numerator <Tok>value</Tok> ÷ sum of denominator <Tok>value</Tok>, across users
-        </>
-      );
+    what = (
+      <Trans
+        t={t}
+        i18nKey={metric.type === "proportion" ? "sentence.sqlProportion" : metric.type === "mean" ? "sentence.sqlMean" : "sentence.sqlRatio"}
+        components={{ c: tok }}
+      />
+    );
   }
 
   const delay = metric.delayHours > 0 ? formatHours(metric.delayHours) : null;
+  const window = metric.windowHours === null ? null : formatHours(metric.windowHours);
   const when =
-    metric.windowHours === null
+    window === null
       ? delay === null
-        ? " any time after first exposure"
-        : ` from ${delay} after first exposure on`
+        ? t("sentence.when.anyTime")
+        : t("sentence.when.fromDelay", { delay })
       : delay === null
-        ? ` within ${formatHours(metric.windowHours)} of first exposure`
-        : ` between ${delay} and ${formatHours(metric.windowHours)} after first exposure`;
+        ? t("sentence.when.within", { window })
+        : t("sentence.when.between", { delay, window });
 
   const cap =
     metric.type === "proportion" || metric.capping.type === "none"
       ? ""
       : metric.capping.type === "absolute"
-        ? `, each user capped at ${metric.capping.value}`
-        : `, each user capped at the ${Number((metric.capping.value * 100).toFixed(2))}th percentile`;
+        ? t("sentence.cap.absolute", { value: metric.capping.value })
+        : t("sentence.cap.percentile", { percentile: percentileOf(metric.capping.value) });
 
   return (
     <>
       {what}
-      {when}
-      {cap}.
+      {t("sentence.tail", { when, cap })}
     </>
   );
 }
 
 export function Direction({ inverse }: { inverse: boolean }) {
+  const { t } = useTranslation("metrics");
   const Icon = inverse ? ArrowDown : ArrowUp;
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap">
       <Icon className="size-3.5 text-muted" aria-hidden="true" />
-      {inverse ? "Lower is better" : "Higher is better"}
+      {inverse ? t("direction.lowerIsBetter") : t("direction.higherIsBetter")}
     </span>
   );
 }

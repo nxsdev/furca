@@ -4,7 +4,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, FileUp, KeyRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { DropZone, FileTrigger } from "react-aria-components";
+import { Trans, useTranslation } from "react-i18next";
 import { CodeBlock } from "~/components/environments/Quickstart";
+import { i18n } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 const LOCATIONS = [
@@ -63,19 +65,22 @@ const parseServiceAccount = (text: string): Parsed => {
     const j: unknown = JSON.parse(text);
     const o = (j ?? {}) as Record<string, unknown>;
     if (o.type !== "service_account" || typeof o.client_email !== "string" || typeof o.private_key !== "string")
-      return { error: "This isn't a service account key. In Google Cloud, open IAM → Service accounts → Keys → Add key → JSON." };
+      return { error: i18n.t("datasources:form.key.notServiceAccount") };
     return { email: o.client_email, projectId: typeof o.project_id === "string" ? o.project_id : null };
   } catch {
-    return { error: "This isn't valid JSON. Paste the whole key file, including the braces." };
+    return { error: i18n.t("datasources:form.key.invalidJson") };
   }
 };
 
 const ROLES = [
-  { id: "roles/bigquery.jobUser", name: "BigQuery Job User", why: "runs queries" },
-  { id: "roles/bigquery.dataViewer", name: "BigQuery Data Viewer", why: "reads your tables" },
-];
+  { id: "roles/bigquery.jobUser", key: "jobUser" },
+  { id: "roles/bigquery.dataViewer", key: "dataViewer" },
+] as const;
+
+const code = <code className="font-mono" />;
 
 function GrantRoles({ email, projectId }: { email: string; projectId: string }) {
+  const { t } = useTranslation("datasources");
   const project = projectId || "<project>";
   const commands = ROLES.map(
     (r) => `gcloud projects add-iam-policy-binding ${project} \\\n  --member="serviceAccount:${email}" \\\n  --role="${r.id}"`,
@@ -84,24 +89,24 @@ function GrantRoles({ email, projectId }: { email: string; projectId: string }) 
     <div className="flex flex-col gap-3 rounded-md border border-border bg-default/30 px-4 py-3">
       <p className="flex min-w-0 items-center gap-2 text-label">
         <CircleCheck className="size-4 shrink-0 text-muted" aria-hidden="true" />
-        <span className="shrink-0 text-muted">Service account</span>
+        <span className="shrink-0 text-muted">{t("form.roles.serviceAccount")}</span>
         <code className="truncate font-mono">{email}</code>
       </p>
       <div className="text-label">
         <p>
-          Grant it these roles on <code className="font-mono">{project}</code>:
+          <Trans t={t} i18nKey="form.roles.grant" components={{ project: <code className="font-mono">{project}</code> }} />
         </p>
         <ul className="mt-1.5 flex flex-col gap-1">
           {ROLES.map((r) => (
             <li key={r.id} className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-medium">{r.name}</span>
+              <span className="font-medium">{t(`form.roles.${r.key}`)}</span>
               <code className="font-mono text-meta text-muted">{r.id}</code>
-              <span className="text-meta text-muted">{r.why}</span>
+              <span className="text-meta text-muted">{t(`form.roles.${r.key}Why`)}</span>
             </li>
           ))}
         </ul>
       </div>
-      <CodeBlock code={commands} label="Copy gcloud commands" />
+      <CodeBlock code={commands} label={t("form.roles.copyCommands")} />
     </div>
   );
 }
@@ -128,6 +133,7 @@ export function BigQueryForm({
   onSaved: (source: DataSource) => void;
   onCancel?: () => void;
 }) {
+  const { t } = useTranslation(["datasources", "common"]);
   const isEdit = source !== undefined;
   const queryClient = useQueryClient();
   const [name, setName] = useState(source?.name ?? "");
@@ -160,16 +166,16 @@ export function BigQueryForm({
   const save = isEdit ? update : create;
 
   const errors = {
-    name: name.trim() === "" ? "Name the data source" : undefined,
-    projectId: projectId.trim() === "" ? "Enter the Google Cloud project id" : undefined,
-    dataset: dataset.trim() === "" ? "Enter the default dataset" : undefined,
+    name: name.trim() === "" ? t("form.errors.name") : undefined,
+    projectId: projectId.trim() === "" ? t("form.errors.projectId") : undefined,
+    dataset: dataset.trim() === "" ? t("form.errors.dataset") : undefined,
     credentials:
       replaceKey && parsed === null
-        ? "Paste or drop the service account key"
+        ? t("form.errors.credentials")
         : replaceKey && parsed !== null && "error" in parsed
           ? parsed.error
           : undefined,
-    sql: sql.trim() === "" ? "Write the exposure query, or start from a template" : undefined,
+    sql: sql.trim() === "" ? t("form.errors.sql") : undefined,
   };
   const shown = (k: keyof typeof errors) => (submitted || k === "credentials" ? errors[k] : undefined);
   const dirty =
@@ -181,13 +187,13 @@ export function BigQueryForm({
     sql !== source.exposureSql ||
     credentials !== "";
 
-  const insertTemplate = (t: Template) => {
+  const insertTemplate = (template: Template) => {
     const previous = sql;
-    setSql(exposureTemplate(t, projectId, dataset));
+    setSql(exposureTemplate(template, projectId, dataset));
     if (previous.trim() !== "")
-      toast("Template inserted", {
-        description: "Your previous SQL was replaced.",
-        actionProps: { children: "Undo", onPress: () => setSql(previous), variant: "tertiary" },
+      toast(t("form.sql.templateInserted"), {
+        description: t("form.sql.templateInsertedDescription"),
+        actionProps: { children: t("form.sql.undo"), onPress: () => setSql(previous), variant: "tertiary" },
       });
   };
 
@@ -216,26 +222,26 @@ export function BigQueryForm({
       }}
       className="min-w-0 rounded-[10px] border border-border bg-surface"
     >
-      <Section title="Warehouse">
+      <Section title={t("form.warehouse.title")}>
         <TextField value={name} onChange={setName} isRequired isInvalid={shown("name") !== undefined} className="sm:max-w-sm" autoFocus={!isEdit}>
-          <Label>Name</Label>
-          <Input placeholder="Analytics warehouse" />
+          <Label>{t("form.warehouse.name")}</Label>
+          <Input placeholder={t("form.warehouse.namePlaceholder")} />
           <FieldError>{shown("name")}</FieldError>
         </TextField>
         <div className="grid gap-4 sm:grid-cols-3">
           <TextField value={projectId} onChange={setProjectId} isRequired isInvalid={shown("projectId") !== undefined}>
-            <Label>Project id</Label>
+            <Label>{t("form.warehouse.projectId")}</Label>
             <Input placeholder="my-company-prod" spellCheck={false} className="font-mono" />
             <FieldError>{shown("projectId")}</FieldError>
           </TextField>
           <TextField value={dataset} onChange={setDataset} isRequired isInvalid={shown("dataset") !== undefined}>
-            <Label>Dataset</Label>
+            <Label>{t("form.warehouse.dataset")}</Label>
             <Input placeholder="analytics_123456" spellCheck={false} className="font-mono" />
-            <Description>Default for unqualified tables.</Description>
+            <Description>{t("form.warehouse.datasetHelp")}</Description>
             <FieldError>{shown("dataset")}</FieldError>
           </TextField>
           <ComboBox allowsCustomValue inputValue={location} onInputChange={setLocation} items={LOCATIONS} menuTrigger="focus">
-            <Label>Location</Label>
+            <Label>{t("form.warehouse.location")}</Label>
             <ComboBox.InputGroup>
               <Input spellCheck={false} className="font-mono" />
               <ComboBox.Trigger />
@@ -249,28 +255,20 @@ export function BigQueryForm({
                 )}
               </ListBox>
             </ComboBox.Popover>
-            <Description>Where the dataset lives.</Description>
+            <Description>{t("form.warehouse.locationHelp")}</Description>
           </ComboBox>
         </div>
       </Section>
 
-      <Section
-        title="Service account key"
-        description={
-          <>
-            Stored encrypted with this deployment's <code className="font-mono">ENCRYPTION_KEY</code> and never shown again.
-            furca only runs read queries.
-          </>
-        }
-      >
+      <Section title={t("form.key.title")} description={<Trans t={t} i18nKey="form.key.description" components={{ c: code }} />}>
         {!replaceKey ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-4 py-3">
             <span className="flex items-center gap-2 text-label">
               <KeyRound className="size-4 text-muted" aria-hidden="true" />
-              A key is stored for this data source.
+              {t("form.key.stored")}
             </span>
             <Button size="sm" variant="tertiary" onPress={() => setReplaceKey(true)}>
-              Replace key
+              {t("form.key.replace")}
             </Button>
           </div>
         ) : (
@@ -291,19 +289,19 @@ export function BigQueryForm({
                   }
               }}
               className={`rounded-md outline-none transition-shadow data-focus-visible:ring-2 data-focus-visible:ring-focus ${dragging ? "ring-2 ring-focus" : ""}`}
-              aria-label="Drop a service account JSON key"
+              aria-label={t("form.key.dropLabel")}
             >
               <TextField
                 value={credentials}
                 onChange={setCredentials}
                 isInvalid={credentials !== "" && shown("credentials") !== undefined}
-                aria-label="Service account JSON key"
+                aria-label={t("form.key.fieldLabel")}
               >
                 <TextArea
                   rows={5}
                   spellCheck={false}
                   autoCorrect="off"
-                  placeholder={'Paste the JSON key, or drop the .json file here\n{ "type": "service_account", "project_id": "…", "client_email": "…", … }'}
+                  placeholder={`${t("form.key.placeholder")}\n{ "type": "service_account", "project_id": "…", "client_email": "…", … }`}
                   className="w-full resize-y font-mono text-[12px] leading-5"
                 />
                 <FieldError>{credentials !== "" ? shown("credentials") : undefined}</FieldError>
@@ -319,7 +317,7 @@ export function BigQueryForm({
               >
                 <Button size="sm" variant="tertiary">
                   <FileUp className="size-4" />
-                  Choose .json file
+                  {t("form.key.chooseFile")}
                 </Button>
               </FileTrigger>
               {isEdit && (
@@ -331,7 +329,7 @@ export function BigQueryForm({
                     setCredentials("");
                   }}
                 >
-                  Keep current key
+                  {t("form.key.keep")}
                 </Button>
               )}
               {submitted && credentials === "" && (
@@ -343,32 +341,27 @@ export function BigQueryForm({
             {parsed !== null && "email" in parsed && <GrantRoles email={parsed.email} projectId={projectId || parsed.projectId || ""} />}
             {parsed === null && (
               <p className="text-label text-muted">
-                The service account needs <span className="text-foreground">BigQuery Job User</span> and{" "}
-                <span className="text-foreground">BigQuery Data Viewer</span> on the project. Paste the key to get the exact
-                commands.
+                <Trans t={t} i18nKey="form.key.needsRoles" components={{ b: <span className="text-foreground" /> }} />
               </p>
             )}
           </>
         )}
       </Section>
 
-      <Section
-        title="Exposure query"
-        description="Tells furca who saw which variation. Used when experiments analyze this source instead of the SDK's built-in exposures."
-      >
+      <Section title={t("form.sql.title")} description={t("form.sql.description")}>
         <TextField value={sql} onChange={setSql} isInvalid={shown("sql") !== undefined} className="w-full">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <Label>SQL</Label>
             <span className="flex items-center gap-1 text-label text-muted">
-              Start from
+              {t("form.sql.startFrom")}
               {(
                 [
-                  ["ga4", "GA4 export"],
+                  ["ga4", t("form.sql.ga4")],
                   ["segment", "Segment"],
-                  ["generic", "Generic"],
+                  ["generic", t("form.sql.generic")],
                 ] as const
-              ).map(([t, label]) => (
-                <Button key={t} size="sm" variant="ghost" className="h-7 px-2 text-label" onPress={() => insertTemplate(t)}>
+              ).map(([template, label]) => (
+                <Button key={template} size="sm" variant="ghost" className="h-7 px-2 text-label" onPress={() => insertTemplate(template)}>
                   {label}
                 </Button>
               ))}
@@ -383,11 +376,7 @@ export function BigQueryForm({
             className="w-full resize-y font-mono text-[0.8125rem] leading-5"
           />
           <Description>
-            One row per exposure event (don't de-duplicate; furca splits phases by time) with columns{" "}
-            <code className="font-mono">user_id</code> STRING, <code className="font-mono">timestamp</code> TIMESTAMP,{" "}
-            <code className="font-mono">experiment_key</code> STRING, <code className="font-mono">variation_key</code> STRING.
-            Optionally use <code className="font-mono">@experiment_key</code>, <code className="font-mono">@start_ms</code> and{" "}
-            <code className="font-mono">@end_ms</code> (epoch ms) to prune partitions; the GA4 template shows how.
+            <Trans t={t} i18nKey="form.sql.help" components={{ c: code }} />
           </Description>
           <FieldError>{shown("sql")}</FieldError>
         </TextField>
@@ -399,14 +388,14 @@ export function BigQueryForm({
             {errorMessage(save.error)}
           </p>
         )}
-        {isEdit && !dirty && save.error === null && <p className="basis-full text-label text-muted sm:mr-auto sm:basis-auto">No unsaved changes.</p>}
+        {isEdit && !dirty && save.error === null && <p className="basis-full text-label text-muted sm:mr-auto sm:basis-auto">{t("form.noChanges")}</p>}
         {onCancel !== undefined && (
           <Button size="sm" variant="tertiary" onPress={onCancel} isDisabled={save.isPending}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
         )}
         <Button type="submit" size="sm" isPending={save.isPending} isDisabled={isEdit && !dirty}>
-          {isEdit ? "Save changes" : "Create data source"}
+          {isEdit ? t("form.saveChanges") : t("form.create")}
         </Button>
       </footer>
     </form>

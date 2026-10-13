@@ -1,0 +1,139 @@
+{
+  "pageTitle": "Data sources · furca",
+  "detailPageTitle": "Data source · furca",
+  "thisEnvironment": "this environment",
+  "builtinName": "Built-in event store",
+  "list": {
+    "title": "Data sources",
+    "description": "Where exposures and metric events are read from. The built-in store works out of the box; add BigQuery to use your warehouse.",
+    "connect": "Connect BigQuery",
+    "loadFailed": "Couldn't load data sources. {{error}}",
+    "builtinType": "Built-in (D1)",
+    "builtinLocation": "This deployment's D1",
+    "warehouseHint": "Already send events to GA4 or Segment with a BigQuery export? Connect it and furca reads exposures and metrics straight from your tables with SQL you control. Templates for both are included.",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "location": "Location",
+      "metrics": "Metrics",
+      "updated": "Updated"
+    }
+  },
+  "new": {
+    "breadcrumb": "New BigQuery source",
+    "title": "Connect BigQuery",
+    "description": "Analyze experiments with exposures and events already in your warehouse, like a GA4 or Segment export.",
+    "createdToast": "{{name}} created",
+    "createdToastDescription": "Test the connection to check access and the exposure query."
+  },
+  "detail": {
+    "fallbackTitle": "Data source",
+    "loadFailed": "Couldn't load this data source. {{error}}",
+    "metrics": {
+      "title": "Metrics",
+      "description": "Metrics that read their events from this source.",
+      "empty": "No metrics use this source yet. <link>Create a metric</link> and pick it as the data source."
+    },
+    "builtin": {
+      "description": "Always on, nothing to configure. Exposures and events sent by the SDK are stored in D1 and analyzed in the Worker.",
+      "howTitle": "How data arrives",
+      "steps": {
+        "exposuresTitle": "Exposures",
+        "exposures": "When a user is bucketed into a running experiment, the SDK records which variation they saw. Repeats are de-duplicated per user and variation, and bot traffic is dropped.",
+        "eventsTitle": "Events",
+        "events": "<c>furca.track(name, value?)</c> records an event. Metrics count them, or sum their value (e.g. revenue).",
+        "storageTitle": "Storage",
+        "storage": "The SDK batches both to <endpoint/> and they're written to this deployment's D1 database, in your Cloudflare account."
+      },
+      "ingestionTitle": "Ingestion, last 24 hours",
+      "ingestionDescription": "Hourly volume in {{environment}}. Switch environments in the sidebar.",
+      "eventNamesTitle": "Event names",
+      "eventNamesDescription": "Distinct events received in {{environment}} over the last 30 days, most frequent first.",
+      "eventNamesLoadFailed": "Couldn't load event names. {{error}}",
+      "eventNamesEmpty": "No events yet. Call <c>furca.track(\"purchase\")</c> from your app; <link>the quickstart</link> has the setup for each runtime.",
+      "columns": {
+        "event": "Event",
+        "count": "Count",
+        "lastSeen": "Last seen"
+      }
+    },
+    "test": {
+      "title": "Connection test",
+      "description": "Authenticates with the stored key and dry-runs the exposure query. Dry runs are free and read no data.",
+      "button": "Test connection",
+      "pending": "Contacting BigQuery…",
+      "notTested": "Not tested since this page opened.",
+      "noKey": "Add a service account key below, then test.",
+      "connected": "Connected",
+      "scan": "The exposure query would scan <bytes>{{bytes}}</bytes> per analysis.",
+      "failed": "Connection failed"
+    },
+    "deletedToast": "{{name}} deleted",
+    "settings": "Settings",
+    "savedToast": "Data source saved",
+    "history": "History",
+    "delete": {
+      "title": "Delete {{name}}?",
+      "confirm": "Delete data source",
+      "body": "The stored service account key is erased. This can't be undone.",
+      "inUse_one": "{{count}} metric reads from this source (archived ones included). Point it at another source first; a source in use can't be deleted.",
+      "inUse_other": "{{count}} metrics read from this source (archived ones included). Point them at another source first; a source in use can't be deleted."
+    }
+  },
+  "form": {
+    "warehouse": {
+      "title": "Warehouse",
+      "name": "Name",
+      "namePlaceholder": "Analytics warehouse",
+      "projectId": "Project id",
+      "dataset": "Dataset",
+      "datasetHelp": "Default for unqualified tables.",
+      "location": "Location",
+      "locationHelp": "Where the dataset lives."
+    },
+    "key": {
+      "title": "Service account key",
+      "description": "Stored encrypted with this deployment's <c>ENCRYPTION_KEY</c> and never shown again. furca only runs read queries.",
+      "stored": "A key is stored for this data source.",
+      "replace": "Replace key",
+      "dropLabel": "Drop a service account JSON key",
+      "fieldLabel": "Service account JSON key",
+      "placeholder": "Paste the JSON key, or drop the .json file here",
+      "chooseFile": "Choose .json file",
+      "keep": "Keep current key",
+      "needsRoles": "The service account needs <b>BigQuery Job User</b> and <b>BigQuery Data Viewer</b> on the project. Paste the key to get the exact commands.",
+      "notServiceAccount": "This isn't a service account key. In Google Cloud, open IAM → Service accounts → Keys → Add key → JSON.",
+      "invalidJson": "This isn't valid JSON. Paste the whole key file, including the braces."
+    },
+    "roles": {
+      "serviceAccount": "Service account",
+      "grant": "Grant it these roles on <project/>:",
+      "copyCommands": "Copy gcloud commands",
+      "jobUser": "BigQuery Job User",
+      "jobUserWhy": "runs queries",
+      "dataViewer": "BigQuery Data Viewer",
+      "dataViewerWhy": "reads your tables"
+    },
+    "sql": {
+      "title": "Exposure query",
+      "description": "Tells furca who saw which variation. Used when experiments analyze this source instead of the SDK's built-in exposures.",
+      "startFrom": "Start from",
+      "ga4": "GA4 export",
+      "generic": "Generic",
+      "help": "One row per exposure event (don't de-duplicate; furca splits phases by time) with columns <c>user_id</c> STRING, <c>timestamp</c> TIMESTAMP, <c>experiment_key</c> STRING, <c>variation_key</c> STRING. Optionally use <c>@experiment_key</c>, <c>@start_ms</c> and <c>@end_ms</c> (epoch ms) to prune partitions; the GA4 template shows how.",
+      "templateInserted": "Template inserted",
+      "templateInsertedDescription": "Your previous SQL was replaced.",
+      "undo": "Undo"
+    },
+    "errors": {
+      "name": "Name the data source",
+      "projectId": "Enter the Google Cloud project id",
+      "dataset": "Enter the default dataset",
+      "credentials": "Paste or drop the service account key",
+      "sql": "Write the exposure query, or start from a template"
+    },
+    "noChanges": "No unsaved changes.",
+    "saveChanges": "Save changes",
+    "create": "Create data source"
+  }
+}

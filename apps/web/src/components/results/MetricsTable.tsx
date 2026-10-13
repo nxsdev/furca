@@ -4,15 +4,13 @@ import type { MetricResult, MetricRole, VariationComparison } from "@furca/core/
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { Fragment } from "react";
+import { useTranslation } from "react-i18next";
 import { VariationSwatch } from "~/components/experiments/parts";
 import { formatCi, formatCount, formatLift, formatMetricValue, formatPercent, formatPValue } from "./format";
 import { VerdictLabel, verdictStyle } from "./verdict";
 
-const roles: ReadonlyArray<{ role: MetricRole; title: string; hint: string }> = [
-  { role: "primary", title: "Primary metric", hint: "Decides the experiment" },
-  { role: "secondary", title: "Secondary metrics", hint: "Explain why the primary moved" },
-  { role: "guardrail", title: "Guardrails", hint: "Must not get worse" },
-];
+/** Title and hint live under `results:table.roles.<role>` */
+const roles: ReadonlyArray<MetricRole> = ["primary", "secondary", "guardrail"];
 
 /** Shared lift axis across every row: covers all intervals and zero, with nice ticks */
 function useAxis(metrics: ReadonlyArray<MetricResult>) {
@@ -50,6 +48,7 @@ function AxisHeader({ axis }: { axis: Axis }) {
 
 /** Interval bar + point estimate on the shared axis, colored by verdict */
 export function CiPlot({ comparison, axis, trusted = true }: { comparison: VariationComparison; axis: Axis; trusted?: boolean }) {
+  const { t } = useTranslation("results");
   const s = verdictStyle[trusted ? comparison.verdict : "neutral"];
   const zero = axis.x(0);
   if (comparison.ci === null || comparison.lift === null) {
@@ -65,7 +64,7 @@ export function CiPlot({ comparison, axis, trusted = true }: { comparison: Varia
       width="100%"
       height="24"
       role="img"
-      aria-label={`Lift ${formatLift(comparison.lift)}, interval ${formatCi(comparison.ci)}`}
+      aria-label={t("table.plotLabel", { lift: formatLift(comparison.lift), ci: formatCi(comparison.ci) })}
       className="block overflow-visible"
     >
       {axis.ticks.map((t) => (
@@ -93,6 +92,7 @@ export function MetricsTable({
   /** false when data health fails: verdicts are withheld and nothing is colored as a win or loss */
   trusted: boolean;
 }) {
+  const { t } = useTranslation("results");
   const axis = useAxis(results);
   const variationIndex = new Map(experiment.variations.map((v, i) => [v.key, i]));
   const variationName = (key: string) => experiment.variations.find((v) => v.key === key)?.name ?? key;
@@ -104,24 +104,24 @@ export function MetricsTable({
       <MobileList experiment={experiment} results={results} metrics={metrics} engine={engine} trusted={trusted} axis={axis} />
     <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[820px] border-separate border-spacing-0 text-label">
-        <caption className="sr-only">Metric results by variation compared with {control?.name ?? "control"}</caption>
+        <caption className="sr-only">{t("table.caption", { control: control?.name ?? t("table.controlFallback") })}</caption>
         <thead>
           <tr className="text-left text-meta text-muted [&>th]:border-b [&>th]:border-border [&>th]:px-2.5 [&>th]:py-2 [&>th]:font-medium [&>th]:whitespace-nowrap">
-            <th scope="col" className="w-[22%] min-w-[11rem] pl-5!">Metric</th>
-            <th scope="col" className="min-w-[9.5rem]">Variation</th>
-            <th scope="col" className="text-right">{control?.name ?? "Control"}</th>
-            <th scope="col" className="text-right">Value</th>
-            <th scope="col" className="text-right">Lift</th>
+            <th scope="col" className="w-[22%] min-w-[11rem] pl-5!">{t("table.columns.metric")}</th>
+            <th scope="col" className="min-w-[9.5rem]">{t("table.columns.variation")}</th>
+            <th scope="col" className="text-right">{control?.name ?? t("table.controlHeader")}</th>
+            <th scope="col" className="text-right">{t("table.columns.value")}</th>
+            <th scope="col" className="text-right">{t("table.columns.lift")}</th>
             <th scope="col" className="w-[20%] min-w-[150px]">
-              <span className="sr-only">Interval plot</span>
+              <span className="sr-only">{t("table.columns.intervalPlot")}</span>
               <AxisHeader axis={axis} />
             </th>
-            <th scope="col" className="text-right">{engine === "bayesian" ? "Chance to win" : "p-value"}</th>
-            <th scope="col" className="pr-5!">Result</th>
+            <th scope="col" className="text-right">{engine === "bayesian" ? t("table.columns.chanceToWin") : t("table.columns.pValue")}</th>
+            <th scope="col" className="pr-5!">{t("table.columns.result")}</th>
           </tr>
         </thead>
         <tbody>
-          {roles.map(({ role, title, hint }) => {
+          {roles.map((role) => {
             const group = results.filter((r) => r.role === role);
             if (group.length === 0) return null;
             return (
@@ -132,7 +132,7 @@ export function MetricsTable({
                     colSpan={columns + 1}
                     className="border-b border-border bg-surface-secondary px-5 py-1.5 text-left text-meta font-medium"
                   >
-                    {title} <span className="font-normal text-muted">· {hint}</span>
+                    {t(`table.roles.${role}.title`)} <span className="font-normal text-muted">· {t(`table.roles.${role}.hint`)}</span>
                   </th>
                 </tr>
                 {group.map((result) => {
@@ -143,15 +143,15 @@ export function MetricsTable({
                   const nameCell = (rowSpan: number) => (
                     <th scope="rowgroup" rowSpan={rowSpan} className="border-b border-border py-3 pr-3 pl-5 text-left align-top font-normal">
                       {metric === undefined ? (
-                        <span className="text-muted">Deleted metric</span>
+                        <span className="text-muted">{t("table.deletedMetric")}</span>
                       ) : (
                         <Link to="/metrics/$metricId" params={{ metricId: metric.id }} className="font-medium hover:underline">
                           {metric.name}
                         </Link>
                       )}
                       <div className="mt-0.5 text-meta text-muted">
-                        {type === "proportion" ? "Conversion rate" : type === "ratio" ? "Ratio" : "Mean per user"}
-                        {metric?.inverse === true && " · lower is better"}
+                        {t(`table.types.${type}`)}
+                        {metric?.inverse === true && t("table.lowerIsBetter")}
                         {result.cupedApplied && " · CUPED"}
                       </div>
                     </th>
@@ -163,7 +163,7 @@ export function MetricsTable({
                         <td colSpan={columns} className="border-b border-border px-3 py-3 pr-5 text-muted">
                           <span className="inline-flex items-start gap-1.5">
                             <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-lose" aria-hidden="true" />
-                            {result.error ?? "No comparisons were computed for this metric."}
+                            {result.error ?? t("table.noComparisons")}
                           </span>
                         </td>
                       </tr>
@@ -213,7 +213,7 @@ export function MetricsTable({
                           ) : (
                             <span className="inline-flex items-center gap-1 whitespace-nowrap text-label font-medium">
                               <AlertTriangle className="size-3.5 shrink-0 text-health" aria-hidden="true" />
-                              Unreliable
+                              {t("table.unreliable")}
                             </span>
                           )}
                           {c.message !== null && <div className="max-w-[18ch] truncate text-meta text-muted">{c.message}</div>}
@@ -248,26 +248,28 @@ function MobileList({
   trusted: boolean;
   axis: Axis;
 }) {
+  const { t } = useTranslation("results");
   const control = experiment.variations[0];
   return (
     <div className="md:hidden">
-      {roles.map(({ role, title }) => {
+      {roles.map((role) => {
         const group = results.filter((r) => r.role === role);
         if (group.length === 0) return null;
+        const title = t(`table.roles.${role}.title`);
         return (
           <section key={role} aria-label={title}>
             <h3 className="border-b border-border bg-surface-secondary px-5 py-1.5 text-meta font-medium">{title}</h3>
             <ul>
               {group.flatMap((result) => {
                 const metric = metrics.get(result.metricId);
-                const name = metric?.name ?? "Deleted metric";
+                const name = metric?.name ?? t("table.deletedMetric");
                 const summary = new Map(result.variations.map((v) => [v.variationKey, v]));
                 const base = control === undefined ? undefined : summary.get(control.key);
                 if (result.error !== null || result.comparisons.length === 0)
                   return [
                     <li key={result.metricId} className="border-b border-border px-5 py-3 text-label">
                       <p className="font-medium">{name}</p>
-                      <p className="mt-0.5 text-muted">{result.error ?? "No comparisons were computed for this metric."}</p>
+                      <p className="mt-0.5 text-muted">{result.error ?? t("table.noComparisons")}</p>
                     </li>,
                   ];
                 return result.comparisons.map((c) => {
@@ -276,7 +278,7 @@ function MobileList({
                   const tone = trusted ? verdictStyle[c.verdict].text : "text-muted";
                   const evidence =
                     engine === "bayesian"
-                      ? c.chanceToWin === null ? null : `${formatPercent(c.chanceToWin)} to win`
+                      ? c.chanceToWin === null ? null : t("table.toWin", { percent: formatPercent(c.chanceToWin) })
                       : c.pValue === null ? null : `p ${formatPValue(c.pValue)}`;
                   return (
                     <li key={`${result.metricId}:${c.variationKey}`} className="flex flex-col gap-1.5 border-b border-border px-5 py-3 text-label last:border-b-0">
@@ -287,13 +289,13 @@ function MobileList({
                         ) : (
                           <span className="inline-flex shrink-0 items-center gap-1 font-medium">
                             <AlertTriangle className="size-3.5 text-health" aria-hidden="true" />
-                            Unreliable
+                            {t("table.unreliable")}
                           </span>
                         )}
                       </div>
                       <p className="flex items-center gap-1.5 text-meta text-muted">
                         <VariationSwatch index={index} />
-                        {experiment.variations[index]?.name ?? c.variationKey} vs {control?.name ?? "control"}
+                        {t("table.versus", { variation: experiment.variations[index]?.name ?? c.variationKey, control: control?.name ?? t("table.controlFallback") })}
                       </p>
                       <p className="flex flex-wrap items-baseline gap-x-2 font-mono tabular">
                         <span className={`font-medium ${tone === "text-muted" ? "" : tone}`}>{c.lift === null ? "–" : formatLift(c.lift)}</span>
@@ -303,7 +305,8 @@ function MobileList({
                       <CiPlot comparison={c} axis={axis} trusted={trusted} />
                       {base !== undefined && v !== undefined && metric !== undefined && (
                         <p className="font-mono text-meta text-muted tabular">
-                          {formatMetricValue(metric.type, base.mean)} → {formatMetricValue(metric.type, v.mean)} · {formatCount(base.users)} / {formatCount(v.users)} users
+                          {formatMetricValue(metric.type, base.mean)} → {formatMetricValue(metric.type, v.mean)} ·{" "}
+                          {t("table.usersPair", { base: formatCount(base.users), variation: formatCount(v.users) })}
                         </p>
                       )}
                     </li>

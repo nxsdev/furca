@@ -1,0 +1,272 @@
+{
+  "page": {
+    "listTitle": "フラグ · furca",
+    "detailTitle": "フラグ · furca"
+  },
+  "valueTypes": {
+    "boolean": "ブール値",
+    "string": "文字列",
+    "number": "数値",
+    "json": "JSON"
+  },
+  "shared": {
+    "flags": "フラグ",
+    "createFlag": "フラグを作成",
+    "optional": "（任意）",
+    "key": "キー",
+    "type": "型",
+    "description": "説明",
+    "descriptionPlaceholder": "このフラグで制御する内容",
+    "tags": "タグ",
+    "defaultValue": "デフォルト値",
+    "copyKey": "キーをコピー",
+    "archived": "アーカイブ済み",
+    "on": "オン",
+    "off": "オフ",
+    "switchLabel": "{{environment}} の {{key}}",
+    "matchesTestUser": "テストユーザーに一致",
+    "serve": "<value/> を配信",
+    "rulesIn": "{{environment}} のルール"
+  },
+  "list": {
+    "description": "環境ごとに機能をオン/オフし、属性でユーザーをターゲティングして、段階的にロールアウトできます。",
+    "loadError": "フラグを読み込めませんでした。{{error}}",
+    "emptyTitle": "最初のフラグを作成",
+    "emptyDescription": "フラグは、コードが実行時に furca から取得する値です。デプロイせずに、誰にどの値を返すかを環境ごとに変更できます。",
+    "search": "フラグを検索",
+    "searchPlaceholder": "キー・説明・タグで検索",
+    "allTypes": "すべての型",
+    "showArchived": "アーカイブ済みを表示",
+    "noMatches": "フィルターに一致するフラグはありません。<clear>フィルターをクリア</clear>",
+    "noFlags": "フラグはまだありません。",
+    "columns": {
+      "flag": "フラグ",
+      "type": "型",
+      "rules": "ルール",
+      "rulesInSr": "（{{environment}}）",
+      "experiment": "実験",
+      "updated": "最終更新"
+    }
+  },
+  "create": {
+    "description": "コードから参照するキー、値の型、どのルールにも一致しないときに配信する値を設定します。",
+    "created": "{{key}} を作成しました",
+    "enterKey": "キーを入力してください",
+    "keyInvalid": "英小文字、数字、- と _ のみ使用できます（最大 64 文字）",
+    "keyHelp": "英小文字、数字、- と _ が使えます。後から変更できません。",
+    "defaultValueHelp": "フラグがオンで、どのルールにも一致しないときに配信する値です。"
+  },
+  "detail": {
+    "notFoundTitle": "フラグが見つかりません",
+    "notFoundDescription": "削除された可能性があります。フラグの一覧は「フラグ」ページで確認できます。",
+    "backToFlags": "フラグ一覧に戻る",
+    "loadError": "このフラグを読み込めませんでした。{{error}}",
+    "loading": "フラグを読み込み中",
+    "sections": "フラグのセクション",
+    "tabs": {
+      "targeting": "ターゲティング",
+      "implementation": "実装",
+      "history": "履歴"
+    },
+    "rulesTitle": "ルール",
+    "rulesDescription": "上から順に評価され、最初に一致したルールの値が配信されます。",
+    "rulesEnvironment": "ルールを表示する環境",
+    "unsaved": "未保存",
+    "experimentRulesHint": "実験のルールは実験の画面から追加します。",
+    "rulesSaved": "ルールを保存しました",
+    "rulesSavedDescription": "SDK は次回のペイロード取得時に反映します。",
+    "saveRulesFailed": "ルールを保存できませんでした",
+    "unsavedRegion": "未保存の変更",
+    "unsavedChanges": "{{environments}} のルールに未保存の変更があります",
+    "fixFirst_other": "先に {{count}}件のルールを修正してください",
+    "leaveTitle": "保存していないルールの変更を破棄しますか？",
+    "leaveDescription": "ルールの編集内容はまだ保存されていません。このページを離れると破棄されます。",
+    "keepEditing": "編集を続ける",
+    "discardAndLeave": "破棄して移動"
+  },
+  "header": {
+    "breadcrumb": "パンくずリスト",
+    "noDescription": "説明なし",
+    "editDetails": "説明とタグを編集",
+    "saveDetailsFailed": "説明とタグを保存できませんでした",
+    "archivedToast": "{{key}} をアーカイブしました",
+    "restoredToast": "{{key}} を復元しました",
+    "archivedDescription": "フラグ一覧には表示されなくなります。環境ごとのオン/オフとルールは引き続き適用されます。",
+    "updateFailed": "フラグを更新できませんでした",
+    "deletedToast": "{{key}} を削除しました",
+    "actions": "フラグの操作",
+    "restore": "復元",
+    "deleteFlag": "フラグを削除",
+    "usedBy_other": "{{count}}件の実験で使用中",
+    "deleteTitle": "{{key}} を削除しますか？",
+    "deleteDescription": "すべての環境のペイロードからただちに削除され、SDK はコード側のフォールバック値を返すようになります。この操作は取り消せません。"
+  },
+  "environments": {
+    "title": "環境",
+    "description": "フラグがオフの環境では、ペイロードにフラグが含まれず、SDK はコードで指定したフォールバック値を返します。",
+    "noRules": "ルールなし",
+    "ruleCount_other": "ルール {{count}}件"
+  },
+  "defaultRow": {
+    "saved": "デフォルト値を保存しました",
+    "badge": "デフォルト",
+    "everyoneElse": "上記以外のユーザー",
+    "sameEverywhere": "· すべての環境で共通",
+    "close": "デフォルト値の編集を閉じる",
+    "edit": "デフォルト値を編集",
+    "help": "ルールとは別に保存され、すべての環境に適用されます。",
+    "save": "デフォルト値を保存"
+  },
+  "offNote": {
+    "experimentStarved": "{{key}} は {{environment}} でオフのため、{{experiment}} にトラフィックが流れていません。実験を実行するにはフラグをオンにしてください。",
+    "rulesInactive": "{{key}} は {{environment}} でオフです。オンにすると、これらのルールが適用されます。"
+  },
+  "rules": {
+    "types": {
+      "force": "固定値",
+      "rollout": "段階的ロールアウト",
+      "experiment": "実験"
+    },
+    "issues": {
+      "condition": "条件：{{issue}}",
+      "value": "値：{{issue}}",
+      "coverage": "対象割合は 0%〜100% の範囲で指定してください",
+      "hashAttribute": "振り分け属性を指定してください"
+    },
+    "empty": "{{environment}} にはルールがありません。フラグがオンのときは、全員にデフォルト値が配信されます。",
+    "managedBy": "実験 <link>{{name}}</link> で管理",
+    "rolloutOf": "一致するユーザーの <pct>{{percent}}</pct>（{{attribute}} で振り分け）",
+    "ruleEnabled": "ルール {{number}} を有効化",
+    "closeRule": "ルール {{number}} を閉じる",
+    "editRule": "ルール {{number}} を編集",
+    "moreActions": "ルール {{number}} のその他の操作",
+    "ruleActions": "ルール {{number}} の操作",
+    "moveUp": "上へ移動",
+    "moveDown": "下へ移動",
+    "deleteRule": "ルールを削除",
+    "experimentStatus": {
+      "draft": "下書き · 未配信",
+      "running": "実行中",
+      "stopped": "停止済み"
+    },
+    "ofMatchingUsers": "一致するユーザーの <pct>{{percent}}</pct>",
+    "variations_other": "バリエーション {{count}}個"
+  },
+  "ruleEditor": {
+    "who": "対象",
+    "howMany": "割合",
+    "coverage": "ロールアウトの対象割合",
+    "coveragePercent": "ロールアウトの対象割合（%）",
+    "bucketedBy": "（一致するユーザーのうち）振り分け属性：",
+    "bucketBy": "振り分け属性",
+    "stickyHelp": "同じ {{attribute}} は常に同じバケットに入るため、割合を上げても既存の対象ユーザーはそのままで、新しいユーザーが追加されます。",
+    "serve": "配信する値",
+    "note": "メモ",
+    "notePlaceholder": "例：QA チーム、ベータ版の顧客",
+    "keptUntilSave": "変更は保存するまで保持されます。",
+    "done": "完了"
+  },
+  "addRule": {
+    "button": "ルールを追加",
+    "menu": "ルールの種類",
+    "force": "固定値を配信",
+    "forceHelp": "一致するすべてのユーザーに同じ値を配信します",
+    "rollout": "段階的ロールアウト",
+    "rolloutHelp": "一致するユーザーの一部に値を配信します"
+  },
+  "testUser": {
+    "title": "ユーザーでテスト",
+    "description": "公開中の {{environment}} のペイロードを、SDK とまったく同じ方法で評価します。",
+    "attributes": "属性",
+    "editor": "属性の入力方法",
+    "fields": "フィールド",
+    "json": "JSON",
+    "attributeName": "属性名",
+    "attribute": "属性",
+    "notSet": "未設定",
+    "valueOf": "{{attribute}} の値",
+    "remove": "{{attribute}} を削除",
+    "addAttribute": "属性を追加",
+    "attributesJson": "属性（JSON）",
+    "jsonErrors": {
+      "notObject": "属性は JSON オブジェクトで指定してください",
+      "invalid": "JSON の形式が正しくありません"
+    },
+    "payloadError": "ペイロードを読み込めませんでした。{{error}}",
+    "fixJson": "結果を表示するには、属性の JSON を修正してください。",
+    "unsavedHint": "保存していないルールの変更があります。新しいルールをテストするには保存してください。",
+    "publishedRule": "公開中のルール {{number}}",
+    "rule": "ルール {{number}}",
+    "serves": "配信される値",
+    "fallback": "コード側のフォールバック値",
+    "notInPayload": "{{key}} は {{environment}} でオフ（または未公開）のため、ペイロードに含まれていません。",
+    "defaultServed": "どのルールにも一致しなかったため、デフォルト値が配信されます。",
+    "matched": "{{rule}} に一致しました。",
+    "matchedVariation": "{{rule}} に一致しました（バリエーション {{variation}}）。",
+    "steps": "評価の手順",
+    "stepMatched": "一致",
+    "stepSkipped": "スキップ"
+  },
+  "simulate": {
+    "needs": "必要な条件：{{condition}}（{{actual}}）",
+    "notSet": "未設定",
+    "has": "現在の値は {{value}}",
+    "conditionsMatch": "条件に一致",
+    "unknownType": "不明なルールの種類",
+    "noHashAttribute": "振り分けに使う属性 {{attribute}} がありません",
+    "inRollout": "{{percent}} のロールアウトの対象内（バケット {{bucket}}）",
+    "outsideRollout": "{{percent}} のロールアウトの対象外（バケット {{bucket}}）",
+    "outsideExperiment": "実験の対象割合外（バケット {{bucket}}）",
+    "assigned": "{{variation}} に割り当て（バケット {{bucket}}）"
+  },
+  "history": {
+    "verbs": {
+      "created": "<actor>{{actor}}</actor> がフラグを作成しました",
+      "updated": "<actor>{{actor}}</actor> がフラグを更新しました",
+      "rulesUpdated": "<actor>{{actor}}</actor> がルールを変更しました",
+      "enabled": "<actor>{{actor}}</actor> がフラグをオンにしました",
+      "disabled": "<actor>{{actor}}</actor> がフラグをオフにしました",
+      "archived": "<actor>{{actor}}</actor> がフラグをアーカイブしました",
+      "unarchived": "<actor>{{actor}}</actor> がフラグを復元しました",
+      "deleted": "<actor>{{actor}}</actor> がフラグを削除しました"
+    },
+    "loadError": "履歴を読み込めませんでした。{{error}}",
+    "emptyTitle": "変更履歴はまだありません",
+    "emptyDescription": "このフラグへのすべての変更（ルール、オン/オフ、値）が、変更したユーザーとともにここに記録されます。",
+    "loadOlder": "以前の変更を読み込む",
+    "hideChanges": "変更内容を閉じる",
+    "showChanges": "変更内容を表示",
+    "noDiff": "フィールド単位の差分はありません。",
+    "wholeValue": "（値全体）"
+  },
+  "implementation": {
+    "title": "コードでこのフラグを使う",
+    "description": "<code>npm install @furca/sdk</code> でインストールします。SDK はローカルで評価するため、判定のたびにネットワーク通信が発生することはありません。",
+    "environment": "環境",
+    "browser": "ブラウザ",
+    "sdkKeyNote": "SDK キーは公開される前提のキーです。できるのは、この環境のペイロードの読み取りとイベントの送信だけです。"
+  },
+  "codeBlock": {
+    "copy": "コードをコピー"
+  },
+  "value": {
+    "label": "値",
+    "emptyString": "空文字列",
+    "enterNumber": "数値を入力してください",
+    "format": "整形",
+    "validJson": "有効な JSON",
+    "invalidJson": "有効な JSON ではありません",
+    "expectedBoolean": "true または false を指定してください",
+    "expectedString": "文字列を指定してください",
+    "expectedNumber": "数値を指定してください"
+  },
+  "toggle": {
+    "turnOnFailed": "{{environment}} で {{key}} をオンにできませんでした",
+    "turnOffFailed": "{{environment}} で {{key}} をオフにできませんでした",
+    "turnedOn": "{{environment}} で {{key}} をオンにしました",
+    "turnedOff": "{{environment}} で {{key}} をオフにしました",
+    "turnedOnDescription": "SDK は次回のペイロード取得時に反映します。",
+    "turnedOffDescription": "SDK はコード側のフォールバック値を返すようになります。",
+    "undo": "元に戻す"
+  }
+}

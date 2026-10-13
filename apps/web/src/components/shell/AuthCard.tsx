@@ -1,6 +1,6 @@
-import { Button, FieldError, Form, Input, Label, TextField } from "@heroui/react";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { submitHandler, useAppForm } from "~/components/form/form";
 import { currentLocale, setLocale } from "~/i18n";
 import { LogoMark } from "./Logo";
 
@@ -30,51 +30,50 @@ export function AuthCard({
   onSubmit: (values: Record<AuthField["name"], string>) => Promise<string | null>;
   footer?: ReactNode;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const { t } = useTranslation();
+  const form = useAppForm({
+    defaultValues: {
+      name: fields.find((f) => f.name === "name")?.defaultValue ?? "",
+      email: fields.find((f) => f.name === "email")?.defaultValue ?? "",
+      password: "",
+    },
+    onSubmit: async ({ value, formApi }) => {
+      const error = await onSubmit(value);
+      if (error !== null) formApi.setErrorMap({ onSubmit: { form: error, fields: {} } });
+    },
+  });
+  const validatorFor = (f: AuthField) => ({
+    onBlur: ({ value }: { value: string }) => {
+      if (value.trim().length === 0) return t("form.required");
+      if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t("form.email");
+      if (f.minLength !== undefined && value.length < f.minLength) return t("form.minLength", { count: f.minLength });
+      return undefined;
+    },
+  });
   return (
     <div className="flex min-h-dvh items-center justify-center px-4 py-12">
       <div className="w-full max-w-[380px]">
         <LogoMark className="mb-6 size-9" />
         <h1 className="text-title font-semibold tracking-tight">{title}</h1>
         <p className="mt-1 text-body text-muted">{description}</p>
-        <Form
-          className="mt-8 flex flex-col gap-4"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const data = new FormData(e.currentTarget);
-            const values = { name: "", email: "", password: "" };
-            for (const f of fields) values[f.name] = String(data.get(f.name) ?? "");
-            setPending(true);
-            setError(await onSubmit(values));
-            setPending(false);
-          }}
-        >
+        <form className="mt-8 flex flex-col gap-4" noValidate onSubmit={submitHandler(form)}>
           {fields.map((f) => (
-            <TextField
-              key={f.name}
-              name={f.name}
-              type={f.type ?? "text"}
-              isRequired
-              isReadOnly={f.isReadOnly}
-              defaultValue={f.defaultValue}
-              minLength={f.minLength}
-              autoComplete={f.autoComplete}
-            >
-              <Label>{f.label}</Label>
-              <Input />
-              <FieldError />
-            </TextField>
+            <form.AppField key={f.name} name={f.name} validators={validatorFor(f)}>
+              {(field) => (
+                <field.TextField
+                  label={f.label}
+                  type={f.type ?? "text"}
+                  autoComplete={f.autoComplete}
+                  isReadOnly={f.isReadOnly}
+                />
+              )}
+            </form.AppField>
           ))}
-          {error !== null && (
-            <p role="alert" className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-label text-danger">
-              {error}
-            </p>
-          )}
-          <Button type="submit" fullWidth isPending={pending} className="mt-2">
-            {submitLabel}
-          </Button>
-        </Form>
+          <form.AppForm>
+            <form.FormError />
+            <form.SubmitButton label={submitLabel} fullWidth className="mt-2" />
+          </form.AppForm>
+        </form>
         {footer !== undefined && <div className="mt-6 text-label text-muted">{footer}</div>}
         <LanguageToggle />
       </div>

@@ -1,0 +1,229 @@
+{
+  "pageTitle": "指標 · furca",
+  "detailPageTitle": "指標 · furca",
+  "builtinEvents": "組み込みイベント",
+  "archived": "アーカイブ済み",
+  "types": {
+    "proportion": "コンバージョン",
+    "mean": "平均",
+    "ratio": "比率"
+  },
+  "direction": {
+    "lowerIsBetter": "低いほど良い",
+    "higherIsBetter": "高いほど良い"
+  },
+  "window": {
+    "none": "期間なし",
+    "withDelay": "{{window}} · 遅延 {{delay}}"
+  },
+  "capping": {
+    "absolute": "ユーザーごとの上限 {{value}}",
+    "percentile": "ユーザーごとの上限 p{{percentile}}"
+  },
+  "sentence": {
+    "eventPlaceholder": "イベント",
+    "proportion": "<c>{{event}}</c> が1回以上あったユーザーの割合",
+    "meanCount": "ユーザーあたりの <c>{{event}}</c> イベントの平均回数",
+    "meanSum": "ユーザーあたりの <c>{{event}}</c> の値の合計の平均",
+    "ratio": {
+      "countCount": "全ユーザーの <c>{{numerator}}</c> イベント数 ÷ <c>{{denominator}}</c> イベント数",
+      "countSum": "全ユーザーの <c>{{numerator}}</c> イベント数 ÷ <c>{{denominator}}</c> の値の合計",
+      "sumCount": "全ユーザーの <c>{{numerator}}</c> の値の合計 ÷ <c>{{denominator}}</c> イベント数",
+      "sumSum": "全ユーザーの <c>{{numerator}}</c> の値の合計 ÷ <c>{{denominator}}</c> の値の合計"
+    },
+    "sqlProportion": "SQL の結果に1行以上あるユーザーの割合",
+    "sqlMean": "SQL から得たユーザーあたりの <c>value</c> の合計の平均",
+    "sqlRatio": "全ユーザーの分子の <c>value</c> の合計 ÷ 分母の <c>value</c> の合計",
+    "when": {
+      "anyTime": "初回露出以降の全期間",
+      "fromDelay": "初回露出の{{delay}}後以降",
+      "within": "初回露出から{{window}}以内",
+      "between": "初回露出の{{delay}}後から{{window}}後まで"
+    },
+    "cap": {
+      "absolute": "、ユーザーごとの上限は{{value}}",
+      "percentile": "、ユーザーごとの上限は{{percentile}}パーセンタイル"
+    },
+    "tail": "（{{when}}{{cap}}）。"
+  },
+  "list": {
+    "title": "指標",
+    "description": "成功の基準を再利用できる形で定義します。実験では、主要指標・副指標・ガードレール指標として選択します。",
+    "newMetric": "指標を作成",
+    "loadFailed": "指標を読み込めませんでした。{{error}}",
+    "emptyTitle": "指標はまだありません",
+    "emptyDescription": "指標は、購入のコンバージョン率やユーザーあたりの売上のように、イベントを実験の判定に使う数値に変換したものです。まずはアプリが track() で送信するイベントから作成しましょう。",
+    "count_other": "{{count}}件の指標",
+    "showArchived": "アーカイブ済みを表示",
+    "noArchived": "アーカイブ済みの指標はありません。",
+    "experimentCount_other": "実験 {{count}}件",
+    "columns": {
+      "metric": "指標",
+      "type": "種類",
+      "dataSource": "データソース",
+      "goal": "目標",
+      "window": "計測期間",
+      "usedBy": "使用状況"
+    }
+  },
+  "new": {
+    "breadcrumb": "新規",
+    "title": "新しい指標",
+    "description": "イベントを、実験の判定に使う数値に変換します。"
+  },
+  "detail": {
+    "fallbackTitle": "指標",
+    "loadFailed": "この指標を読み込めませんでした。{{error}}",
+    "editTitle": "{{name}} を編集",
+    "runningWarning_other": "実行中の実験 {{count}}件がこの指標を使用しています（{{names}}）。変更は各実験の次回の分析から反映されます。",
+    "archivedToast": "指標をアーカイブしました",
+    "archivedToastDescription": "選択肢には表示されなくなります。すでに使用している実験では引き続き使われます。",
+    "restoredToast": "指標を復元しました",
+    "updateFailed": "指標を更新できませんでした",
+    "savedToast": "指標を保存しました",
+    "definition": "定義",
+    "facts": {
+      "key": "キー",
+      "type": "種類",
+      "dataSource": "データソース",
+      "numerator": "分子",
+      "event": "イベント",
+      "denominator": "分母",
+      "window": "計測期間",
+      "windowNone": "なし（分析時点まで）",
+      "delay": "計測開始の遅延",
+      "capping": "キャッピング",
+      "goal": "目標",
+      "updated": "更新日時"
+    },
+    "aggregation": {
+      "count": "回数",
+      "sum": "合計"
+    },
+    "sql": {
+      "numerator": "分子の SQL",
+      "single": "SQL",
+      "denominator": "分母の SQL"
+    },
+    "usedBy": {
+      "title": "使用している実験",
+      "description": "この指標を参照している実験です。結果は各実験の次回の分析で更新されます。",
+      "loadFailed": "実験を読み込めませんでした。{{error}}",
+      "empty": "この指標を使用している実験はまだありません。<link>実験を作成</link>するときに主要指標として選択してください。",
+      "columns": {
+        "experiment": "実験",
+        "status": "ステータス",
+        "role": "役割"
+      },
+      "roles": {
+        "primary": "主要指標",
+        "guardrail": "ガードレール指標",
+        "secondary": "副指標"
+      }
+    },
+    "history": {
+      "title": "履歴",
+      "description": "この指標の定義に対するすべての変更です。",
+      "empty": "この指標を編集すると、変更内容の差分とともにここに表示されます。"
+    }
+  },
+  "form": {
+    "sections": {
+      "basics": "基本情報",
+      "measure": "計測する内容",
+      "window": "計測期間",
+      "windowDescription": "各ユーザーが実験に初めて露出した時点から数えます。期間を短くすると、結果が早く出てノイズも少なくなります。",
+      "analysis": "分析"
+    },
+    "name": {
+      "label": "名前",
+      "placeholder": "購入完了率"
+    },
+    "key": {
+      "label": "キー",
+      "readOnly": "キーは作成後に変更できません。",
+      "help": "URL と API で使われます。"
+    },
+    "description": {
+      "label": "説明",
+      "placeholder": "任意。この指標で何がわかるか、どんなときに使うかを記入します。"
+    },
+    "type": {
+      "label": "種類",
+      "proportion": "X を1回以上行ったユーザーの割合。",
+      "mean": "ユーザーあたりの X の回数または合計の平均。",
+      "ratio": "全ユーザーの X の合計 ÷ Y の合計。"
+    },
+    "dataSource": {
+      "label": "データソース",
+      "sdkEvents": "SDK イベント",
+      "sqlHelp": "イベントは BigQuery の SQL から取得します。",
+      "sdkHelp": "アプリが SDK の track() で送信するイベントを使います。"
+    },
+    "sql": {
+      "numerator": "分子の SQL",
+      "event": "イベントの SQL",
+      "denominator": "分母の SQL",
+      "insertTemplate": "テンプレートを挿入",
+      "help": "イベントごとに1行を返し、<c>user_id</c> STRING、<c>timestamp</c> TIMESTAMP、<c>value</c> FLOAT64（回数を数える場合は 1）の列を含めてください。furca は <c>user_id</c> で露出と結合します。"
+    },
+    "event": {
+      "label": "イベント",
+      "numerator": "分子",
+      "denominator": "分母",
+      "thisEnvironment": "この環境",
+      "unavailable": "イベントの候補を現在取得できません。track() で送信するイベント名を入力してください。",
+      "suggestions": "候補は {{environment}} で過去30日間に受信したイベントです。まだ届いていないイベント名も入力できます。",
+      "none": "{{environment}} ではまだイベントを受信していません。furca.track(\"purchase\") で送信する予定のイベント名を入力してください。"
+    },
+    "aggregation": {
+      "label": "集計方法",
+      "count": "回数",
+      "sum": "value の合計",
+      "countHelp": "track() の呼び出しごとに1回として数えます。",
+      "sumHelp": "<c>track(name, value)</c> に渡した <c>value</c> を合計します（例：セント単位の売上）。"
+    },
+    "window": {
+      "label": "計測期間",
+      "custom": "カスタム",
+      "customLabel": "計測期間（時間）",
+      "hours": "時間",
+      "delay": "計測開始の遅延",
+      "delayHelp": "露出直後の数時間に発生したイベントを除外します。露出のきっかけとなった訪問を除く場合などに使います。"
+    },
+    "inverseHelp": "レイテンシ、エラー、解約など、下げたい指標に使います。オンにすると、減少が優勢と判定されます。",
+    "capping": {
+      "label": "キャッピング",
+      "absolute": "固定値",
+      "percentile": "パーセンタイル",
+      "help": "極端に大きな値を持つ一部のユーザーの影響を抑えます。合計が飛び抜けて大きいユーザーが1人いるだけで、平均が大きく動くことがあります。キャッピングでは、バリエーションを比較する前に各ユーザーの合計に上限を設けます。",
+      "absoluteLabel": "ユーザーごとの合計の上限",
+      "percentileLabel": "ユーザーごとの上限",
+      "percentileSuffix": "パーセンタイル",
+      "absoluteHelp": "指標と同じ単位で指定します（例：セント単位の売上なら 50000）。",
+      "percentileHelp": "分析のたびに全バリエーションを通して算出します。通常は 99 がおすすめです。"
+    },
+    "errors": {
+      "name": "指標の名前を入力してください",
+      "key": "英小文字・数字・-・_ のみ使用できます（最大64文字）",
+      "numSql": "イベントごとに1行を返す SQL を入力してください",
+      "denSql": "比率の指標には分母のクエリが必要です",
+      "numEvent": "イベント名を選択または入力してください",
+      "denEvent": "比率の指標には分母のイベントが必要です",
+      "window": "計測期間は0時間より長くしてください",
+      "delayNegative": "遅延に負の値は指定できません",
+      "delayTooLong": "遅延は計測期間より短くしてください",
+      "capAbsolute": "上限は0より大きくしてください",
+      "capPercentile": "パーセンタイルは50〜99.99の範囲で指定してください",
+      "fixFields": "続行するには、強調表示された項目を修正してください。"
+    },
+    "saveChanges": "変更を保存",
+    "create": "指標を作成",
+    "preview": {
+      "title": "プレビュー",
+      "type": "種類",
+      "goal": "目標",
+      "source": "データソース"
+    }
+  }
+}

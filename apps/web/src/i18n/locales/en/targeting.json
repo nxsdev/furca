@@ -1,0 +1,77 @@
+{
+  "conditionBuilder": {
+    "empty": "Matches everyone. Add a condition to target users by attribute.",
+    "if": "if",
+    "and": "and",
+    "attribute": "Attribute",
+    "attributePlaceholder": "attribute",
+    "operator": "Operator",
+    "noValueNeeded": "No value needed",
+    "values": "Values",
+    "valuesPlaceholder": "Type a value, press Enter",
+    "value": "Value",
+    "valuePlaceholder": "value",
+    "removeCondition": "Remove condition {{number}}",
+    "addCondition": "Add condition"
+  },
+  "tagInput": {
+    "remove": "Remove {{value}}"
+  },
+  "issues": {
+    "invalidRegex": "Not a valid regular expression",
+    "enterNumber": "Enter a number",
+    "invalidVersion": "Use a version like 2.4.0",
+    "chooseAttribute": "Choose an attribute",
+    "enterValue": "Enter a value"
+  },
+  "operatorGroups": {
+    "text": "Text",
+    "number": "Number",
+    "version": "Version",
+    "presence": "Presence"
+  },
+  "operators": {
+    "eq": "is",
+    "neq": "is not",
+    "in": "is one of",
+    "not_in": "is not one of",
+    "contains": "contains",
+    "not_contains": "does not contain",
+    "starts_with": "starts with",
+    "ends_with": "ends with",
+    "regex": "matches regex",
+    "gt": "greater than",
+    "gte": "at least",
+    "lt": "less than",
+    "lte": "at most",
+    "semver_gt": "version >",
+    "semver_gte": "version ≥",
+    "semver_lt": "version <",
+    "semver_lte": "version ≤",
+    "exists": "exists",
+    "not_exists": "does not exist"
+  },
+  "summary": {
+    "everyone": "Everyone",
+    "and": " and ",
+    "eq": "{{attribute}} is {{value}}",
+    "neq": "{{attribute}} is not {{value}}",
+    "in": "{{attribute}} is one of {{value}}",
+    "not_in": "{{attribute}} is not one of {{value}}",
+    "contains": "{{attribute}} contains {{value}}",
+    "not_contains": "{{attribute}} does not contain {{value}}",
+    "starts_with": "{{attribute}} starts with {{value}}",
+    "ends_with": "{{attribute}} ends with {{value}}",
+    "regex": "{{attribute}} matches regex {{value}}",
+    "gt": "{{attribute}} greater than {{value}}",
+    "gte": "{{attribute}} at least {{value}}",
+    "lt": "{{attribute}} less than {{value}}",
+    "lte": "{{attribute}} at most {{value}}",
+    "semver_gt": "{{attribute}} version > {{value}}",
+    "semver_gte": "{{attribute}} version ≥ {{value}}",
+    "semver_lt": "{{attribute}} version < {{value}}",
+    "semver_lte": "{{attribute}} version ≤ {{value}}",
+    "exists": "{{attribute}} exists",
+    "not_exists": "{{attribute}} does not exist"
+  }
+}

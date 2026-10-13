@@ -1,19 +1,21 @@
 import { Skeleton } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
+import { Trans, useTranslation } from "react-i18next";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { hourlySeries } from "~/components/environments/Sparkline";
 import { formatCount } from "~/components/results/format";
 import { QueryError } from "~/components/ui/primitives";
+import { intlLocale } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
 
-/** Identity colors validated for both themes (blue 255 / teal 190, CVD ΔE ≥ 15) */
+/** Identity colors validated for both themes (blue 255 / teal 190, CVD ΔE ≥ 15). Labels: `overview:traffic.series.<key>` */
 const SERIES = [
-  { key: "exposures", label: "Exposures", color: "var(--color-variation-1)" },
-  { key: "events", label: "Events", color: "var(--color-variation-3)" },
+  { key: "exposures", color: "var(--color-variation-1)" },
+  { key: "events", color: "var(--color-variation-3)" },
 ] as const;
 
-const hourLabel = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric" });
-const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
+const hourLabel = (d: Date) => d.toLocaleTimeString(intlLocale(), { hour: "numeric" });
+const compact = (v: number) => new Intl.NumberFormat(intlLocale(), { notation: "compact", maximumFractionDigits: 1 }).format(v);
 
 /** 0 / 1,000 / 2,000 …: about four whole-number steps of 1, 2, 2.5 or 5 × 10ⁿ covering `max` */
 const niceTicks = (max: number) => {
@@ -30,18 +32,19 @@ function ChartTooltip({
   active?: boolean;
   payload?: ReadonlyArray<{ payload?: { hour: Date; exposures: number; events: number } }>;
 }) {
+  const { t } = useTranslation("overview");
   const row = payload?.[0]?.payload;
   if (active !== true || row === undefined) return null;
   return (
     <div className="min-w-36 rounded-md border border-border bg-overlay px-3 py-2 text-label shadow-overlay">
       <p className="mb-1 text-meta text-muted">
-        {row.hour.toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}
+        {row.hour.toLocaleString(intlLocale(), { weekday: "short", hour: "numeric", minute: "2-digit" })}
       </p>
       {SERIES.map((s) => (
         <p key={s.key} className="flex items-center gap-2">
           <span aria-hidden="true" className="h-0.5 w-3 rounded-full" style={{ background: s.color }} />
           <span className="font-mono font-medium tabular">{formatCount(row[s.key])}</span>
-          <span className="text-muted">{s.label.toLowerCase()}</span>
+          <span className="text-muted">{t(`traffic.series.${s.key}`).toLowerCase()}</span>
         </p>
       ))}
     </div>
@@ -50,10 +53,11 @@ function ChartTooltip({
 
 /** Hourly exposures vs events for the last 24 hours of one environment */
 export function TrafficChart({ environmentId, environmentName }: { environmentId: string; environmentName: string }) {
+  const { t } = useTranslation("overview");
   const volume = useQuery(orpc.events.volume.queryOptions({ input: { environmentId } }));
   if (volume.isPending)
     return (
-      <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label="Loading traffic">
+      <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t("traffic.loading")}>
         <Skeleton className="h-4 w-48 rounded-md" />
         <Skeleton className="h-[160px] rounded-md" />
       </div>
@@ -61,7 +65,7 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
   if (volume.isError)
     return (
       <div className="p-4">
-        <QueryError message={`Couldn't load SDK traffic. ${errorMessage(volume.error)}`} onRetry={() => volume.refetch()} />
+        <QueryError message={t("traffic.loadFailed", { message: errorMessage(volume.error) })} onRetry={() => volume.refetch()} />
       </div>
     );
 
@@ -73,10 +77,9 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
   if (totals.exposures + totals.events === 0)
     return (
       <div className="flex flex-col gap-1 px-5 py-8">
-        <p className="text-body font-medium">No SDK traffic in {environmentName} in the last 24 hours</p>
+        <p className="text-body font-medium">{t("traffic.emptyTitle", { name: environmentName })}</p>
         <p className="text-label text-muted">
-          Exposures arrive when a user is bucketed into a running experiment; events when your app calls{" "}
-          <code className="font-mono text-foreground">track()</code>.
+          <Trans t={t} i18nKey="traffic.emptyDescription" components={{ code: <code className="font-mono text-foreground" /> }} />
         </p>
       </div>
     );
@@ -84,11 +87,11 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
   const ticks = niceTicks(Math.max(...series.map((s) => Math.max(s.exposures, s.events))));
   return (
     <div className="flex flex-col gap-3 px-5 pt-4 pb-3">
-      <ul className="flex flex-wrap gap-x-6 gap-y-1" aria-label="Totals, last 24 hours">
+      <ul className="flex flex-wrap gap-x-6 gap-y-1" aria-label={t("traffic.totals")}>
         {SERIES.map((s) => (
           <li key={s.key} className="flex items-center gap-2 text-label">
             <span aria-hidden="true" className="h-0.5 w-3 rounded-full" style={{ background: s.color }} />
-            <span className="text-muted">{s.label}</span>
+            <span className="text-muted">{t(`traffic.series.${s.key}`)}</span>
             <span className="font-mono font-medium tabular">{formatCount(totals[s.key])}</span>
           </li>
         ))}
@@ -110,7 +113,7 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
               ticks={ticks}
               domain={[0, ticks.at(-1) ?? 1]}
               interval={0}
-              tickFormatter={(v: number) => compact.format(v)}
+              tickFormatter={compact}
               width={36}
               tickLine={false}
               axisLine={false}
@@ -121,7 +124,7 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
               <Area
                 key={s.key}
                 dataKey={s.key}
-                name={s.label}
+                name={t(`traffic.series.${s.key}`)}
                 type="monotone"
                 stroke={s.color}
                 strokeWidth={2}
@@ -135,12 +138,12 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
         </ResponsiveContainer>
       </div>
       <table className="sr-only">
-        <caption>Hourly SDK traffic in {environmentName}, last 24 hours</caption>
+        <caption>{t("traffic.tableCaption", { name: environmentName })}</caption>
         <thead>
           <tr>
-            <th>Hour</th>
-            <th>Exposures</th>
-            <th>Events</th>
+            <th>{t("traffic.hour")}</th>
+            <th>{t("traffic.series.exposures")}</th>
+            <th>{t("traffic.series.events")}</th>
           </tr>
         </thead>
         <tbody>

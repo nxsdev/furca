@@ -4,9 +4,12 @@ import { Button, Description, Label, NumberField, Switch, TextArea, TextField } 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Info, RotateCcw } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { ValuePreview } from "~/components/flags/ValueInput";
+import { formatList } from "~/components/results/format";
 import { ConditionBuilder, type ConditionValue, conditionIssue } from "~/components/targeting/ConditionBuilder";
 import { Segmented } from "~/components/ui/Segmented";
+import { intlLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 import { CoverageField, currentPhase, evenPercents, VariationSwatch } from "./parts";
@@ -42,6 +45,7 @@ const sameWeights = (a: ReadonlyArray<number>, b: ReadonlyArray<number>) =>
   a.length === b.length && a.every((w, i) => Math.abs(w - (b[i] ?? 0)) < 1e-9);
 
 export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; onDone: () => void }) {
+  const { t } = useTranslation(["experiments", "common"]);
   const phase = currentPhase(experiment);
   const n = experiment.variations.length;
   const [coverage, setCoverage] = useState(phase?.coverage ?? experiment.coverage);
@@ -57,9 +61,9 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
   const total = weights.reduce((a, b) => a + b, 0);
   const next = { coverage, weights, conditions };
   const changes = [
-    coverage < phase.coverage - 1e-9 && "coverage goes down",
-    !sameWeights(weights, phase.weights) && "the split changes",
-    JSON.stringify(conditions) !== JSON.stringify(phase.conditions) && "targeting changes",
+    coverage < phase.coverage - 1e-9 && t("traffic.changes.coverageDown"),
+    !sameWeights(weights, phase.weights) && t("traffic.changes.split"),
+    JSON.stringify(conditions) !== JSON.stringify(phase.conditions) && t("traffic.changes.targeting"),
   ].filter((c): c is string => c !== false);
   const changed = changes.length > 0 || Math.abs(coverage - phase.coverage) > 1e-9;
   const newPhase = trafficChangeNeedsNewPhase(phase, next);
@@ -81,8 +85,8 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
 
   return (
     <ActionPanel
-      title="Change traffic"
-      description={`Phase ${phaseNo} is running. Raising coverage is safe; anything else re-randomizes users.`}
+      title={t("traffic.title")}
+      description={t("traffic.description", { phase: phaseNo })}
       footer={
         <>
           {save.error !== null && (
@@ -91,18 +95,18 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
             </p>
           )}
           <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={save.isPending}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button size="sm" onPress={apply} isPending={save.isPending} isDisabled={!changed || (submitted && invalid)}>
-            {newPhase ? `Start phase ${phaseNo + 1}` : "Apply"}
+            {newPhase ? t("traffic.startPhase", { phase: phaseNo + 1 }) : t("traffic.apply")}
           </Button>
         </>
       }
     >
-      <CoverageField value={coverage} onChange={setCoverage} description={`Now ${Math.round(phase.coverage * 100)}%. Raising it keeps the phase.`} />
+      <CoverageField value={coverage} onChange={setCoverage} description={t("traffic.coverageHelp", { percent: Math.round(phase.coverage * 100) })} />
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-label font-medium">Split</p>
+          <p className="text-label font-medium">{t("traffic.split")}</p>
           <Switch
             size="sm"
             isSelected={even}
@@ -115,7 +119,7 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
               <Switch.Control>
                 <Switch.Thumb />
               </Switch.Control>
-              <span className="text-label">Even split</span>
+              <span className="text-label">{t("traffic.evenSplit")}</span>
             </Switch.Content>
           </Switch>
         </div>
@@ -129,7 +133,7 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
               minValue={0}
               maxValue={100}
               step={0.1}
-              aria-label={`${v.name} weight`}
+              aria-label={t("traffic.weight", { name: v.name })}
             >
               <NumberField.Group className="grid-cols-[auto_1fr_auto]">
                 <span className="flex items-center gap-2 pl-3 text-label whitespace-nowrap">
@@ -142,10 +146,10 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
             </NumberField>
           ))}
         </div>
-        {Math.abs(total - 1) > 1e-4 && <p className="text-meta text-danger">Weights total {Number((total * 100).toFixed(2))}%; they must total 100%.</p>}
+        {Math.abs(total - 1) > 1e-4 && <p className="text-meta text-danger">{t("traffic.weightsTotal", { percent: Number((total * 100).toFixed(2)) })}</p>}
       </div>
       <div className="flex flex-col gap-2">
-        <p className="text-label font-medium">Who can enter</p>
+        <p className="text-label font-medium">{t("traffic.whoCanEnter")}</p>
         <ConditionBuilder value={conditions} onChange={setConditions} />
       </div>
 
@@ -157,26 +161,26 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
           {newPhase ? <RotateCcw className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : <Info className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />}
           {newPhase ? (
             <p>
-              <span className="font-medium">
-                This starts phase {phaseNo + 1} and re-randomizes users; results restart.
-              </span>{" "}
+              <span className="font-medium">{t("traffic.newPhase", { phase: phaseNo + 1 })}</span>{" "}
               <span className="text-muted">
-                Because {changes.join(" and ")}, keeping users in place would bias the comparison. Phase {phaseNo}'s data stays in the record
-                but is no longer analyzed.
+                {t("traffic.newPhaseWhy", {
+                  changes: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(changes),
+                  current: phaseNo,
+                })}
               </span>
             </p>
           ) : (
             <p>
-              <span className="font-medium">Coverage increase keeps the current phase.</span>{" "}
-              <span className="text-muted">Users already in the experiment keep their variation; new users join at the same split.</span>
+              <span className="font-medium">{t("traffic.keepsPhase")}</span>{" "}
+              <span className="text-muted">{t("traffic.keepsPhaseWhy")}</span>
             </p>
           )}
         </div>
       )}
       <TextField value={reason} onChange={setReason} isRequired={newPhase} isInvalid={submitted && newPhase && reason.trim() === ""}>
-        <Label>Reason{newPhase ? "" : " (optional)"}</Label>
-        <TextArea rows={2} placeholder="e.g. Treatment had a checkout bug in Safari; fixed in 2.4.1" className="resize-y" />
-        <Description>Shown on the phase timeline and in History.</Description>
+        <Label>{newPhase ? t("traffic.reason") : t("traffic.reasonOptional")}</Label>
+        <TextArea rows={2} placeholder={t("traffic.reasonPlaceholder")} className="resize-y" />
+        <Description>{t("traffic.reasonHelp")}</Description>
       </TextField>
     </ActionPanel>
   );
@@ -194,6 +198,7 @@ export function StopPanel({
   suggestion: string | null;
   onDone: () => void;
 }) {
+  const { t } = useTranslation(["experiments", "common"]);
   const { environments } = useEnvironment();
   const [choice, setChoice] = useState(suggestion ?? "");
   const [reason, setReason] = useState("");
@@ -201,8 +206,8 @@ export function StopPanel({
   const stop = useMutation(orpc.experiments.stop.mutationOptions({ onSuccess: useSaved(onDone) }));
   const shipKey = choice.startsWith("ship:") ? choice.slice(5) : null;
   const shipped = experiment.variations.find((v) => v.key === shipKey);
-  const envNames = environments.filter((e) => experiment.environmentIds.includes(e.id)).map((e) => e.name).join(", ");
-  const suggested = <span className="ml-1.5 rounded-sm bg-default px-1 py-px text-[11px] font-medium text-muted">Suggested</span>;
+  const envNames = formatList(environments.filter((e) => experiment.environmentIds.includes(e.id)).map((e) => e.name));
+  const suggested = <span className="ml-1.5 rounded-sm bg-default px-1 py-px text-[11px] font-medium text-muted">{t("stop.suggested")}</span>;
   const preview = (value: string) =>
     feature === undefined ? <code className="font-mono">{value}</code> : <ValuePreview valueType={feature.valueType} value={value} />;
 
@@ -212,18 +217,23 @@ export function StopPanel({
       label: (
         <span className="inline-flex items-center gap-1.5">
           <VariationSwatch index={i + 1} />
-          Ship {v.name}
+          {t("stop.ship", { name: v.name })}
           {suggestion === `ship:${v.key}` && suggested}
         </span>
       ),
-      description: "Roll this variation out to everyone in the experiment.",
+      description: t("stop.shipHelp"),
     })),
     {
       value: "rollback",
-      label: <span>Roll back{suggestion === "rollback" && suggested}</span>,
-      description: "Remove the change; keep what users had before.",
+      label: (
+        <span>
+          {t("stop.rollback")}
+          {suggestion === "rollback" && suggested}
+        </span>
+      ),
+      description: t("stop.rollbackHelp"),
     },
-    { value: "inconclusive", label: "Inconclusive", description: "No clear answer. Remove the rule and record it." },
+    { value: "inconclusive", label: t("stop.inconclusive"), description: t("stop.inconclusiveHelp") },
   ];
 
   const submit = () => {
@@ -239,8 +249,8 @@ export function StopPanel({
 
   return (
     <ActionPanel
-      title="Stop & decide"
-      description="Stopping ends assignment and records the decision. It can't be undone; a new experiment is needed to test again."
+      title={t("stop.title")}
+      description={t("stop.description")}
       footer={
         <>
           {stop.error !== null && (
@@ -249,36 +259,42 @@ export function StopPanel({
             </p>
           )}
           <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={stop.isPending}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button size="sm" onPress={submit} isPending={stop.isPending} isDisabled={submitted && (choice === "" || reason.trim() === "")}>
-            {shipped !== undefined ? `Stop and ship ${shipped.name}` : "Stop experiment"}
+            {shipped !== undefined ? t("stop.stopAndShip", { name: shipped.name }) : t("stop.stopExperiment")}
           </Button>
         </>
       }
     >
-      <Segmented label="Decision" value={choice} onChange={setChoice} options={options} />
-      {submitted && choice === "" && <p className="-mt-3 text-meta text-danger">Choose a decision.</p>}
+      <Segmented label={t("stop.decision")} value={choice} onChange={setChoice} options={options} />
+      {submitted && choice === "" && <p className="-mt-3 text-meta text-danger">{t("stop.chooseDecision")}</p>}
       {choice !== "" && (
         <p className="rounded-lg border border-border bg-surface-secondary px-4 py-3 text-label" aria-live="polite">
           {shipped !== undefined ? (
-            <>
-              The flag will serve {shipped.name}'s value {preview(shipped.value)} to everyone matching the targeting in {envNames}. The
-              experiment rule becomes a fixed rule you can edit on the flag later.
-            </>
+            <Trans
+              t={t}
+              i18nKey="stop.shipSummary"
+              values={{ name: shipped.name, environments: envNames }}
+              components={{ value: preview(shipped.value) }}
+            />
           ) : (
             <>
-              The experiment rule is removed from <span className="font-mono">{feature?.key ?? "the flag"}</span> in {envNames}. Users get the
-              flag's other rules or its default value{feature === undefined ? "" : <> {preview(feature.defaultValue)}</>}.
-              {choice === "inconclusive" && " The decision is recorded as inconclusive."}
+              <Trans
+                t={t}
+                i18nKey={feature === undefined ? "stop.removeSummaryNoValue" : "stop.removeSummary"}
+                values={{ flag: feature?.key ?? t("theFlag"), environments: envNames }}
+                components={{ code: <span className="font-mono" />, value: feature === undefined ? <></> : preview(feature.defaultValue) }}
+              />
+              {choice === "inconclusive" && t("stop.recordedInconclusive")}
             </>
           )}
         </p>
       )}
       <TextField value={reason} onChange={setReason} isRequired isInvalid={submitted && reason.trim() === ""}>
-        <Label>Why</Label>
-        <TextArea rows={3} placeholder="e.g. +4.2% checkout conversion [+1.1%, +7.3%], guardrails flat, health OK after 14 days" className="resize-y" />
-        <Description>Kept with the experiment so the team can find out later what was decided and why.</Description>
+        <Label>{t("stop.why")}</Label>
+        <TextArea rows={3} placeholder={t("stop.whyPlaceholder")} className="resize-y" />
+        <Description>{t("stop.whyHelp")}</Description>
       </TextField>
     </ActionPanel>
   );

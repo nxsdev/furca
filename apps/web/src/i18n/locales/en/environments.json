@@ -1,0 +1,70 @@
+{
+  "pageTitle": "SDK & environments · furca",
+  "page": {
+    "title": "SDK & environments",
+    "description": "Each environment has its own SDK key, flag states and payload. SDKs download the payload once and evaluate flags locally.",
+    "newEnvironment": "New environment",
+    "loadFailed": "Couldn't load environments. {{message}}",
+    "emptyTitle": "No environments",
+    "emptyDescription": "Create one to get an SDK key. Most teams start with production and development."
+  },
+  "table": {
+    "environment": "Environment",
+    "sdkKey": "SDK key",
+    "payload": "Payload",
+    "flagsOn": "Flags on",
+    "last24h": "Last 24h",
+    "actions": "Actions"
+  },
+  "row": {
+    "copySdkKey": "Copy SDK key",
+    "payload": "Payload",
+    "moreActions": "More actions for {{name}}",
+    "rotateSdkKey": "Rotate SDK key",
+    "rotateSdkKeyMenu": "Rotate SDK key…"
+  },
+  "payloadSize": {
+    "notPublished": "Not published",
+    "large": "Large",
+    "largeHint": "Above 100 KB, SDK startup gets slower on mobile networks. Archive unused flags or move large JSON values out of flags."
+  },
+  "create": {
+    "name": "Name",
+    "key": "Key",
+    "keyHelp": "Can't be changed later.",
+    "keyInvalid": "Use lowercase letters, digits, - and _",
+    "created": "{{name}} created",
+    "createdDescription": "Flags start disabled here. Copy its SDK key below."
+  },
+  "payloadDrawer": {
+    "title": "Payload · {{name}}",
+    "description": "The exact JSON SDKs download from <code>{{path}}</code>. Disabled flags are left out.",
+    "loadFailed": "Couldn't load the payload. {{message}}",
+    "copyJson": "Copy JSON"
+  },
+  "rotate": {
+    "title": "Rotate the {{name}} SDK key?",
+    "confirm": "Rotate key",
+    "body": "A new key is issued immediately. Apps still using <code>{{sdkKey}}</code> get your fallback value for every flag, and their exposures and events are dropped until you deploy the new key.",
+    "done": "New SDK key for {{name}}",
+    "doneDescription": "Deploy it to every app that uses this environment."
+  },
+  "quickstart": {
+    "title": "Quickstart",
+    "description": "Install the SDK, evaluate flags locally, and send events for metrics.",
+    "environmentLabel": "Environment for the snippet",
+    "environment": "Environment",
+    "install": "1. Install",
+    "copyInstall": "Copy install command",
+    "connect": "2. Connect to {{name}}",
+    "runtime": "Runtime",
+    "browser": "Browser",
+    "footer": "Exposures are sent automatically when a user is bucketed into an experiment. Events from <code>track()</code> land in the built-in event store and can be used by metrics right away."
+  },
+  "codeBlock": {
+    "copy": "Copy code"
+  },
+  "sparkline": {
+    "label": "{{events}} events and {{exposures}} exposures in the last 24 hours"
+  }
+}

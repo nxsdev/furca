@@ -2,9 +2,11 @@ import type { ConditionOperator } from "@furca/core/targeting/Condition";
 import { Button, ComboBox, Header, Input, ListBox, Select, TextField } from "@heroui/react";
 import { Plus, X } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { i18n } from "~/i18n";
 import { type ConditionValue, isListOperator, isPresenceOperator, operatorGroups } from "./summary";
 
-export { type ConditionValue, conditionsSummary, operatorLabels } from "./summary";
+export { type ConditionValue, conditionsSummary } from "./summary";
 
 type MutableCondition = { attribute: string; operator: ConditionOperator; values: string[] };
 
@@ -18,19 +20,19 @@ const formatIssue = ({ operator, values }: ConditionValue): string | null => {
     try {
       new RegExp(v);
     } catch {
-      return "Not a valid regular expression";
+      return i18n.t("targeting:issues.invalidRegex");
     }
   }
   if ((operator === "gt" || operator === "gte" || operator === "lt" || operator === "lte") && !Number.isFinite(Number(v)))
-    return "Enter a number";
-  if (operator.startsWith("semver_") && !SEMVER.test(v.trim())) return "Use a version like 2.4.0";
+    return i18n.t("targeting:issues.enterNumber");
+  if (operator.startsWith("semver_") && !SEMVER.test(v.trim())) return i18n.t("targeting:issues.invalidVersion");
   return null;
 };
 
 /** Why a condition can't be saved yet, or null when it's complete */
 export const conditionIssue = (c: ConditionValue): string | null => {
-  if (c.attribute.trim() === "") return "Choose an attribute";
-  if (!isPresenceOperator(c.operator) && (c.values[0] ?? "").trim() === "") return "Enter a value";
+  if (c.attribute.trim() === "") return i18n.t("targeting:issues.chooseAttribute");
+  if (!isPresenceOperator(c.operator) && (c.values[0] ?? "").trim() === "") return i18n.t("targeting:issues.enterValue");
   return formatIssue(c);
 };
 
@@ -51,6 +53,7 @@ export function ConditionBuilder({
   attributeSuggestions?: ReadonlyArray<string>;
   isDisabled?: boolean;
 }) {
+  const { t } = useTranslation("targeting");
   const rows = value.map((c) => ({ attribute: c.attribute, operator: c.operator, values: [...c.values] }));
   const update = (i: number, patch: Partial<MutableCondition>) =>
     onChange(rows.map((row, j) => (j === i ? { ...row, ...patch } : row)));
@@ -64,14 +67,14 @@ export function ConditionBuilder({
   return (
     <div className="flex flex-col gap-2">
       {rows.length === 0 && (
-        <p className="text-label text-muted">Matches everyone. Add a condition to target users by attribute.</p>
+        <p className="text-label text-muted">{t("conditionBuilder.empty")}</p>
       )}
       {rows.map((row, i) => {
         const issue = formatIssue(row);
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity besides their position
           <div key={i} className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-start gap-x-2 gap-y-1.5 sm:grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_2rem]">
-            <span className="flex h-8 items-center font-mono text-meta text-muted">{i === 0 ? "if" : "and"}</span>
+            <span className="flex h-8 items-center font-mono text-meta text-muted">{i === 0 ? t("conditionBuilder.if") : t("conditionBuilder.and")}</span>
             <AttributeInput
               value={row.attribute}
               suggestions={suggestions}
@@ -79,7 +82,7 @@ export function ConditionBuilder({
               isDisabled={isDisabled}
             />
             <Select
-              aria-label="Operator"
+              aria-label={t("conditionBuilder.operator")}
               value={row.operator}
               onChange={(k) => typeof k === "string" && setOperator(i, k as ConditionOperator)}
               isDisabled={isDisabled}
@@ -91,11 +94,11 @@ export function ConditionBuilder({
               <Select.Popover className="min-w-44">
                 <ListBox>
                   {operatorGroups.map((group) => (
-                    <ListBox.Section key={group.label}>
-                      <Header>{group.label}</Header>
-                      {group.items.map(([op, label]) => (
-                        <ListBox.Item key={op} id={op} textValue={label} className="text-label">
-                          {label}
+                    <ListBox.Section key={group.id}>
+                      <Header>{t(`operatorGroups.${group.id}`)}</Header>
+                      {group.operators.map((op) => (
+                        <ListBox.Item key={op} id={op} textValue={t(`operators.${op}`)} className="text-label">
+                          {t(`operators.${op}`)}
                           <ListBox.ItemIndicator />
                         </ListBox.Item>
                       ))}
@@ -106,19 +109,19 @@ export function ConditionBuilder({
             </Select>
             <div className="order-last col-span-3 col-start-2 min-w-0 sm:order-none sm:col-span-1 sm:col-start-auto">
               {isPresenceOperator(row.operator) ? (
-                <span className="hidden h-8 items-center text-label text-muted sm:flex">No value needed</span>
+                <span className="hidden h-8 items-center text-label text-muted sm:flex">{t("conditionBuilder.noValueNeeded")}</span>
               ) : isListOperator(row.operator) ? (
                 <TagInput
-                  aria-label="Values"
+                  aria-label={t("conditionBuilder.values")}
                   values={row.values}
                   onChange={(values) => update(i, { values })}
-                  placeholder="Type a value, press Enter"
+                  placeholder={t("conditionBuilder.valuesPlaceholder")}
                   isDisabled={isDisabled}
                   className="font-mono"
                 />
               ) : (
                 <TextField
-                  aria-label="Value"
+                  aria-label={t("conditionBuilder.value")}
                   value={row.values[0] ?? ""}
                   onChange={(v) => update(i, { values: [v] })}
                   isInvalid={issue !== null}
@@ -126,7 +129,7 @@ export function ConditionBuilder({
                 >
                   <Input
                     className="h-8 w-full py-1 font-mono text-base sm:text-label"
-                    placeholder={row.operator === "regex" ? "^.+@acme\\.com$" : row.operator.startsWith("semver") ? "2.4.0" : "value"}
+                    placeholder={row.operator === "regex" ? "^.+@acme\\.com$" : row.operator.startsWith("semver") ? "2.4.0" : t("conditionBuilder.valuePlaceholder")}
                   />
                 </TextField>
               )}
@@ -136,7 +139,7 @@ export function ConditionBuilder({
               isIconOnly
               size="sm"
               variant="ghost"
-              aria-label={`Remove condition ${i + 1}`}
+              aria-label={t("conditionBuilder.removeCondition", { number: i + 1 })}
               className="size-8 min-w-8 text-muted hover:text-foreground"
               onPress={() => onChange(rows.filter((_, j) => j !== i))}
               isDisabled={isDisabled}
@@ -149,7 +152,7 @@ export function ConditionBuilder({
       <div>
         <Button size="sm" variant="ghost" onPress={add} isDisabled={isDisabled} className="-ml-2 h-7 px-2 text-label text-muted hover:text-foreground">
           <Plus className="size-3.5" />
-          Add condition
+          {t("conditionBuilder.addCondition")}
         </Button>
       </div>
     </div>
@@ -167,9 +170,10 @@ function AttributeInput({
   onChange: (v: string) => void;
   isDisabled: boolean;
 }) {
+  const { t } = useTranslation("targeting");
   return (
     <ComboBox
-      aria-label="Attribute"
+      aria-label={t("conditionBuilder.attribute")}
       allowsCustomValue
       menuTrigger="focus"
       inputValue={value}
@@ -177,7 +181,7 @@ function AttributeInput({
       isDisabled={isDisabled}
     >
       <ComboBox.InputGroup>
-        <Input className="h-8 w-full py-1 font-mono text-base sm:text-label" placeholder="attribute" />
+        <Input className="h-8 w-full py-1 font-mono text-base sm:text-label" placeholder={t("conditionBuilder.attributePlaceholder")} />
         <ComboBox.Trigger />
       </ComboBox.InputGroup>
       <ComboBox.Popover>
@@ -209,6 +213,7 @@ export function TagInput({
   className?: string;
   "aria-label": string;
 }) {
+  const { t } = useTranslation("targeting");
   const [draft, setDraft] = useState("");
   const commit = (text: string) => {
     const added = text
@@ -237,7 +242,7 @@ export function TagInput({
           <span className="truncate">{v}</span>
           <button
             type="button"
-            aria-label={`Remove ${v}`}
+            aria-label={t("tagInput.remove", { value: v })}
             disabled={isDisabled}
             onClick={() => onChange(values.filter((x) => x !== v))}
             className="flex size-6 shrink-0 items-center justify-center rounded-[4px] text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"

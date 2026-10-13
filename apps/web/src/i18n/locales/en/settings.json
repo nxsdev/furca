@@ -1,0 +1,56 @@
+{
+  "pageTitle": "Settings · furca",
+  "page": {
+    "title": "Settings",
+    "description": "Who has access to this furca instance, and where its data lives.",
+    "loadFailed": "Couldn't load members. {{message}}"
+  },
+  "invite": {
+    "label": "Invite by email",
+    "submit": "Create invite link",
+    "help": "No email is sent. You get a one-time sign-up link to share; it works for 7 days.",
+    "createdFor": "Invite link for <strong>{{email}}</strong>. Send it to them directly; it can be used once.",
+    "copyLink": "Copy invite link",
+    "createdExpires": "Expires <relative/>.",
+    "done": "Done"
+  },
+  "members": {
+    "title": "Members",
+    "descriptionOwner": "Everyone here can edit flags, experiments and metrics. Only you, the owner, can remove members.",
+    "description": "Everyone here can edit flags, experiments and metrics. Only the owner can remove members.",
+    "name": "Name",
+    "email": "Email",
+    "joined": "Joined",
+    "actions": "Actions",
+    "owner": "Owner",
+    "you": "You",
+    "remove": "Remove",
+    "removed": "{{name}} removed",
+    "removeTitle": "Remove {{name}}?",
+    "removeConfirm": "Remove member",
+    "removeBody": "<strong>{{email}}</strong> loses access immediately. Their past changes stay in the audit log. To bring them back, send a new invitation."
+  },
+  "invitations": {
+    "title": "Invitations",
+    "description": "furca is invite-only: people join through a link you create here.",
+    "empty": "No pending invitations.",
+    "pending": "Pending",
+    "expires": "Expires",
+    "actions": "Actions",
+    "expiresAt": "Expires <relative/>",
+    "expiredAt": "Expired <relative/>",
+    "revoke": "Revoke",
+    "revoked": "Invitation revoked",
+    "revokedDescription": "The link no longer works.",
+    "revokeFailed": "Couldn't revoke the invitation"
+  },
+  "about": {
+    "title": "About this instance",
+    "dataLocation": "Your data stays in your Cloudflare account. Flags, experiments, exposures and events live in this deployment's D1 database and KV namespace; BigQuery keys are encrypted at rest with its <code>ENCRYPTION_KEY</code>.",
+    "sdkHost": "SDK host",
+    "copySdkHost": "Copy SDK host",
+    "docs": "Documentation",
+    "sdkReference": "SDK reference",
+    "reportIssue": "Report an issue"
+  }
+}

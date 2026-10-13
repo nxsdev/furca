@@ -1,12 +1,14 @@
+import { useTranslation } from "react-i18next";
 import { CopyButton } from "~/components/ui/primitives";
 
 /** Copyable code sample. Comment lines are muted; everything else stays ink */
 export function CodeBlock({ code, title }: { code: string; title?: string }) {
+  const { t } = useTranslation("flags");
   return (
     <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface-secondary text-left">
       <div className="flex h-9 items-center justify-between gap-2 border-b border-border pr-1 pl-3.5">
         <span className="truncate text-meta font-medium text-muted">{title ?? ""}</span>
-        <CopyButton value={code} label="Copy code" />
+        <CopyButton value={code} label={t("codeBlock.copy")} />
       </div>
       <pre className="overflow-x-auto px-3.5 py-3 font-mono text-[0.8125rem] leading-[1.6]">
         <code>

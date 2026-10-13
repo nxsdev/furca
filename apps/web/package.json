@@ -23,6 +23,7 @@
     "@orpc/tanstack-query": "catalog:",
     "@react-aria/ssr": "catalog:",
     "@react-aria/utils": "catalog:",
+    "@tanstack/react-form": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-start": "catalog:",

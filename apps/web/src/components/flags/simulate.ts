@@ -9,6 +9,7 @@ import {
   type PayloadRule,
   type SdkPayload,
 } from "@furca/sdk";
+import { i18n } from "~/i18n";
 import { conditionsSummary } from "../targeting/summary";
 
 export interface TraceStep {
@@ -29,25 +30,30 @@ function step(rule: PayloadRule, attributes: Attributes): { matched: boolean; re
     const has = Object.hasOwn(attributes, failing.attribute) ? attributes[failing.attribute] : undefined;
     return {
       matched: false,
-      reason: `Needs ${conditionsSummary([failing])} (${has === undefined || has === null ? "not set" : `has ${show(has)}`})`,
+      reason: i18n.t("flags:simulate.needs", {
+        condition: conditionsSummary([failing]),
+        actual: has === undefined || has === null ? i18n.t("flags:simulate.notSet") : i18n.t("flags:simulate.has", { value: show(has) }),
+      }),
     };
   }
-  const who = rule.conditions.length === 0 ? "Everyone" : "Conditions match";
+  const who = rule.conditions.length === 0 ? i18n.t("targeting:summary.everyone") : i18n.t("flags:simulate.conditionsMatch");
   if (rule.type === "force") return { matched: true, reason: who };
-  if (rule.type !== "rollout" && rule.type !== "experiment") return { matched: false, reason: "Unknown rule type" };
+  if (rule.type !== "rollout" && rule.type !== "experiment") return { matched: false, reason: i18n.t("flags:simulate.unknownType") };
   const raw = Object.hasOwn(attributes, rule.hashAttribute) ? attributes[rule.hashAttribute] : undefined;
   const id = raw === undefined || raw === null ? "" : String(raw);
-  if (id === "") return { matched: false, reason: `No ${rule.hashAttribute} attribute to bucket by` };
+  if (id === "") return { matched: false, reason: i18n.t("flags:simulate.noHashAttribute", { attribute: rule.hashAttribute }) };
   const n = hash(rule.seed, id);
+  const bucket = n.toFixed(4);
   if (rule.type === "rollout") {
+    const percent = pct(rule.coverage);
     return n < rule.coverage
-      ? { matched: true, reason: `In the ${pct(rule.coverage)} rollout (bucket ${n.toFixed(4)})` }
-      : { matched: false, reason: `Outside the ${pct(rule.coverage)} rollout (bucket ${n.toFixed(4)})` };
+      ? { matched: true, reason: i18n.t("flags:simulate.inRollout", { percent, bucket }) }
+      : { matched: false, reason: i18n.t("flags:simulate.outsideRollout", { percent, bucket }) };
   }
   const v = rule.variations[chooseVariation(n, getBucketRanges(rule.variations.length, rule.coverage, rule.weights))];
   return v === undefined
-    ? { matched: false, reason: `Outside experiment coverage (bucket ${n.toFixed(4)})` }
-    : { matched: true, reason: `Assigned to ${v.key} (bucket ${n.toFixed(4)})` };
+    ? { matched: false, reason: i18n.t("flags:simulate.outsideExperiment", { bucket }) }
+    : { matched: true, reason: i18n.t("flags:simulate.assigned", { variation: v.key, bucket }) };
 }
 
 /** Evaluates exactly like the SDK and explains each rule it looked at, up to the one that matched */

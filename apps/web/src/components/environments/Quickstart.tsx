@@ -1,4 +1,5 @@
 import { Label, ListBox, Select, Tabs } from "@heroui/react";
+import { Trans, useTranslation } from "react-i18next";
 import { CopyButton, Panel, PanelHeader } from "~/components/ui/primitives";
 import { useEnvironment } from "~/lib/environment";
 
@@ -95,43 +96,46 @@ app.get("/checkout", async (req, res) => {
 });`;
 };
 
-export function CodeBlock({ code, label = "Copy code", className = "max-h-[440px]" }: { code: string; label?: string; className?: string }) {
+export function CodeBlock({ code, label, className = "max-h-[440px]" }: { code: string; label?: string; className?: string }) {
+  const { t } = useTranslation("environments");
   return (
     <div className="group relative min-w-0">
       <pre className={`${className} overflow-auto rounded-md border border-border bg-background py-3 pr-12 pl-4 font-mono text-[12.5px] leading-5`}>
         <code>{code}</code>
       </pre>
       <div className="absolute top-1.5 right-1.5 rounded-md bg-background">
-        <CopyButton value={code} label={label} />
+        <CopyButton value={code} label={label ?? t("codeBlock.copy")} />
       </div>
     </div>
   );
 }
 
-const targets: ReadonlyArray<{ id: SdkTarget; label: string }> = [
-  { id: "browser", label: "Browser" },
+/** Runtime brand names stay as-is; only "Browser" is translated */
+const targets: ReadonlyArray<{ id: SdkTarget; label: string | null }> = [
+  { id: "browser", label: null },
   { id: "workers", label: "Cloudflare Workers" },
   { id: "node", label: "Node" },
 ];
 
 /** SDK setup for the selected environment, with its real SDK key filled in */
 export function Quickstart() {
+  const { t } = useTranslation("environments");
   const { environments, current, select } = useEnvironment();
   if (current === null) return null;
   const conn = { apiHost: apiHost(), sdkKey: current.sdkKey };
   return (
     <Panel>
       <PanelHeader
-        title="Quickstart"
-        description="Install the SDK, evaluate flags locally, and send events for metrics."
+        title={t("quickstart.title")}
+        description={t("quickstart.description")}
         actions={
           <Select
-            aria-label="Environment for the snippet"
+            aria-label={t("quickstart.environmentLabel")}
             value={current.id}
             onChange={(id) => typeof id === "string" && select(id)}
             className="w-44 shrink-0"
           >
-            <Label className="sr-only">Environment</Label>
+            <Label className="sr-only">{t("quickstart.environment")}</Label>
             <Select.Trigger className="h-8">
               <Select.Value className="text-label" />
               <Select.Indicator />
@@ -151,33 +155,31 @@ export function Quickstart() {
       />
       <div className="flex flex-col gap-4 px-5 py-4">
         <div className="flex flex-col gap-1.5">
-          <h3 className="text-label font-medium">1. Install</h3>
-          <CodeBlock code={INSTALL} label="Copy install command" />
+          <h3 className="text-label font-medium">{t("quickstart.install")}</h3>
+          <CodeBlock code={INSTALL} label={t("quickstart.copyInstall")} />
         </div>
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h3 className="text-label font-medium">2. Connect to {current.name}</h3>
+          <h3 className="text-label font-medium">{t("quickstart.connect", { name: current.name })}</h3>
           <Tabs variant="secondary" defaultSelectedKey="browser" className="min-w-0 gap-0">
             <Tabs.ListContainer>
-              <Tabs.List aria-label="Runtime" className="w-max min-w-0">
-                {targets.map((t) => (
-                  <Tabs.Tab key={t.id} id={t.id} className="w-auto px-3 text-label">
-                    {t.label}
+              <Tabs.List aria-label={t("quickstart.runtime")} className="w-max min-w-0">
+                {targets.map((target) => (
+                  <Tabs.Tab key={target.id} id={target.id} className="w-auto px-3 text-label">
+                    {target.label ?? t("quickstart.browser")}
                     <Tabs.Indicator />
                   </Tabs.Tab>
                 ))}
               </Tabs.List>
             </Tabs.ListContainer>
-            {targets.map((t) => (
-              <Tabs.Panel key={t.id} id={t.id} className="mt-3 p-0">
-                <CodeBlock code={sdkSnippet(t.id, conn)} />
+            {targets.map((target) => (
+              <Tabs.Panel key={target.id} id={target.id} className="mt-3 p-0">
+                <CodeBlock code={sdkSnippet(target.id, conn)} />
               </Tabs.Panel>
             ))}
           </Tabs>
         </div>
         <p className="text-label text-muted">
-          Exposures are sent automatically when a user is bucketed into an experiment. Events from{" "}
-          <code className="font-mono text-foreground">track()</code> land in the built-in event store and can be used by metrics
-          right away.
+          <Trans t={t} i18nKey="quickstart.footer" components={{ code: <code className="font-mono text-foreground" /> }} />
         </p>
       </div>
     </Panel>

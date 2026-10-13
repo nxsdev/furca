@@ -5,8 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Lock, RotateCcw } from "lucide-react";
 import type { ReactNode } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { ValuePreview } from "~/components/flags/ValueInput";
-import { formatCount, formatDateTime, formatDuration, formatPercent } from "~/components/results/format";
+import { formatCount, formatDateTime, formatDuration, formatList, formatPercent } from "~/components/results/format";
 import { conditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { ListSkeleton, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
@@ -27,52 +28,59 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-const MetricLinks = ({ ids, metrics }: { ids: ReadonlyArray<string>; metrics: ReadonlyMap<string, Metric> }) =>
-  ids.length === 0 ? (
-    <span className="text-muted">None</span>
+function MetricLinks({ ids, metrics }: { ids: ReadonlyArray<string>; metrics: ReadonlyMap<string, Metric> }) {
+  const { t } = useTranslation(["experiments", "common"]);
+  return ids.length === 0 ? (
+    <span className="text-muted">{t("common:states.none")}</span>
   ) : (
     <span className="flex flex-col gap-0.5">
       {ids.map((id) => (
         <Link key={id} to="/metrics/$metricId" params={{ metricId: id }} className="w-fit truncate hover:underline">
-          {metrics.get(id)?.name ?? "Deleted metric"}
+          {metrics.get(id)?.name ?? t("setup.deletedMetric")}
         </Link>
       ))}
     </span>
   );
+}
+
+const num = <span className="font-mono tabular" />;
 
 /** Read-only setup: what was registered before the data arrived */
 export function SetupView({ experiment: x, feature }: { experiment: Experiment; feature: Feature | undefined }) {
+  const { t } = useTranslation(["experiments", "common"]);
   const { environments } = useEnvironment();
   const metricsQuery = useQuery(orpc.metrics.list.queryOptions({ input: { includeArchived: true } }));
   const metrics = new Map((metricsQuery.data ?? []).map((m) => [m.id, m]));
   const traffic = trafficOf(x);
   const started = x.status !== "draft";
-  const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? "Deleted environment";
+  const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? t("setup.deletedEnvironment");
   const s = x.stats;
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
       <div className="flex min-w-0 flex-col gap-4">
         <Panel>
-          <PanelHeader title="Hypothesis" />
+          <PanelHeader title={t("setup.hypothesis")} />
           <p className={`whitespace-pre-wrap px-5 py-4 text-body ${x.hypothesis.trim() === "" ? "text-muted" : ""}`}>
-            {x.hypothesis.trim() === "" ? "No hypothesis was written." : x.hypothesis}
+            {x.hypothesis.trim() === "" ? t("setup.noHypothesis") : x.hypothesis}
           </p>
         </Panel>
         <Panel className="overflow-hidden">
           <PanelHeader
-            title="Variations"
+            title={t("setup.variations")}
             description={
               <>
-                Values served by{" "}
                 {feature === undefined ? (
-                  "the flag"
+                  t("setup.valuesServedByFlag")
                 ) : (
-                  <Link to="/flags/$featureId" params={{ featureId: feature.id }} className="font-mono hover:underline">
-                    {feature.key}
-                  </Link>
+                  <Trans
+                    t={t}
+                    i18nKey="setup.valuesServedBy"
+                    values={{ flag: feature.key }}
+                    components={{ link: <Link to="/flags/$featureId" params={{ featureId: feature.id }} className="font-mono hover:underline" /> }}
+                  />
                 )}
-                {started ? " · weights of the current phase" : ""}
+                {started ? t("setup.currentWeights") : ""}
               </>
             }
           />
@@ -80,10 +88,10 @@ export function SetupView({ experiment: x, feature }: { experiment: Experiment; 
             <table className={tbl.table}>
               <thead>
                 <tr>
-                  <th scope="col" className={tbl.th}>Variation</th>
-                  <th scope="col" className={tbl.th}>Key</th>
-                  <th scope="col" className={tbl.th}>Value</th>
-                  <th scope="col" className={`${tbl.th} text-right`}>Weight</th>
+                  <th scope="col" className={tbl.th}>{t("setup.columns.variation")}</th>
+                  <th scope="col" className={tbl.th}>{t("setup.columns.key")}</th>
+                  <th scope="col" className={tbl.th}>{t("setup.columns.value")}</th>
+                  <th scope="col" className={`${tbl.th} text-right`}>{t("setup.columns.weight")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -107,70 +115,82 @@ export function SetupView({ experiment: x, feature }: { experiment: Experiment; 
           </div>
         </Panel>
         <Panel>
-          <PanelHeader title="Targeting & traffic" />
+          <PanelHeader title={t("setup.targeting")} />
           <Rows>
-            <Row label="Who can enter">{conditionsSummary(traffic.conditions)}</Row>
-            <Row label="Coverage">
-              <span className="font-mono tabular">{formatPercent(traffic.coverage, 0)}</span> of matching users
+            <Row label={t("setup.whoCanEnter")}>{conditionsSummary(traffic.conditions)}</Row>
+            <Row label={t("setup.coverage")}>
+              <Trans t={t} i18nKey="setup.coverageValue" values={{ percent: formatPercent(traffic.coverage, 0) }} components={{ num }} />
             </Row>
-            <Row label="Assign by">
+            <Row label={t("setup.assignBy")}>
               <code className="font-mono">{x.hashAttribute}</code>
             </Row>
-            <Row label="Runs in">{x.environmentIds.map(envName).join(", ") || "–"}</Row>
-            <Row label="Analyzed in">{envName(x.analysisEnvironmentId)}</Row>
+            <Row label={t("setup.runsIn")}>{formatList(x.environmentIds.map(envName)) || "–"}</Row>
+            <Row label={t("setup.analyzedIn")}>{envName(x.analysisEnvironmentId)}</Row>
           </Rows>
         </Panel>
       </div>
       <div className="flex min-w-0 flex-col gap-4">
         <Panel>
-          <PanelHeader title="Metrics" />
+          <PanelHeader title={t("setup.metrics")} />
           <Rows>
-            <Row label="Primary">
-              {x.primaryMetricId === null ? <span className="text-muted">Not set (required to start)</span> : <MetricLinks ids={[x.primaryMetricId]} metrics={metrics} />}
+            <Row label={t("setup.primary")}>
+              {x.primaryMetricId === null ? (
+                <span className="text-muted">{t("setup.primaryMissing")}</span>
+              ) : (
+                <MetricLinks ids={[x.primaryMetricId]} metrics={metrics} />
+              )}
             </Row>
-            <Row label="Secondary">
+            <Row label={t("setup.secondary")}>
               <MetricLinks ids={x.secondaryMetricIds} metrics={metrics} />
             </Row>
-            <Row label="Guardrails">
+            <Row label={t("setup.guardrails")}>
               <MetricLinks ids={x.guardrailMetricIds} metrics={metrics} />
             </Row>
           </Rows>
         </Panel>
         <Panel>
           <PanelHeader
-            title="Statistics"
+            title={t("setup.statistics")}
             description={
               started ? (
                 <span className="inline-flex items-center gap-1">
-                  <Lock className="size-3" aria-hidden="true" /> Locked at start so results can't be re-run until they look good
+                  <Lock className="size-3" aria-hidden="true" /> {t("setup.locked")}
                 </span>
               ) : (
-                "Locks when the experiment starts"
+                t("setup.locksOnStart")
               )
             }
           />
           <Rows>
-            <Row label="Engine">{s.engine === "bayesian" ? "Bayesian" : s.sequential ? "Frequentist, sequential" : "Frequentist, fixed horizon"}</Row>
-            <Row label="Confidence">{Math.round((1 - s.alpha) * 100)}%</Row>
-            <Row label="CUPED">{s.cuped ? "On" : "Off"}</Row>
-            {s.engine === "frequentist" && <Row label="Correction">{s.correction === "holm" ? "Holm" : "None"}</Row>}
+            <Row label={t("setup.engine")}>
+              {s.engine === "bayesian" ? t("setup.bayesian") : s.sequential ? t("setup.sequential") : t("setup.fixed")}
+            </Row>
+            <Row label={t("setup.confidence")}>{Math.round((1 - s.alpha) * 100)}%</Row>
+            <Row label="CUPED">{s.cuped ? t("setup.on") : t("setup.off")}</Row>
+            {s.engine === "frequentist" && (
+              <Row label={t("setup.correction")}>{s.correction === "holm" ? t("setup.holm") : t("common:states.none")}</Row>
+            )}
             {s.engine === "frequentist" && s.sequential && (
-              <Row label="Tuned for">
-                <span className="font-mono tabular">{formatCount(s.sequentialTuning)}</span> users
+              <Row label={t("setup.tunedFor")}>
+                <Trans t={t} i18nKey="setup.tunedForValue" values={{ n: formatCount(s.sequentialTuning) }} components={{ num }} />
               </Row>
             )}
           </Rows>
         </Panel>
         <Panel>
-          <PanelHeader title="Plan" />
+          <PanelHeader title={t("setup.plan")} />
           <Rows>
-            <Row label="Detect">
-              <span className="font-mono tabular">{formatPercent(x.plan.mde)}</span> relative lift
+            <Row label={t("setup.detect")}>
+              <Trans t={t} i18nKey="setup.detectValue" values={{ mde: formatPercent(x.plan.mde) }} components={{ num }} />
             </Row>
-            <Row label="Per variation">
-              {x.plan.sampleSizePerVariation === null ? <span className="text-muted">Not planned</span> : <span className="font-mono tabular">{formatCount(x.plan.sampleSizePerVariation)}</span>}
+            <Row label={t("setup.perVariation")}>
+              {x.plan.sampleSizePerVariation === null ? (
+                <span className="text-muted">{t("setup.notPlanned")}</span>
+              ) : (
+                <span className="font-mono tabular">{formatCount(x.plan.sampleSizePerVariation)}</span>
+              )}
             </Row>
-            <Row label="Daily users">
+            <Row label={t("setup.dailyUsers")}>
               {x.plan.dailyTraffic === null ? <span className="text-muted">–</span> : <span className="font-mono tabular">{formatCount(x.plan.dailyTraffic)}</span>}
             </Row>
           </Rows>
@@ -182,13 +202,13 @@ export function SetupView({ experiment: x, feature }: { experiment: Experiment; 
 
 /** Timeline of traffic periods; each new phase re-randomizes users with a new seed */
 export function PhasesView({ experiment: x }: { experiment: Experiment }) {
+  const { t } = useTranslation("experiments");
   const phases = x.phases.map((p, i) => ({ p, i })).reverse();
   return (
     <div className="flex flex-col gap-4">
       <p className="flex items-start gap-2 text-label text-muted">
         <RotateCcw className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-        Changing weights, targeting or lowering coverage starts a new phase with a new seed, so every user is re-assigned. Results only
-        use the current phase.
+        {t("phases.intro")}
       </p>
       <Panel>
         <ol>
@@ -196,7 +216,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
             const current = i === x.phases.length - 1 && p.endedAt === null;
             const prev = x.phases[i - 1];
             const was = (changed: boolean, text: string) =>
-              prev !== undefined && changed ? <span className="ml-2 font-sans text-meta text-muted">was {text}</span> : null;
+              prev !== undefined && changed ? <span className="ml-2 font-sans text-meta text-muted">{t("phases.was", { value: text })}</span> : null;
             return (
               <li key={i} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3 border-b border-border px-5 py-4 last:border-b-0">
                 <span
@@ -209,18 +229,18 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                 <div className="flex min-w-0 flex-col gap-2">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <p className="text-body font-medium">
-                      Phase {i + 1}
-                      {current && <span className="ml-2 text-label font-normal text-muted">Current</span>}
+                      {t("phases.phase", { n: i + 1 })}
+                      {current && <span className="ml-2 text-label font-normal text-muted">{t("phases.current")}</span>}
                     </p>
                     <p className="text-label text-muted tabular">
                       {formatDateTime(p.startedAt)} –{" "}
-                      {p.endedAt === null ? "now" : formatDateTime(p.endedAt)} ·{" "}
+                      {p.endedAt === null ? t("phases.now") : formatDateTime(p.endedAt)} ·{" "}
                       {formatDuration(p.startedAt, p.endedAt ?? new Date())}
                     </p>
                   </div>
                   {p.reason !== "" && <p className="text-label">{p.reason}</p>}
                   <dl className="grid gap-x-6 gap-y-1.5 text-label sm:grid-cols-[auto_minmax(0,1fr)]">
-                    <dt className="text-muted">Split</dt>
+                    <dt className="text-muted">{t("phases.split")}</dt>
                     <dd className="flex min-w-0 flex-col gap-1.5">
                       <div className="flex h-1.5 w-full max-w-xs gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
                         {p.weights.map((w, j) => (
@@ -231,7 +251,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                         {p.weights.map((w, j) => (
                           <span key={j} className="inline-flex items-center gap-1">
                             <VariationSwatch index={j} />
-                            <span className="font-sans">{x.variations[j]?.name ?? `Variation ${j}`}</span> {weightLabel(w)}
+                            <span className="font-sans">{x.variations[j]?.name ?? t("phases.variationN", { n: j })}</span> {weightLabel(w)}
                           </span>
                         ))}
                         {was(
@@ -240,12 +260,12 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                         )}
                       </span>
                     </dd>
-                    <dt className="text-muted">Coverage</dt>
+                    <dt className="text-muted">{t("phases.coverage")}</dt>
                     <dd className="font-mono tabular">
                       {formatPercent(p.coverage, 0)}
                       {was(prev !== undefined && prev.coverage !== p.coverage, formatPercent(prev?.coverage ?? 0, 0))}
                     </dd>
-                    <dt className="text-muted">Targeting</dt>
+                    <dt className="text-muted">{t("phases.targeting")}</dt>
                     <dd>
                       {conditionsSummary(p.conditions)}
                       {was(
@@ -253,7 +273,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                         conditionsSummary(prev?.conditions ?? []),
                       )}
                     </dd>
-                    <dt className="text-muted">Seed</dt>
+                    <dt className="text-muted">{t("phases.seed")}</dt>
                     <dd className="truncate font-mono text-meta">{p.seed}</dd>
                   </dl>
                 </div>
@@ -266,17 +286,18 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
   );
 }
 
-const actionLabel: Record<string, string> = {
-  created: "Created the experiment",
-  updated: "Edited the experiment",
-  started: "Started the experiment",
-  "phase.started": "Started a new phase",
-  "traffic.updated": "Changed traffic",
-  stopped: "Stopped the experiment",
-  archived: "Archived",
-  unarchived: "Restored from archive",
-  deleted: "Deleted",
-};
+/** Audit action → key under `experiments:history.actions` */
+const actionKey = {
+  created: "created",
+  updated: "updated",
+  started: "started",
+  "phase.started": "phaseStarted",
+  "traffic.updated": "trafficUpdated",
+  stopped: "stopped",
+  archived: "archived",
+  unarchived: "unarchived",
+  deleted: "deleted",
+} as const;
 
 const parseJson = (s: string | null): Record<string, unknown> | null => {
   if (s === null) return null;
@@ -292,6 +313,7 @@ const IGNORED = new Set(["updatedAt", "createdAt"]);
 
 /** Audit trail for this experiment: who changed what, newest first */
 export function HistoryView({ experiment }: { experiment: Experiment }) {
+  const { t } = useTranslation("experiments");
   const audit = useQuery(
     orpc.audit.list.queryOptions({
       // ponytail: newest 100 only; add a "Load older" button with the `before` cursor if experiments get busier
@@ -305,7 +327,7 @@ export function HistoryView({ experiment }: { experiment: Experiment }) {
       </Panel>
     );
   if (audit.error !== null) return <QueryError message={errorMessage(audit.error)} onRetry={() => audit.refetch()} />;
-  if (audit.data.length === 0) return <p className="py-10 text-center text-body text-muted">No changes recorded yet.</p>;
+  if (audit.data.length === 0) return <p className="py-10 text-center text-body text-muted">{t("history.empty")}</p>;
   return (
     <Panel>
       <ol>
@@ -316,11 +338,12 @@ export function HistoryView({ experiment }: { experiment: Experiment }) {
             before === null || after === null
               ? []
               : Object.keys(after).filter((k) => !IGNORED.has(k) && JSON.stringify(before[k]) !== JSON.stringify(after[k]));
+          const key = Object.hasOwn(actionKey, log.action) ? actionKey[log.action as keyof typeof actionKey] : null;
           return (
             <li key={log.id} className="flex flex-col gap-1 border-b border-border px-5 py-3 last:border-b-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                 <p className="text-label">
-                  <span className="font-medium">{log.actorEmail}</span> <span className="text-muted">{(actionLabel[log.action] ?? log.action).toLowerCase()}</span>
+                  <span className="font-medium">{log.actorEmail}</span> <span className="text-muted">{key === null ? log.action.toLowerCase() : t(`history.actions.${key}`)}</span>
                 </p>
                 <span className="text-meta text-muted">
                   <RelativeTime date={log.createdAt} />
@@ -329,12 +352,13 @@ export function HistoryView({ experiment }: { experiment: Experiment }) {
               {changed.length > 0 && (
                 <details className="text-meta">
                   <summary className="w-fit cursor-pointer text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus">
-                    Changed {changed.map((k) => k.replace(/([A-Z])/g, " $1").toLowerCase()).join(", ")}
+                    {/* ponytail: field names are the audit JSON keys spelled out, not translated */}
+                    {t("history.changed", { fields: changed.map((k) => k.replace(/([A-Z])/g, " $1").toLowerCase()).join(", ") })}
                   </summary>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     {[
-                      ["Before", before],
-                      ["After", after],
+                      [t("history.before"), before],
+                      [t("history.after"), after],
                     ].map(([label, obj]) => (
                       <div key={label as string} className="min-w-0">
                         <p className="mb-1 text-muted">{label as string}</p>

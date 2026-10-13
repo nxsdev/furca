@@ -1,0 +1,77 @@
+{
+  "conditionBuilder": {
+    "empty": "すべてのユーザーが対象です。属性でユーザーを絞り込むには条件を追加してください。",
+    "if": "条件",
+    "and": "かつ",
+    "attribute": "属性",
+    "attributePlaceholder": "属性",
+    "operator": "演算子",
+    "noValueNeeded": "値は不要です",
+    "values": "値",
+    "valuesPlaceholder": "値を入力して Enter",
+    "value": "値",
+    "valuePlaceholder": "値",
+    "removeCondition": "条件 {{number}} を削除",
+    "addCondition": "条件を追加"
+  },
+  "tagInput": {
+    "remove": "{{value}} を削除"
+  },
+  "issues": {
+    "invalidRegex": "正規表現の形式が正しくありません",
+    "enterNumber": "数値を入力してください",
+    "invalidVersion": "2.4.0 のような形式でバージョンを入力してください",
+    "chooseAttribute": "属性を選択してください",
+    "enterValue": "値を入力してください"
+  },
+  "operatorGroups": {
+    "text": "テキスト",
+    "number": "数値",
+    "version": "バージョン",
+    "presence": "有無"
+  },
+  "operators": {
+    "eq": "次と等しい",
+    "neq": "次と等しくない",
+    "in": "次のいずれか",
+    "not_in": "次のいずれでもない",
+    "contains": "次を含む",
+    "not_contains": "次を含まない",
+    "starts_with": "次で始まる",
+    "ends_with": "次で終わる",
+    "regex": "正規表現に一致",
+    "gt": "次より大きい",
+    "gte": "次以上",
+    "lt": "次より小さい",
+    "lte": "次以下",
+    "semver_gt": "バージョン >",
+    "semver_gte": "バージョン ≥",
+    "semver_lt": "バージョン <",
+    "semver_lte": "バージョン ≤",
+    "exists": "存在する",
+    "not_exists": "存在しない"
+  },
+  "summary": {
+    "everyone": "すべてのユーザー",
+    "and": " かつ ",
+    "eq": "{{attribute}} が {{value}}",
+    "neq": "{{attribute}} が {{value}} 以外",
+    "in": "{{attribute}} が {{value}} のいずれか",
+    "not_in": "{{attribute}} が {{value}} のいずれでもない",
+    "contains": "{{attribute}} が {{value}} を含む",
+    "not_contains": "{{attribute}} が {{value}} を含まない",
+    "starts_with": "{{attribute}} が {{value}} で始まる",
+    "ends_with": "{{attribute}} が {{value}} で終わる",
+    "regex": "{{attribute}} が正規表現 {{value}} に一致",
+    "gt": "{{attribute}} が {{value}} より大きい",
+    "gte": "{{attribute}} が {{value}} 以上",
+    "lt": "{{attribute}} が {{value}} より小さい",
+    "lte": "{{attribute}} が {{value}} 以下",
+    "semver_gt": "{{attribute}} のバージョンが {{value}} より新しい",
+    "semver_gte": "{{attribute}} のバージョンが {{value}} 以上",
+    "semver_lt": "{{attribute}} のバージョンが {{value}} より古い",
+    "semver_lte": "{{attribute}} のバージョンが {{value}} 以下",
+    "exists": "{{attribute}} が存在する",
+    "not_exists": "{{attribute}} が存在しない"
+  }
+}

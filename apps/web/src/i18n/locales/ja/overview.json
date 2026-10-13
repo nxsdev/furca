@@ -1,0 +1,79 @@
+{
+  "pageTitle": "概要 · furca",
+  "page": {
+    "title": "概要",
+    "description": "実行中の実験、最近の変更、SDK トラフィックを確認できます。",
+    "descriptionIn": "実行中の実験、最近の変更、{{name}} の SDK トラフィックを確認できます。",
+    "loadFailed": "概要を読み込めませんでした。{{message}}"
+  },
+  "onboarding": {
+    "title": "スタートガイド",
+    "description": "変更をフラグで制御してリリースし、効果を計測して、残すかどうかを実験で判断しましょう。",
+    "progress": "{{done}}/{{total}} 完了",
+    "done": "完了"
+  },
+  "steps": {
+    "flag": {
+      "title": "フラグを作成",
+      "doneDescription_other": "現在{{count}}件のフラグがあります。",
+      "description": "フラグで、変更したいコードを囲みます。まずは新しい動作を1つ、オン/オフのフラグで切り替えてみましょう。",
+      "action": "フラグを作成"
+    },
+    "sdk": {
+      "title": "SDK をインストール",
+      "doneDescription": "{{name}} で SDK トラフィックを受信しています。",
+      "description": "{{name}} の SDK キーを使って、アプリに @furca/sdk を追加します。SDK はペイロードを一度だけダウンロードしてフラグをローカルで評価するため、評価のたびにリクエストが発生することはありません。",
+      "copyInstall": "インストールコマンドをコピー",
+      "otherRuntimes": "Cloudflare Workers、Node などのランタイム"
+    },
+    "metric": {
+      "title": "イベントを送信して指標を定義",
+      "doneDescription_other": "{{count}}件の指標を定義済みです。",
+      "description": "成果が発生する箇所で <code>{{call}}</code> を呼び出し、そのイベントを「購入したユーザーの割合」のような指標にします。",
+      "descriptionWithEvents": "成果が発生する箇所で <code>{{call}}</code> を呼び出し、そのイベントを「購入したユーザーの割合」のような指標にします。これまでに受信したイベント：{{names}}。",
+      "action": "指標を定義"
+    },
+    "experiment": {
+      "title": "実験を開始",
+      "description": "フラグ、主要指標、トラフィックの配分を選びます。furca は同じユーザーを常に同じバリエーションに割り当て、結果が信頼できる水準に達したらお知らせします。",
+      "action": "実験を作成"
+    }
+  },
+  "traffic": {
+    "title": "SDK トラフィック",
+    "description": "{{name}} の過去24時間の、1時間ごとの露出数とイベント数です。",
+    "eventStore": "イベントストア",
+    "loading": "トラフィックを読み込み中",
+    "loadFailed": "SDK トラフィックを読み込めませんでした。{{message}}",
+    "emptyTitle": "過去24時間に {{name}} の SDK トラフィックはありません",
+    "emptyDescription": "露出はユーザーが実行中の実験に割り当てられたとき、イベントはアプリが <code>track()</code> を呼び出したときに記録されます。",
+    "totals": "過去24時間の合計",
+    "tableCaption": "{{name}} の過去24時間の SDK トラフィック（1時間ごと）",
+    "hour": "時刻",
+    "series": {
+      "exposures": "露出",
+      "events": "イベント"
+    }
+  },
+  "recentChanges": {
+    "title": "最近の変更",
+    "auditLog": "監査ログ"
+  },
+  "running": {
+    "title": "実行中の実験",
+    "description": "最新の分析にもとづく、各主要指標の判定です。",
+    "all": "すべての実験",
+    "empty": "実行中の実験はありません。<action>実験を作成</action>すると実際のユーザーで変更をテストでき、その判定がここに表示されます。",
+    "experiment": "実験",
+    "runningFor": "実行期間",
+    "users": "ユーザー数",
+    "primaryMetric": "主要指標",
+    "phase": "フェーズ {{number}}",
+    "notAnalyzed": "未分析",
+    "analysisFailed": "分析に失敗",
+    "srm": "サンプル比率の不一致（SRM）",
+    "multipleExposures": "多重露出",
+    "noPrimaryResult": "主要指標の結果なし",
+    "guardrailRegressed": "ガードレール指標が悪化"
+  }
+}

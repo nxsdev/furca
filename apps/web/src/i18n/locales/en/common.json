@@ -29,5 +29,12 @@
     "network": "Could not reach the server. Check your connection and try again.",
     "generic": "Something went wrong. Try again.",
     "requestFailed": "Request failed"
+  },
+  "form": {
+    "required": "Required",
+    "minLength_one": "Use at least {{count}} character",
+    "minLength_other": "Use at least {{count}} characters",
+    "email": "Enter a valid email address",
+    "invalid": "Check this value"
   }
 }

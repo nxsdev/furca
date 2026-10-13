@@ -3,6 +3,7 @@ import type { Experiment } from "@furca/core/experiments/Experiment";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleAlert, CircleDashed, TriangleAlert } from "lucide-react";
+import { Trans, useTranslation } from "react-i18next";
 import { formatCount, formatDuration, formatLift } from "~/components/results/format";
 import { headlineComparison, isHealthy, regressedGuardrails, VerdictLabel } from "~/components/results/verdict";
 import { Panel, PanelHeader } from "~/components/ui/primitives";
@@ -32,22 +33,23 @@ function Users({ experimentId }: { experimentId: string }) {
 }
 
 function PrimaryStatus({ experiment }: { experiment: Experiment }) {
+  const { t } = useTranslation("overview");
   const latest = useLatest(experiment.id);
   if (latest.isPending) return <Skeleton className="h-4 w-28 rounded-md" />;
   if (latest.isError) return <span className="text-muted">—</span>;
   const snap = latest.data;
-  if (snap === null) return <Muted>Not analyzed yet</Muted>;
-  if (snap.status === "error") return <Muted icon={CircleAlert}>Analysis failed</Muted>;
+  if (snap === null) return <Muted>{t("running.notAnalyzed")}</Muted>;
+  if (snap.status === "error") return <Muted icon={CircleAlert}>{t("running.analysisFailed")}</Muted>;
   if (!isHealthy(snap.health))
     return (
       <span className="inline-flex items-center gap-1 whitespace-nowrap text-label font-medium text-health">
         <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-        {snap.health?.srm.ok === false ? "Sample ratio mismatch" : "Multiple exposures"}
+        {snap.health?.srm.ok === false ? t("running.srm") : t("running.multipleExposures")}
       </span>
     );
   const primary = snap.metrics.find((m) => m.role === "primary");
   const c = primary === undefined ? null : headlineComparison(primary);
-  if (c === null) return <Muted>No primary result</Muted>;
+  if (c === null) return <Muted>{t("running.noPrimaryResult")}</Muted>;
   return (
     <span className="inline-flex items-center gap-2">
       <VerdictLabel verdict={c.verdict} />
@@ -55,7 +57,7 @@ function PrimaryStatus({ experiment }: { experiment: Experiment }) {
       {regressedGuardrails(snap.metrics).length > 0 && (
         <span className="inline-flex items-center gap-1 whitespace-nowrap text-label text-lose">
           <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-          Guardrail regressed
+          {t("running.guardrailRegressed")}
         </span>
       )}
     </span>
@@ -63,36 +65,33 @@ function PrimaryStatus({ experiment }: { experiment: Experiment }) {
 }
 
 export function RunningExperiments({ experiments }: { experiments: ReadonlyArray<Experiment> }) {
+  const { t } = useTranslation("overview");
   const running = experiments.filter((x) => x.status === "running");
   const now = new Date();
   return (
     <Panel>
       <PanelHeader
-        title="Running experiments"
-        description="Live verdict on each primary metric, from the latest analysis."
+        title={t("running.title")}
+        description={t("running.description")}
         actions={
           <Link to="/experiments" className={`${linkCls} shrink-0`}>
-            All experiments
+            {t("running.all")}
           </Link>
         }
       />
       {running.length === 0 ? (
         <p className="px-5 py-6 text-body text-muted">
-          Nothing is running.{" "}
-          <Link to="/experiments/new" className={linkCls}>
-            Create an experiment
-          </Link>{" "}
-          to test a change on real users; its verdict will show up here.
+          <Trans t={t} i18nKey="running.empty" components={{ action: <Link to="/experiments/new" className={linkCls} /> }} />
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className={tbl.table}>
             <thead>
               <tr>
-                <th className={tbl.th}>Experiment</th>
-                <th className={`${tbl.th} hidden sm:table-cell`}>Running for</th>
-                <th className={`${tbl.th} hidden text-right md:table-cell`}>Users</th>
-                <th className={tbl.th}>Primary metric</th>
+                <th className={tbl.th}>{t("running.experiment")}</th>
+                <th className={`${tbl.th} hidden sm:table-cell`}>{t("running.runningFor")}</th>
+                <th className={`${tbl.th} hidden text-right md:table-cell`}>{t("running.users")}</th>
+                <th className={tbl.th}>{t("running.primaryMetric")}</th>
               </tr>
             </thead>
             <tbody>
@@ -102,7 +101,7 @@ export function RunningExperiments({ experiments }: { experiments: ReadonlyArray
                     <Link to="/experiments/$experimentId" params={{ experimentId: x.id }} className={`${tbl.rowLink} block truncate`}>
                       {x.name}
                     </Link>
-                    {x.phases.length > 1 && <span className="block text-meta text-muted">Phase {x.phases.length}</span>}
+                    {x.phases.length > 1 && <span className="block text-meta text-muted">{t("running.phase", { number: x.phases.length })}</span>}
                   </td>
                   <td className={`${tbl.td} hidden whitespace-nowrap tabular sm:table-cell`}>
                     {x.startedAt === null ? "—" : formatDuration(new Date(x.startedAt), now)}

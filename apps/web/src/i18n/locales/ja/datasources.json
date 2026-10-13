@@ -1,0 +1,138 @@
+{
+  "pageTitle": "データソース · furca",
+  "detailPageTitle": "データソース · furca",
+  "thisEnvironment": "この環境",
+  "builtinName": "組み込みイベントストア",
+  "list": {
+    "title": "データソース",
+    "description": "露出と指標のイベントの読み込み元です。組み込みイベントストアは設定なしで使えます。ウェアハウスのデータを使う場合は BigQuery を追加してください。",
+    "connect": "BigQuery を接続",
+    "loadFailed": "データソースを読み込めませんでした。{{error}}",
+    "builtinType": "組み込み（D1）",
+    "builtinLocation": "このデプロイの D1",
+    "warehouseHint": "GA4 や Segment のイベントを BigQuery にエクスポートしている場合は、接続するだけで、自分で編集できる SQL を使ってテーブルから露出と指標を直接読み込めます。GA4 と Segment 用のテンプレートも用意しています。",
+    "columns": {
+      "name": "名前",
+      "type": "種類",
+      "location": "ロケーション",
+      "metrics": "指標",
+      "updated": "更新日時"
+    }
+  },
+  "new": {
+    "breadcrumb": "新しい BigQuery ソース",
+    "title": "BigQuery を接続",
+    "description": "GA4 や Segment のエクスポートなど、ウェアハウスにすでにある露出とイベントで実験を分析します。",
+    "createdToast": "{{name}} を作成しました",
+    "createdToastDescription": "接続テストで、アクセス権限と露出クエリを確認してください。"
+  },
+  "detail": {
+    "fallbackTitle": "データソース",
+    "loadFailed": "このデータソースを読み込めませんでした。{{error}}",
+    "metrics": {
+      "title": "指標",
+      "description": "このソースからイベントを読み込む指標です。",
+      "empty": "このソースを使用している指標はまだありません。<link>指標を作成</link>し、データソースとしてこのソースを選択してください。"
+    },
+    "builtin": {
+      "description": "常に有効で、設定は不要です。SDK が送信した露出とイベントは D1 に保存され、Worker で分析されます。",
+      "howTitle": "データの流れ",
+      "steps": {
+        "exposuresTitle": "露出",
+        "exposures": "ユーザーが実行中の実験に振り分けられると、SDK はそのユーザーに表示したバリエーションを記録します。同じユーザー・バリエーションでの重複は1件にまとめられ、ボットのトラフィックは除外されます。",
+        "eventsTitle": "イベント",
+        "events": "<c>furca.track(name, value?)</c> でイベントを記録します。指標はイベントの回数、または値の合計（例：売上）を集計します。",
+        "storageTitle": "保存先",
+        "storage": "SDK は両方をまとめて <endpoint/> に送信します。データは、Cloudflare アカウント内にあるこのデプロイの D1 データベースに書き込まれます。"
+      },
+      "ingestionTitle": "取り込み量（過去24時間）",
+      "ingestionDescription": "{{environment}} の1時間ごとの件数です。環境はサイドバーで切り替えられます。",
+      "eventNamesTitle": "イベント名",
+      "eventNamesDescription": "{{environment}} で過去30日間に受信したイベントの一覧です（多い順）。",
+      "eventNamesLoadFailed": "イベント名を読み込めませんでした。{{error}}",
+      "eventNamesEmpty": "まだイベントはありません。アプリから <c>furca.track(\"purchase\")</c> を呼び出してください。ランタイムごとの設定方法は<link>クイックスタート</link>にあります。",
+      "columns": {
+        "event": "イベント",
+        "count": "件数",
+        "lastSeen": "最終受信"
+      }
+    },
+    "test": {
+      "title": "接続テスト",
+      "description": "保存済みのキーで認証し、露出クエリをドライランします。ドライランは無料で、データは読み込みません。",
+      "button": "接続をテスト",
+      "pending": "BigQuery に接続中…",
+      "notTested": "このページを開いてからまだテストしていません。",
+      "noKey": "下の設定でサービスアカウントキーを追加してから、テストしてください。",
+      "connected": "接続に成功しました",
+      "scan": "露出クエリのスキャン量は、分析1回あたり <bytes>{{bytes}}</bytes> の見込みです。",
+      "failed": "接続に失敗しました"
+    },
+    "deletedToast": "{{name}} を削除しました",
+    "settings": "設定",
+    "savedToast": "データソースを保存しました",
+    "history": "履歴",
+    "delete": {
+      "title": "{{name}} を削除しますか？",
+      "confirm": "データソースを削除",
+      "body": "保存されているサービスアカウントキーも消去されます。この操作は元に戻せません。",
+      "inUse_other": "{{count}}件の指標（アーカイブ済みを含む）がこのソースを参照しています。先に別のソースへ切り替えてください。使用中のソースは削除できません。"
+    }
+  },
+  "form": {
+    "warehouse": {
+      "title": "ウェアハウス",
+      "name": "名前",
+      "namePlaceholder": "分析用ウェアハウス",
+      "projectId": "プロジェクト ID",
+      "dataset": "データセット",
+      "datasetHelp": "データセット名を省略したテーブル参照で使われます。",
+      "location": "ロケーション",
+      "locationHelp": "データセットが保存されている場所です。"
+    },
+    "key": {
+      "title": "サービスアカウントキー",
+      "description": "このデプロイの <c>ENCRYPTION_KEY</c> で暗号化して保存され、再表示されることはありません。furca は読み取りクエリのみを実行します。",
+      "stored": "このデータソースにはキーが保存されています。",
+      "replace": "キーを置き換え",
+      "dropLabel": "サービスアカウントの JSON キーをドロップ",
+      "fieldLabel": "サービスアカウントの JSON キー",
+      "placeholder": "JSON キーを貼り付けるか、.json ファイルをここにドロップ",
+      "chooseFile": ".json ファイルを選択",
+      "keep": "現在のキーを維持",
+      "needsRoles": "サービスアカウントには、このプロジェクトでの <b>BigQuery ジョブユーザー</b> と <b>BigQuery データ閲覧者</b> のロールが必要です。キーを貼り付けると、実行するコマンドが表示されます。",
+      "notServiceAccount": "サービスアカウントキーではありません。Google Cloud で IAM → サービス アカウント → キー → 鍵を追加 → JSON の順に操作して作成してください。",
+      "invalidJson": "有効な JSON ではありません。波かっこを含め、キーファイル全体を貼り付けてください。"
+    },
+    "roles": {
+      "serviceAccount": "サービスアカウント",
+      "grant": "<project/> で次のロールを付与してください：",
+      "copyCommands": "gcloud コマンドをコピー",
+      "jobUser": "BigQuery ジョブユーザー",
+      "jobUserWhy": "クエリの実行用",
+      "dataViewer": "BigQuery データ閲覧者",
+      "dataViewerWhy": "テーブルの読み取り用"
+    },
+    "sql": {
+      "title": "露出クエリ",
+      "description": "誰がどのバリエーションを見たかを furca に伝えるクエリです。実験で SDK の組み込み露出の代わりにこのソースを使って分析するときに使われます。",
+      "startFrom": "テンプレート",
+      "ga4": "GA4 エクスポート",
+      "generic": "汎用",
+      "help": "露出イベントごとに1行を返し（重複は除外しないでください。furca は時刻でフェーズを分けます）、<c>user_id</c> STRING、<c>timestamp</c> TIMESTAMP、<c>experiment_key</c> STRING、<c>variation_key</c> STRING の列を含めてください。必要に応じて <c>@experiment_key</c>、<c>@start_ms</c>、<c>@end_ms</c>（エポックミリ秒）でパーティションを絞り込めます。書き方は GA4 テンプレートを参照してください。",
+      "templateInserted": "テンプレートを挿入しました",
+      "templateInsertedDescription": "入力済みの SQL を置き換えました。",
+      "undo": "元に戻す"
+    },
+    "errors": {
+      "name": "データソースの名前を入力してください",
+      "projectId": "Google Cloud のプロジェクト ID を入力してください",
+      "dataset": "デフォルトのデータセットを入力してください",
+      "credentials": "サービスアカウントキーを貼り付けるか、ドロップしてください",
+      "sql": "露出クエリを入力するか、テンプレートから始めてください"
+    },
+    "noChanges": "未保存の変更はありません。",
+    "saveChanges": "変更を保存",
+    "create": "データソースを作成"
+  }
+}

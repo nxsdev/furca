@@ -4,15 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, Flag, Pencil, Play, SlidersHorizontal, Square, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { StopPanel, TrafficEditor } from "~/components/experiments/actions";
 import { ExperimentForm } from "~/components/experiments/ExperimentForm";
 import { DecisionBadge, StatusBadge } from "~/components/experiments/parts";
 import { HistoryView, PhasesView, SetupView } from "~/components/experiments/tabs";
-import { formatDuration } from "~/components/results/format";
+import { formatDuration, formatList } from "~/components/results/format";
 import { ResultsView } from "~/components/results/ResultsView";
 import { headlineComparison, isHealthy, regressedGuardrails } from "~/components/results/verdict";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { Code, PageHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
+import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
@@ -20,31 +22,37 @@ type Tab = "results" | "setup" | "phases" | "history";
 const tabs: ReadonlyArray<Tab> = ["results", "setup", "phases", "history"];
 
 export const Route = createFileRoute("/_app/experiments/$experimentId")({
-  head: () => ({ meta: [{ title: "Experiment · furca" }] }),
+  head: () => ({ meta: [{ title: i18n.t("experiments:pageTitle.detail") }] }),
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
     tabs.includes(search.tab as Tab) ? { tab: search.tab as Tab } : {},
   component: Page,
 });
 
-const breadcrumb = (
-  <Link to="/experiments" className="w-fit text-label text-muted hover:text-foreground">
-    Experiments
-  </Link>
-);
+function Breadcrumb() {
+  const { t } = useTranslation("experiments");
+  return (
+    <Link to="/experiments" className="w-fit text-label text-muted hover:text-foreground">
+      {t("breadcrumb")}
+    </Link>
+  );
+}
+
+const breadcrumb = <Breadcrumb />;
 
 function Page() {
+  const { t } = useTranslation("experiments");
   const { experimentId } = Route.useParams();
   const query = useQuery(orpc.experiments.get.queryOptions({ input: { id: experimentId } }));
   if (query.error !== null)
     return (
       <>
-        <PageHeader breadcrumb={breadcrumb} title="Experiment" />
+        <PageHeader breadcrumb={breadcrumb} title={t("detail.title")} />
         <QueryError message={errorMessage(query.error)} onRetry={() => query.refetch()} />
       </>
     );
   if (query.isPending)
     return (
-      <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading experiment">
+      <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("detail.loading")}>
         <Skeleton className="h-4 w-24 rounded-md" />
         <Skeleton className="h-7 w-72 rounded-md" />
         <Skeleton className="h-4 w-96 max-w-full rounded-md" />
@@ -58,6 +66,7 @@ function Page() {
 type Mode = "view" | "edit" | "traffic" | "stop";
 
 function Detail({ experiment: x }: { experiment: Experiment }) {
+  const { t } = useTranslation(["experiments", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { environments } = useEnvironment();
@@ -80,7 +89,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       onSuccess: (next) => {
         saved(next);
         setConfirm(null);
-        toast.success("Experiment started", { description: "Users are being assigned. Results appear as exposures arrive." });
+        toast.success(i18n.t("experiments:detail.toast.started"), { description: i18n.t("experiments:detail.toast.startedDescription") });
         void navigate({ to: ".", search: { tab: "results" } });
       },
     }),
@@ -90,7 +99,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: orpc.experiments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
-        toast("Draft deleted");
+        toast(i18n.t("experiments:detail.toast.deleted"));
         void navigate({ to: "/experiments" });
       },
     }),
@@ -99,9 +108,11 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
     orpc.experiments.archive.mutationOptions({
       onSuccess: (next) => {
         saved(next);
-        toast(next.archived ? "Archived" : "Restored", { description: next.archived ? "Hidden from the experiments list." : undefined });
+        toast(i18n.t(next.archived ? "experiments:detail.toast.archived" : "experiments:detail.toast.restored"), {
+          description: next.archived ? i18n.t("experiments:detail.toast.archivedDescription") : undefined,
+        });
       },
-      onError: (error) => toast.danger("Could not archive", { description: errorMessage(error) }),
+      onError: (error) => toast.danger(i18n.t("experiments:detail.toast.archiveFailed"), { description: errorMessage(error) }),
     }),
   );
 
@@ -124,13 +135,13 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
   if (mode === "edit")
     return (
       <>
-        <PageHeader breadcrumb={breadcrumb} title={`Edit ${x.name}`} description="Drafts can change freely; nothing is live until you start." />
+        <PageHeader breadcrumb={breadcrumb} title={t("detail.editTitle", { name: x.name })} description={t("detail.editDescription")} />
         <ExperimentForm
           experiment={x}
           onSaved={(next) => {
             saved(next);
             setMode("view");
-            toast.success("Draft saved");
+            toast.success(t("detail.toast.saved"));
           }}
           onCancel={() => setMode("view")}
         />
@@ -140,33 +151,33 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
   const actions =
     x.status === "draft" ? (
       <>
-        <Button size="sm" variant="ghost" onPress={() => setConfirm("delete")} aria-label="Delete draft" isIconOnly className="text-muted">
+        <Button size="sm" variant="ghost" onPress={() => setConfirm("delete")} aria-label={t("detail.actions.deleteDraft")} isIconOnly className="text-muted">
           <Trash2 className="size-4" />
         </Button>
         <Button size="sm" variant="outline" onPress={() => setMode("edit")}>
           <Pencil className="size-3.5" />
-          Edit
+          {t("common:actions.edit")}
         </Button>
         <Button size="sm" onPress={() => setConfirm("start")}>
           <Play className="size-3.5" />
-          Start
+          {t("detail.actions.start")}
         </Button>
       </>
     ) : x.status === "running" ? (
       <>
         <Button size="sm" variant="outline" onPress={() => setMode(mode === "traffic" ? "view" : "traffic")} isDisabled={mode === "stop"}>
           <SlidersHorizontal className="size-3.5" />
-          Change traffic
+          {t("detail.actions.changeTraffic")}
         </Button>
         <Button size="sm" onPress={() => setMode(mode === "stop" ? "view" : "stop")} isDisabled={mode === "traffic"}>
           <Square className="size-3.5" />
-          Stop & decide
+          {t("detail.actions.stopAndDecide")}
         </Button>
       </>
     ) : (
       <Button size="sm" variant="outline" onPress={() => archive.mutate({ id: x.id, archived: !x.archived })} isPending={archive.isPending}>
         {x.archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}
-        {x.archived ? "Restore" : "Archive"}
+        {x.archived ? t("common:actions.restore") : t("common:actions.archive")}
       </Button>
     );
 
@@ -181,7 +192,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
               <StatusBadge status={x.status} />
             </span>
             {x.status === "stopped" && <DecisionBadge experiment={x} />}
-            {x.archived && <span className="text-label font-normal text-muted">Archived</span>}
+            {x.archived && <span className="text-label font-normal text-muted">{t("detail.archivedBadge")}</span>}
           </span>
         }
         description={
@@ -193,11 +204,11 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
               className="inline-flex items-center gap-1 font-mono text-label text-foreground hover:underline"
             >
               <Flag className="size-3.5 text-muted" aria-hidden="true" />
-              {feature?.key ?? "flag"}
+              {feature?.key ?? t("detail.flagFallback")}
             </Link>
-            <span className="text-label">{envs.map((e) => e.name).join(", ")}</span>
+            <span className="text-label">{formatList(envs.map((e) => e.name))}</span>
             {x.status === "running" && x.startedAt !== null && (
-              <span className="text-label">Running {formatDuration(x.startedAt, new Date())}</span>
+              <span className="text-label">{t("detail.runningFor", { duration: formatDuration(x.startedAt, new Date()) })}</span>
             )}
           </span>
         }
@@ -208,7 +219,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
         <p className="-mt-2 mb-6 max-w-[80ch] border-l-2 border-border pl-3 text-body text-muted">
           {x.decision.reason}
           <span className="ml-2 text-meta whitespace-nowrap">
-            · decided <RelativeTime date={x.decision.decidedAt} />
+            <Trans t={t} i18nKey="detail.decided" components={{ time: <RelativeTime date={x.decision.decidedAt} /> }} />
           </span>
         </p>
       )}
@@ -226,25 +237,25 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
 
       <Tabs variant="secondary" selectedKey={tab} onSelectionChange={(k) => void navigate({ to: ".", search: { tab: k as Tab }, replace: true })}>
         <Tabs.ListContainer className="mb-6">
-          <Tabs.List aria-label="Experiment sections" className="min-w-0 gap-1">
+          <Tabs.List aria-label={t("detail.tabs.label")} className="min-w-0 gap-1">
             {started && (
               <Tabs.Tab className="w-auto px-2.5 text-label" id="results">
-                Results
+                {t("detail.tabs.results")}
                 <Tabs.Indicator />
               </Tabs.Tab>
             )}
             <Tabs.Tab className="w-auto px-2.5 text-label" id="setup">
-              Setup
+              {t("detail.tabs.setup")}
               <Tabs.Indicator />
             </Tabs.Tab>
             {started && (
               <Tabs.Tab className="w-auto px-2.5 text-label" id="phases">
-                Phases <span className="ml-1 font-mono text-meta text-muted tabular">{x.phases.length}</span>
+                {t("detail.tabs.phases")} <span className="ml-1 font-mono text-meta text-muted tabular">{x.phases.length}</span>
                 <Tabs.Indicator />
               </Tabs.Tab>
             )}
             <Tabs.Tab className="w-auto px-2.5 text-label" id="history">
-              History
+              {t("detail.tabs.history")}
               <Tabs.Indicator />
             </Tabs.Tab>
           </Tabs.List>
@@ -271,24 +282,34 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
         <AlertDialog.Container size="sm">
           <AlertDialog.Dialog>
             <AlertDialog.Header>
-              <AlertDialog.Heading className="text-section font-semibold">Start {x.name}?</AlertDialog.Heading>
+              <AlertDialog.Heading className="text-section font-semibold">{t("detail.start.title", { name: x.name })}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body className="flex flex-col gap-3 text-body text-muted">
               <p>
-                The experiment rule on <span className="font-mono text-foreground">{feature?.key ?? "the flag"}</span> goes live in{" "}
-                {envs.length === 1 ? "1 environment" : `${envs.length} environments`} ({envs.map((e) => e.name).join(", ")}). Matching users are
-                assigned to {x.variations.map((v) => v.name).join(" / ")} from now on.
+                <Trans
+                  t={t}
+                  i18nKey="detail.start.body"
+                  count={envs.length}
+                  values={{
+                    flag: feature?.key ?? t("theFlag"),
+                    environments: formatList(envs.map((e) => e.name)),
+                    variations: x.variations.map((v) => v.name).join(" / "),
+                  }}
+                  components={{ code: <span className="font-mono text-foreground" /> }}
+                />
               </p>
-              <p>Variations and statistics settings lock so the result can't be tuned after the fact.</p>
+              <p>{t("detail.start.locks")}</p>
               {offIn.length > 0 && (
                 <p className="text-foreground">
-                  <span className="font-mono">{feature?.key}</span> is off in {offIn.map((e) => e.name).join(", ")}: nobody there is
-                  assigned until you turn the flag on.
+                  <Trans
+                    t={t}
+                    i18nKey="detail.start.flagOff"
+                    values={{ flag: feature?.key ?? "", environments: formatList(offIn.map((e) => e.name)) }}
+                    components={{ code: <span className="font-mono" /> }}
+                  />
                 </p>
               )}
-              {x.primaryMetricId === null && (
-                <p className="text-foreground">Set a primary metric first: Edit → Metrics. Starting without one is not allowed.</p>
-              )}
+              {x.primaryMetricId === null && <p className="text-foreground">{t("detail.start.needsPrimary")}</p>}
               {start.error !== null && (
                 <p role="alert" className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-label text-danger">
                   {errorMessage(start.error)}
@@ -297,10 +318,10 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button slot="close" variant="tertiary" size="sm" isDisabled={start.isPending}>
-                Cancel
+                {t("common:actions.cancel")}
               </Button>
               <Button size="sm" isPending={start.isPending} isDisabled={x.primaryMetricId === null} onPress={() => start.mutate({ id: x.id })}>
-                Start experiment
+                {t("detail.start.confirm")}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -310,15 +331,19 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       <ConfirmDialog
         isOpen={confirm === "delete"}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Delete this draft?"
-        confirmLabel="Delete draft"
+        title={t("detail.delete.title")}
+        confirmLabel={t("detail.actions.deleteDraft")}
         onConfirm={() => remove.mutate({ id: x.id })}
         isPending={remove.isPending}
         error={remove.error === null ? null : errorMessage(remove.error)}
       >
         <p>
-          <span className="font-medium text-foreground">{x.name}</span> and its rule on{" "}
-          <span className="font-mono">{feature?.key ?? "the flag"}</span> are removed. Nobody was assigned yet, so no data is lost.
+          <Trans
+            t={t}
+            i18nKey="detail.delete.body"
+            values={{ name: x.name, flag: feature?.key ?? t("theFlag") }}
+            components={{ name: <span className="font-medium text-foreground" />, code: <span className="font-mono" /> }}
+          />
         </p>
       </ConfirmDialog>
     </>

@@ -6,6 +6,7 @@ import { Button, Input, Skeleton, TextArea, TextField } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Info, Minus, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Panel, PanelHeader } from "~/components/ui/primitives";
 import { errorMessage, orpc } from "~/lib/rpc";
 import type { Rule } from "./RulesEditor";
@@ -62,15 +63,15 @@ export function useTestUser({
     select: parsePayload,
   });
 
-  const parsedJson = useMemo((): { value: Record<string, unknown> | null; error: string | null } => {
+  const parsedJson = useMemo((): { value: Record<string, unknown> | null; error: "notObject" | "invalid" | null } => {
     if (mode !== "json") return { value: null, error: null };
     try {
       const v: unknown = JSON.parse(json);
       return v !== null && typeof v === "object" && !Array.isArray(v)
         ? { value: v as Record<string, unknown>, error: null }
-        : { value: null, error: "Attributes must be a JSON object" };
+        : { value: null, error: "notObject" };
     } catch {
-      return { value: null, error: "Not valid JSON yet" };
+      return { value: null, error: "invalid" };
     }
   }, [mode, json]);
 
@@ -82,13 +83,15 @@ export function useTestUser({
     [mode, rows, parsedJson.value],
   );
 
+  // Trace reasons are translated text, so recompute them when the language changes
+  const { i18n } = useTranslation();
   const result = useMemo(() => {
     if (payload.data === undefined || attributes === null) return null;
     const trace = traceEvaluation(payload.data, feature.key, attributes);
     const keys = new Map([...experimentsById].map(([id, x]) => [id, x.key]));
     const ruleIds = alignRules(payload.data?.features[feature.key]?.rules ?? [], savedRules, keys);
     return { ...trace, ruleIds, matchedRuleId: trace.evaluation.ruleIndex >= 0 ? (ruleIds[trace.evaluation.ruleIndex] ?? null) : null };
-  }, [payload.data, attributes, feature.key, savedRules, experimentsById]);
+  }, [payload.data, attributes, feature.key, savedRules, experimentsById, i18n.language]);
 
   const switchMode = (next: "rows" | "json") => {
     if (next === "json") setJson(rowsToJson(rows));
@@ -116,6 +119,7 @@ export function TestUserPanel({
   ruleNumber: (id: string | null) => number | null;
   hasUnsavedChanges: boolean;
 }) {
+  const { t } = useTranslation(["flags", "common"]);
   const { rows, setRows, mode, switchMode, json, setJson, jsonError, payload, result } = state;
   const [focusId, setFocusId] = useState<string | null>(null);
   const update = (id: string, patch: Partial<Row>) => setRows(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -123,19 +127,19 @@ export function TestUserPanel({
   return (
     <Panel>
       <PanelHeader
-        title="Test a user"
-        description={`Evaluates the published ${environment.name} payload, exactly like the SDK.`}
+        title={t("testUser.title")}
+        description={t("testUser.description", { environment: environment.name })}
       />
       <div className="flex flex-col gap-3 px-4 py-4 sm:px-5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-label font-medium">Attributes</span>
+          <span className="text-label font-medium">{t("testUser.attributes")}</span>
           <Segmented
-            aria-label="Attribute editor"
+            aria-label={t("testUser.editor")}
             value={mode}
             onChange={switchMode}
             options={[
-              { id: "rows", label: "Fields" },
-              { id: "json", label: "JSON" },
+              { id: "rows", label: t("testUser.fields") },
+              { id: "json", label: t("testUser.json") },
             ]}
           />
         </div>
@@ -143,17 +147,17 @@ export function TestUserPanel({
           <div className="flex flex-col gap-1.5">
             {rows.map((r) => (
               <div key={r.id} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_2rem] gap-1.5">
-                <TextField aria-label="Attribute name" value={r.key} onChange={(key) => update(r.id, { key })}>
-                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder="attribute" spellCheck={false} autoFocus={r.id === focusId} />
+                <TextField aria-label={t("testUser.attributeName")} value={r.key} onChange={(key) => update(r.id, { key })}>
+                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder={t("testUser.attribute")} spellCheck={false} autoFocus={r.id === focusId} />
                 </TextField>
-                <TextField aria-label={`Value of ${r.key || "attribute"}`} value={r.value} onChange={(value) => update(r.id, { value })}>
-                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder="not set" spellCheck={false} />
+                <TextField aria-label={t("testUser.valueOf", { attribute: r.key || t("testUser.attribute") })} value={r.value} onChange={(value) => update(r.id, { value })}>
+                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder={t("testUser.notSet")} spellCheck={false} />
                 </TextField>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="ghost"
-                  aria-label={`Remove ${r.key || "attribute"}`}
+                  aria-label={t("testUser.remove", { attribute: r.key || t("testUser.attribute") })}
                   className="size-8 min-w-8 text-muted hover:text-foreground"
                   onPress={() => setRows(rows.filter((x) => x.id !== r.id))}
                 >
@@ -173,14 +177,14 @@ export function TestUserPanel({
                 }}
               >
                 <Plus className="size-3.5" />
-                Add attribute
+                {t("testUser.addAttribute")}
               </Button>
             </div>
           </div>
         ) : (
-          <TextField aria-label="Attributes JSON" value={json} onChange={setJson} isInvalid={jsonError !== null}>
+          <TextField aria-label={t("testUser.attributesJson")} value={json} onChange={setJson} isInvalid={jsonError !== null}>
             <TextArea rows={6} spellCheck={false} className="w-full font-mono text-base sm:text-label leading-5" />
-            {jsonError !== null && <p className="mt-1 text-meta text-danger">{jsonError}</p>}
+            {jsonError !== null && <p className="mt-1 text-meta text-danger">{t(`testUser.jsonErrors.${jsonError}`)}</p>}
           </TextField>
         )}
       </div>
@@ -192,13 +196,13 @@ export function TestUserPanel({
           </div>
         ) : payload.error !== null ? (
           <div className="flex items-center justify-between gap-3 text-label">
-            <span className="text-danger">Could not load the payload. {errorMessage(payload.error)}</span>
+            <span className="text-danger">{t("testUser.payloadError", { error: errorMessage(payload.error) })}</span>
             <Button size="sm" variant="outline" onPress={() => payload.refetch()}>
-              Retry
+              {t("common:actions.retry")}
             </Button>
           </div>
         ) : result === null ? (
-          <p className="text-label text-muted">Fix the attributes JSON to see the result.</p>
+          <p className="text-label text-muted">{t("testUser.fixJson")}</p>
         ) : (
           <Result
             feature={feature}
@@ -210,7 +214,7 @@ export function TestUserPanel({
         {hasUnsavedChanges && (
           <p className="mt-3 flex items-start gap-1.5 text-meta text-muted">
             <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-            You have unsaved rule changes. Save them to test the new rules.
+            {t("testUser.unsavedHint")}
           </p>
         )}
       </div>
@@ -229,21 +233,19 @@ function Result({
   result: NonNullable<TestUserState["result"]>;
   ruleNumber: (id: string | null) => number | null;
 }) {
+  const { t } = useTranslation("flags");
   const { evaluation, steps, ruleIds } = result;
   const label = (index: number) => {
     const n = ruleNumber(ruleIds[index] ?? null);
-    return n === null ? `Published rule ${index + 1}` : `Rule ${n}`;
+    return n === null ? t("testUser.publishedRule", { number: index + 1 }) : t("testUser.rule", { number: n });
   };
-  const kind = { force: "Force", rollout: "Rollout", experiment: "Experiment" } as const;
 
   if (evaluation.source === "unknown") {
     return (
       <div className="flex flex-col gap-1">
-        <span className="text-meta font-medium text-muted">Serves</span>
-        <span className="text-body font-medium">Your code's fallback</span>
-        <p className="text-label text-muted">
-          {feature.key} is off in {environment.name} (or not published yet), so it isn't in the payload.
-        </p>
+        <span className="text-meta font-medium text-muted">{t("testUser.serves")}</span>
+        <span className="text-body font-medium">{t("testUser.fallback")}</span>
+        <p className="text-label text-muted">{t("testUser.notInPayload", { key: feature.key, environment: environment.name })}</p>
       </div>
     );
   }
@@ -251,28 +253,30 @@ function Result({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span className="text-meta font-medium text-muted">Serves</span>
+        <span className="text-meta font-medium text-muted">{t("testUser.serves")}</span>
         <div>
           <ValuePreview valueType={feature.valueType} value={JSON.stringify(evaluation.value)} className="text-body" />
         </div>
         <p className="text-label text-muted">
           {evaluation.source === "default"
-            ? "No rule matched, so the default value is served."
-            : `${label(evaluation.ruleIndex)} matched${evaluation.experiment ? `: variation ${evaluation.experiment.variationKey}` : ""}.`}
+            ? t("testUser.defaultServed")
+            : evaluation.experiment
+              ? t("testUser.matchedVariation", { rule: label(evaluation.ruleIndex), variation: evaluation.experiment.variationKey })
+              : t("testUser.matched", { rule: label(evaluation.ruleIndex) })}
         </p>
       </div>
       {steps.length > 0 && (
-        <ol className="flex flex-col gap-1.5 border-t border-border pt-3" aria-label="Evaluation steps">
+        <ol className="flex flex-col gap-1.5 border-t border-border pt-3" aria-label={t("testUser.steps")}>
           {steps.map((s) => (
             <li key={s.index} className="flex items-start gap-2 text-label">
               {s.matched ? (
-                <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label="Matched" />
+                <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label={t("testUser.stepMatched")} />
               ) : (
-                <Minus className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label="Skipped" />
+                <Minus className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label={t("testUser.stepSkipped")} />
               )}
               <span className="min-w-0">
                 <span className="font-medium">
-                  {label(s.index)} · {kind[s.rule.type]}
+                  {label(s.index)} · {t(`rules.types.${s.rule.type}`)}
                 </span>
                 <span className="text-muted"> — {s.reason}</span>
               </span>
@@ -280,8 +284,8 @@ function Result({
           ))}
           {evaluation.source === "default" && (
             <li className="flex items-start gap-2 text-label">
-              <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label="Matched" />
-              <span className="font-medium">Default value</span>
+              <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label={t("testUser.stepMatched")} />
+              <span className="font-medium">{t("shared.defaultValue")}</span>
             </li>
           )}
         </ol>

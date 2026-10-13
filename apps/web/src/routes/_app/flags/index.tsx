@@ -4,12 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Flag, FlaskConical, Plus } from "lucide-react";
 import { type MouseEvent, type ReactNode, useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { CodeBlock } from "~/components/flags/CodeBlock";
-import { CreateFlagForm, valueTypeOptions } from "~/components/flags/CreateFlagForm";
+import { CreateFlagForm, valueTypes } from "~/components/flags/CreateFlagForm";
 import { FlagSwitch } from "~/components/flags/FlagSwitch";
 import { useSetEnabled } from "~/components/flags/useSetEnabled";
 import { environmentHue } from "~/components/shell/Sidebar";
 import { CopyButton, EmptyState, ListSkeleton, PageHeader, Panel, QueryError, RelativeTime } from "~/components/ui/primitives";
+import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
@@ -17,7 +19,7 @@ export const Route = createFileRoute("/_app/flags/")({
   // ?new=1 (also from the ⌘K palette) opens the inline create form
   validateSearch: (search: Record<string, unknown>): { new?: 1 | "1" } =>
     search.new === "1" || search.new === 1 || search.new === true ? { new: 1 } : {},
-  head: () => ({ meta: [{ title: "Flags · furca" }] }),
+  head: () => ({ meta: [{ title: i18n.t("flags:page.listTitle") }] }),
   component: FlagsPage,
 });
 
@@ -29,6 +31,7 @@ const matches = (f: Feature, q: string) =>
   f.key.includes(q) || f.description.toLowerCase().includes(q) || f.tags.some((t) => t.toLowerCase().includes(q));
 
 function FlagsPage() {
+  const { t } = useTranslation("flags");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const [query, setQuery] = useState("");
@@ -63,14 +66,14 @@ function FlagsPage() {
   return (
     <>
       <PageHeader
-        title="Flags"
-        description="Turn features on per environment, target users by attribute, and roll out gradually."
+        title={t("shared.flags")}
+        description={t("list.description")}
         actions={
           !creating &&
           !isEmpty && (
             <Button size="sm" onPress={() => setCreating(true)}>
               <Plus className="size-4" />
-              Create flag
+              {t("shared.createFlag")}
             </Button>
           )
         }
@@ -78,12 +81,12 @@ function FlagsPage() {
       {creating && <CreateFlagForm onCancel={() => setCreating(false)} />}
 
       {features.error !== null ? (
-        <QueryError message={`Could not load flags. ${errorMessage(features.error)}`} onRetry={() => features.refetch()} />
+        <QueryError message={t("list.loadError", { error: errorMessage(features.error) })} onRetry={() => features.refetch()} />
       ) : isEmpty && !creating ? (
         <EmptyState
           icon={<Flag />}
-          title="Create your first flag"
-          description="A flag is a value your code asks furca for at runtime. Change who gets what per environment, without a deploy."
+          title={t("list.emptyTitle")}
+          description={t("list.emptyDescription")}
           action={
             <div className="flex w-full max-w-[560px] flex-col items-center gap-4">
               <div className="w-full">
@@ -91,7 +94,7 @@ function FlagsPage() {
               </div>
               <Button size="sm" onPress={() => setCreating(true)}>
                 <Plus className="size-4" />
-                Create flag
+                {t("shared.createFlag")}
               </Button>
             </div>
           }
@@ -99,21 +102,21 @@ function FlagsPage() {
       ) : isEmpty ? null : (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <SearchField aria-label="Search flags" value={query} onChange={setQuery} className="w-full sm:w-72">
+            <SearchField aria-label={t("list.search")} value={query} onChange={setQuery} className="w-full sm:w-72">
               <SearchField.Group className="h-8">
                 <SearchField.SearchIcon />
-                <SearchField.Input placeholder="Search key, description or tag" className="text-base sm:text-label" />
+                <SearchField.Input placeholder={t("list.searchPlaceholder")} className="text-base sm:text-label" />
                 <SearchField.ClearButton />
               </SearchField.Group>
             </SearchField>
-            <Select aria-label="Type" value={type} onChange={(k) => typeof k === "string" && setType(k as FeatureValueType | "all")} className="w-36">
+            <Select aria-label={t("shared.type")} value={type} onChange={(k) => typeof k === "string" && setType(k as FeatureValueType | "all")} className="w-36">
               <Select.Trigger className="h-8 min-h-8 py-1 text-label">
                 <Select.Value className="text-label" />
                 <Select.Indicator />
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  {[{ id: "all", label: "All types" }, ...valueTypeOptions].map((o) => (
+                  {[{ id: "all", label: t("list.allTypes") }, ...valueTypes.map((id) => ({ id, label: t(`valueTypes.${id}`) }))].map((o) => (
                     <ListBox.Item key={o.id} id={o.id} textValue={o.label} className="text-label">
                       {o.label}
                       <ListBox.ItemIndicator />
@@ -127,7 +130,7 @@ function FlagsPage() {
                 <Checkbox.Control>
                   <Checkbox.Indicator />
                 </Checkbox.Control>
-                Show archived
+                {t("list.showArchived")}
               </Checkbox.Content>
             </Checkbox>
           </div>
@@ -142,21 +145,24 @@ function FlagsPage() {
                 environments={environments}
                 emptyMessage={
                   filtering ? (
-                    <>
-                      No flags match these filters.{" "}
-                      <button
-                        type="button"
-                        className="rounded-sm text-link underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus"
-                        onClick={() => {
-                          setQuery("");
-                          setType("all");
-                        }}
-                      >
-                        Clear filters
-                      </button>
-                    </>
+                    <Trans
+                      t={t}
+                      i18nKey="list.noMatches"
+                      components={{
+                        clear: (
+                          <button
+                            type="button"
+                            className="rounded-sm text-link underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus"
+                            onClick={() => {
+                              setQuery("");
+                              setType("all");
+                            }}
+                          />
+                        ),
+                      }}
+                    />
                   ) : (
-                    "No flags yet."
+                    t("list.noFlags")
                   )
                 }
               />
@@ -184,6 +190,7 @@ function FlagsTable({
   runningByFeature: ReadonlyMap<string, ReadonlyArray<{ id: string; name: string }>>;
   emptyMessage: ReactNode;
 }) {
+  const { t } = useTranslation("flags");
   const navigate = useNavigate();
   const setEnabled = useSetEnabled();
   const current = environments.find((e) => e.id === currentEnvironmentId);
@@ -197,8 +204,8 @@ function FlagsTable({
       <table className="w-full border-collapse text-label">
         <thead className="border-b border-border bg-surface-secondary/60">
           <tr>
-            <th className={th}>Flag</th>
-            <th className={`${th} hidden md:table-cell`}>Type</th>
+            <th className={th}>{t("list.columns.flag")}</th>
+            <th className={`${th} hidden md:table-cell`}>{t("list.columns.type")}</th>
             {environments.map((env) => (
               <th key={env.id} className={`${th} w-px ${env.id === currentEnvironmentId ? "text-foreground" : "hidden sm:table-cell"}`}>
                 <span className="inline-flex items-center gap-1.5">
@@ -207,15 +214,15 @@ function FlagsTable({
                 </span>
               </th>
             ))}
-            <th className={`${th} hidden text-right sm:table-cell`} title={current ? `Rules in ${current.name}` : undefined}>
+            <th className={`${th} hidden text-right sm:table-cell`} title={current ? t("shared.rulesIn", { environment: current.name }) : undefined}>
               <span className="inline-flex items-center gap-1.5">
                 {current && <span className={`size-1.5 rounded-full ${environmentHue(current.key)}`} aria-hidden="true" />}
-                Rules
-                {current && <span className="sr-only"> in {current.name}</span>}
+                {t("list.columns.rules")}
+                {current && <span className="sr-only">{t("list.columns.rulesInSr", { environment: current.name })}</span>}
               </span>
             </th>
-            <th className={`${th} hidden lg:table-cell`}>Experiment</th>
-            <th className={`${th} hidden text-right md:table-cell`}>Updated</th>
+            <th className={`${th} hidden lg:table-cell`}>{t("list.columns.experiment")}</th>
+            <th className={`${th} hidden text-right md:table-cell`}>{t("list.columns.updated")}</th>
           </tr>
         </thead>
         <tbody>
@@ -247,10 +254,10 @@ function FlagsTable({
                       {f.key}
                     </Link>
                     <span className="shrink-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0">
-                      <CopyButton value={f.key} label="Copy key" />
+                      <CopyButton value={f.key} label={t("shared.copyKey")} />
                     </span>
                     {f.archived && (
-                      <span className="shrink-0 rounded-[4px] border border-border px-1.5 text-meta text-muted">Archived</span>
+                      <span className="shrink-0 rounded-[4px] border border-border px-1.5 text-meta text-muted">{t("shared.archived")}</span>
                     )}
                   </div>
                   {(f.description !== "" || f.tags.length > 0) && (
@@ -270,7 +277,7 @@ function FlagsTable({
                   return (
                     <td key={env.id} className={`${td} ${env.id === currentEnvironmentId ? "" : "hidden sm:table-cell"}`}>
                       <FlagSwitch
-                        aria-label={`${f.key} in ${env.name}`}
+                        aria-label={t("shared.switchLabel", { key: f.key, environment: env.name })}
                         isSelected={enabled}
                         isDisabled={f.archived}
                         onChange={(next) => setEnabled.mutate({ feature: f, environment: env, enabled: next })}

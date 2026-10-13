@@ -1,4 +1,5 @@
 import type { ConditionOperator } from "@furca/core/targeting/Condition";
+import { i18n } from "~/i18n";
 
 export interface ConditionValue {
   readonly attribute: string;
@@ -6,49 +7,13 @@ export interface ConditionValue {
   readonly values: ReadonlyArray<string>;
 }
 
-export const operatorGroups: ReadonlyArray<{ label: string; items: ReadonlyArray<readonly [ConditionOperator, string]> }> = [
-  {
-    label: "Text",
-    items: [
-      ["eq", "is"],
-      ["neq", "is not"],
-      ["in", "is one of"],
-      ["not_in", "is not one of"],
-      ["contains", "contains"],
-      ["not_contains", "does not contain"],
-      ["starts_with", "starts with"],
-      ["ends_with", "ends with"],
-      ["regex", "matches regex"],
-    ],
-  },
-  {
-    label: "Number",
-    items: [
-      ["gt", "greater than"],
-      ["gte", "at least"],
-      ["lt", "less than"],
-      ["lte", "at most"],
-    ],
-  },
-  {
-    label: "Version",
-    items: [
-      ["semver_gt", "version >"],
-      ["semver_gte", "version ≥"],
-      ["semver_lt", "version <"],
-      ["semver_lte", "version ≤"],
-    ],
-  },
-  {
-    label: "Presence",
-    items: [
-      ["exists", "exists"],
-      ["not_exists", "does not exist"],
-    ],
-  },
+/** Operator menu sections; labels live under `targeting:operatorGroups` / `targeting:operators` */
+export const operatorGroups: ReadonlyArray<{ id: "text" | "number" | "version" | "presence"; operators: ReadonlyArray<ConditionOperator> }> = [
+  { id: "text", operators: ["eq", "neq", "in", "not_in", "contains", "not_contains", "starts_with", "ends_with", "regex"] },
+  { id: "number", operators: ["gt", "gte", "lt", "lte"] },
+  { id: "version", operators: ["semver_gt", "semver_gte", "semver_lt", "semver_lte"] },
+  { id: "presence", operators: ["exists", "not_exists"] },
 ];
-
-export const operatorLabels = Object.fromEntries(operatorGroups.flatMap((g) => g.items)) as Record<ConditionOperator, string>;
 
 export const isListOperator = (op: ConditionOperator) => op === "in" || op === "not_in";
 export const isPresenceOperator = (op: ConditionOperator) => op === "exists" || op === "not_exists";
@@ -58,14 +23,11 @@ const listText = (values: ReadonlyArray<string>) =>
 
 /** "country is one of JP, US and plan is pro"; "Everyone" when there are no conditions */
 export function conditionsSummary(conditions: ReadonlyArray<ConditionValue>): string {
-  if (conditions.length === 0) return "Everyone";
+  if (conditions.length === 0) return i18n.t("targeting:summary.everyone");
   return conditions
     .map(({ attribute, operator, values }) => {
-      const label = operatorLabels[operator] ?? operator;
-      const name = attribute === "" ? "…" : attribute;
-      if (isPresenceOperator(operator)) return `${name} ${label}`;
       const value = isListOperator(operator) ? listText(values) : (values[0] ?? "");
-      return `${name} ${label} ${value === "" ? "…" : value}`;
+      return i18n.t(`targeting:summary.${operator}`, { attribute: attribute === "" ? "…" : attribute, value: value === "" ? "…" : value });
     })
-    .join(" and ");
+    .join(i18n.t("targeting:summary.and"));
 }

@@ -1,0 +1,62 @@
+{
+  "pageTitle": "Audit log · furca",
+  "page": {
+    "title": "Audit log",
+    "description": "Every change to flags, experiments, metrics and settings: who made it, when, and exactly what changed.",
+    "filterLabel": "Filter by type",
+    "type": "Type",
+    "allChanges": "All changes",
+    "hint": "Newest first. Expand a row to see the diff."
+  },
+  "entityTypes": {
+    "feature": "Flags",
+    "experiment": "Experiments",
+    "metric": "Metrics",
+    "datasource": "Data sources",
+    "environment": "Environments",
+    "member": "Members"
+  },
+  "actions": {
+    "created": "created",
+    "updated": "updated",
+    "enabled": "enabled",
+    "disabled": "disabled",
+    "archived": "archived",
+    "unarchived": "restored",
+    "deleted": "deleted",
+    "started": "started",
+    "stopped": "stopped",
+    "invited": "invited",
+    "removed": "removed",
+    "rules": { "updated": "updated rules" },
+    "phase": { "started": "started a new phase" },
+    "traffic": { "updated": "updated traffic" },
+    "sdkKey": { "rotated": "rotated SDK key" },
+    "credentials": { "updated": "replaced credentials" },
+    "invitation": { "revoked": "revoked invitation" }
+  },
+  "list": {
+    "loadFailed": "Couldn't load the audit log. {{message}}",
+    "emptyTitle": "No changes yet",
+    "emptyDescription": "Changes to flags, experiments, metrics, data sources, environments and members appear here as they happen.",
+    "expand": "Expand",
+    "entity": "Entity",
+    "change": "Change",
+    "by": "By",
+    "when": "When",
+    "showDetails": "Show change details",
+    "hideDetails": "Hide change details",
+    "caption": "by {{email}} · {{date}}"
+  },
+  "diff": {
+    "createdWith": "Created with",
+    "stateBefore": "State before this change",
+    "noFieldChanged": "No field changed",
+    "changedLines_one": "{{count}} changed line",
+    "changedLines_other": "{{count}} changed lines",
+    "unchangedLines_one": "{{count}} unchanged line",
+    "unchangedLines_other": "{{count}} unchanged lines",
+    "added": "Added: ",
+    "removed": "Removed: "
+  }
+}

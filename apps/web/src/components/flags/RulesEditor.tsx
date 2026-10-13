@@ -1,33 +1,37 @@
 import type { Environment } from "@furca/core/environments/Environment";
 import type { Experiment } from "@furca/core/experiments/Experiment";
-import { type FeatureRule, type FeatureValueType, validateFeatureValue } from "@furca/core/features/Feature";
+import type { FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
 import { Button, Dropdown, Input, Label, NumberField, Separator, Slider, TextField } from "@heroui/react";
 import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, Ellipsis, FlaskConical, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { ConditionBuilder, conditionIssue, conditionsSummary } from "~/components/targeting/ConditionBuilder";
+import { i18n } from "~/i18n";
 import { FlagSwitch } from "./FlagSwitch";
-import { defaultValueFor, ValueInput, ValuePreview } from "./ValueInput";
+import { defaultValueFor, ValueInput, ValuePreview, valueIssue } from "./ValueInput";
 
 /** A rule as sent to features.saveRules (Effect Schema TaggedClass encoding) */
 export type Rule = typeof FeatureRule.Encoded;
 type ValueRule = Extract<Rule, { _tag: "force" | "rollout" }>;
 
-const typeLabel = { force: "Force", rollout: "Rollout", experiment: "Experiment" } as const;
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
+
+/** "Enter a value" → "enter a value" after "Condition: " (no-op for Japanese) */
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /** Why a rule can't be saved yet, or null */
 export const ruleIssue = (rule: Rule, valueType: FeatureValueType): string | null => {
   if (rule._tag === "experiment") return null;
   for (const c of rule.conditions) {
     const issue = conditionIssue(c);
-    if (issue !== null) return `Condition: ${issue.toLowerCase()}`;
+    if (issue !== null) return i18n.t("flags:rules.issues.condition", { issue: lowerFirst(issue) });
   }
-  const valueError = validateFeatureValue(valueType, rule.value);
-  if (valueError !== null) return `Value: ${valueError.toLowerCase()}`;
+  const valueError = valueIssue(valueType, rule.value);
+  if (valueError !== null) return i18n.t("flags:rules.issues.value", { issue: lowerFirst(valueError) });
   if (rule._tag === "rollout") {
-    if (!(rule.coverage >= 0 && rule.coverage <= 1)) return "Coverage must be between 0% and 100%";
-    if (rule.hashAttribute.trim() === "") return "Choose an attribute to bucket by";
+    if (!(rule.coverage >= 0 && rule.coverage <= 1)) return i18n.t("flags:rules.issues.coverage");
+    if (rule.hashAttribute.trim() === "") return i18n.t("flags:rules.issues.hashAttribute");
   }
   return null;
 };
@@ -64,6 +68,7 @@ export function RulesList({
   attributeSuggestions: ReadonlyArray<string>;
   footer: ReactNode;
 }) {
+  const { t } = useTranslation("flags");
   const replace = (id: string, next: Rule) => onChange(rules.map((r) => (r.id === id ? next : r)));
   const move = (i: number, by: -1 | 1) => {
     const next = [...rules];
@@ -73,10 +78,10 @@ export function RulesList({
   };
 
   return (
-    <ol aria-label={`Rules in ${environment.name}`}>
+    <ol aria-label={t("shared.rulesIn", { environment: environment.name })}>
       {rules.length === 0 && (
         <li className="border-b border-border px-4 py-6 text-center text-label text-muted sm:px-5">
-          No rules in {environment.name}. Everyone gets the default value when the flag is on.
+          {t("rules.empty", { environment: environment.name })}
         </li>
       )}
       {rules.map((rule, i) => {
@@ -98,24 +103,30 @@ export function RulesList({
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">
                     {rule._tag === "experiment" && <FlaskConical className="size-3 text-muted" aria-hidden="true" />}
-                    {typeLabel[rule._tag]}
+                    {t(`rules.types.${rule._tag}`)}
                   </span>
                   {rule._tag === "experiment" ? (
                     <span className="min-w-0 truncate text-label">
-                      Managed by experiment{" "}
-                      <Link
-                        to="/experiments/$experimentId"
-                        params={{ experimentId: rule.experimentId }}
-                        className="rounded-sm font-medium text-foreground underline decoration-border underline-offset-2 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-focus"
-                      >
-                        {experiment?.name ?? "…"}
-                      </Link>
+                      <Trans
+                        t={t}
+                        i18nKey="rules.managedBy"
+                        values={{ name: experiment?.name ?? "…" }}
+                        components={{
+                          link: (
+                            <Link
+                              to="/experiments/$experimentId"
+                              params={{ experimentId: rule.experimentId }}
+                              className="rounded-sm font-medium text-foreground underline decoration-border underline-offset-2 outline-none hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-focus"
+                            />
+                          ),
+                        }}
+                      />
                     </span>
                   ) : (
                     <span className="min-w-0 break-words text-label">{conditionsSummary(rule.conditions)}</span>
                   )}
-                  {!rule.enabled && <span className="text-meta text-muted">Off</span>}
-                  {matched && <span className="text-meta font-medium text-focus">Matches test user</span>}
+                  {!rule.enabled && <span className="text-meta text-muted">{t("shared.off")}</span>}
+                  {matched && <span className="text-meta font-medium text-focus">{t("shared.matchesTestUser")}</span>}
                 </div>
                 {rule._tag !== "experiment" && rule.description !== "" && (
                   <p className="mt-0.5 truncate text-meta text-muted">{rule.description}</p>
@@ -123,18 +134,29 @@ export function RulesList({
                 {rule._tag === "experiment" && experiment !== undefined && <ExperimentFacts experiment={experiment} />}
                 {rule._tag !== "experiment" && (
                   <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-meta whitespace-nowrap text-muted">
-                    {rule._tag === "rollout" && <span className="font-mono tabular text-foreground">{pct(rule.coverage)}</span>}
-                    {rule._tag === "rollout" && <span>of matching users by {rule.hashAttribute}</span>}
+                    {rule._tag === "rollout" && (
+                      <span>
+                        <Trans
+                          t={t}
+                          i18nKey="rules.rolloutOf"
+                          values={{ percent: pct(rule.coverage), attribute: rule.hashAttribute }}
+                          components={{ pct: <span className="font-mono tabular text-foreground" /> }}
+                        />
+                      </span>
+                    )}
                     {rule._tag === "rollout" && <span aria-hidden="true">·</span>}
-                    <span>serve</span>
-                    <ValuePreview valueType={valueType} value={rule.value} className="min-w-0" />
+                    <Trans
+                      t={t}
+                      i18nKey="shared.serve"
+                      components={{ value: <ValuePreview valueType={valueType} value={rule.value} className="min-w-0" /> }}
+                    />
                   </div>
                 )}
                 {issue !== null && !editing && <p className="mt-1 text-meta text-danger">{issue}</p>}
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <FlagSwitch
-                  aria-label={`Rule ${i + 1} enabled`}
+                  aria-label={t("rules.ruleEnabled", { number: i + 1 })}
                   isSelected={rule.enabled}
                   onChange={(enabled) => replace(rule.id, { ...rule, enabled })}
                   className="mr-1"
@@ -144,7 +166,7 @@ export function RulesList({
                     isIconOnly
                     size="sm"
                     variant={editing ? "tertiary" : "ghost"}
-                    aria-label={editing ? `Close rule ${i + 1}` : `Edit rule ${i + 1}`}
+                    aria-label={editing ? t("rules.closeRule", { number: i + 1 }) : t("rules.editRule", { number: i + 1 })}
                     aria-expanded={editing}
                     className="size-8 min-w-8 text-muted hover:text-foreground"
                     onPress={() => onEditingChange(editing ? null : rule.id)}
@@ -153,12 +175,12 @@ export function RulesList({
                   </Button>
                 )}
                 <Dropdown>
-                  <Button isIconOnly size="sm" variant="ghost" aria-label={`More actions for rule ${i + 1}`} className="size-8 min-w-8 text-muted hover:text-foreground">
+                  <Button isIconOnly size="sm" variant="ghost" aria-label={t("rules.moreActions", { number: i + 1 })} className="size-8 min-w-8 text-muted hover:text-foreground">
                     <Ellipsis className="size-4" />
                   </Button>
                   <Dropdown.Popover placement="bottom end" className="min-w-44">
                     <Dropdown.Menu
-                      aria-label={`Rule ${i + 1} actions`}
+                      aria-label={t("rules.ruleActions", { number: i + 1 })}
                       disabledKeys={[...(i === 0 ? ["up"] : []), ...(i === rules.length - 1 ? ["down"] : [])]}
                       onAction={(key) => {
                         if (key === "up") move(i, -1);
@@ -166,20 +188,20 @@ export function RulesList({
                         else if (key === "delete") onChange(rules.filter((r) => r.id !== rule.id));
                       }}
                     >
-                      <Dropdown.Item id="up" textValue="Move up">
+                      <Dropdown.Item id="up" textValue={t("rules.moveUp")}>
                         <ArrowUp className="size-4" />
-                        <Label>Move up</Label>
+                        <Label>{t("rules.moveUp")}</Label>
                       </Dropdown.Item>
-                      <Dropdown.Item id="down" textValue="Move down">
+                      <Dropdown.Item id="down" textValue={t("rules.moveDown")}>
                         <ArrowDown className="size-4" />
-                        <Label>Move down</Label>
+                        <Label>{t("rules.moveDown")}</Label>
                       </Dropdown.Item>
                       {rule._tag !== "experiment" && (
                         <>
                           <Separator />
-                          <Dropdown.Item id="delete" textValue="Delete rule" variant="danger">
+                          <Dropdown.Item id="delete" textValue={t("rules.deleteRule")} variant="danger">
                             <Trash2 className="size-4" />
-                            <Label>Delete rule</Label>
+                            <Label>{t("rules.deleteRule")}</Label>
                           </Dropdown.Item>
                         </>
                       )}
@@ -207,18 +229,19 @@ export function RulesList({
 }
 
 function ExperimentFacts({ experiment }: { experiment: Experiment }) {
+  const { t } = useTranslation("flags");
   const phase = experiment.phases.at(-1);
   const coverage = phase?.coverage ?? experiment.coverage;
-  const status = { draft: "Draft · not serving yet", running: "Running", stopped: "Stopped" }[experiment.status];
+  const status = t(`rules.experimentStatus.${experiment.status}`);
   return (
     <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-meta text-muted">
       <span className={experiment.status === "running" ? "text-foreground" : ""}>{status}</span>
       <span aria-hidden="true">·</span>
       <span>
-        <span className="font-mono tabular">{pct(coverage)}</span> of matching users
+        <Trans t={t} i18nKey="rules.ofMatchingUsers" values={{ percent: pct(coverage) }} components={{ pct: <span className="font-mono tabular" /> }} />
       </span>
       <span aria-hidden="true">·</span>
-      <span>{experiment.variations.length} variations</span>
+      <span>{t("rules.variations", { count: experiment.variations.length })}</span>
     </p>
   );
 }
@@ -238,13 +261,14 @@ function RuleEditor({
   onChange: (rule: ValueRule) => void;
   onDone: () => void;
 }) {
+  const { t } = useTranslation("flags");
   const percent = rule._tag === "rollout" ? Math.round(rule.coverage * 1000) / 10 : 100;
   const setPercent = (p: number) =>
     rule._tag === "rollout" && Number.isFinite(p) && onChange({ ...rule, coverage: Math.min(100, Math.max(0, p)) / 100 });
   return (
     <div className="flex flex-col gap-5 border-t border-border bg-surface-secondary/60 px-4 py-4 sm:px-5 sm:pl-13">
       <section className="flex flex-col gap-2">
-        <h3 className="text-label font-medium">Who</h3>
+        <h3 className="text-label font-medium">{t("ruleEditor.who")}</h3>
         <ConditionBuilder
           value={rule.conditions}
           onChange={(conditions) => onChange({ ...rule, conditions })}
@@ -253,10 +277,10 @@ function RuleEditor({
       </section>
       {rule._tag === "rollout" && (
         <section className="flex flex-col gap-2">
-          <h3 className="text-label font-medium">How many</h3>
+          <h3 className="text-label font-medium">{t("ruleEditor.howMany")}</h3>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Slider
-              aria-label="Rollout coverage"
+              aria-label={t("ruleEditor.coverage")}
               value={percent}
               onChange={(v) => setPercent(Array.isArray(v) ? (v[0] ?? 0) : v)}
               minValue={0}
@@ -270,7 +294,7 @@ function RuleEditor({
               </Slider.Track>
             </Slider>
             <NumberField
-              aria-label="Rollout coverage percent"
+              aria-label={t("ruleEditor.coveragePercent")}
               value={percent}
               onChange={setPercent}
               minValue={0}
@@ -283,9 +307,9 @@ function RuleEditor({
                 <span className="pr-2.5 text-label text-muted">%</span>
               </NumberField.Group>
             </NumberField>
-            <span className="text-label text-muted">of matching users, bucketed by</span>
+            <span className="text-label text-muted">{t("ruleEditor.bucketedBy")}</span>
             <TextField
-              aria-label="Bucket by attribute"
+              aria-label={t("ruleEditor.bucketBy")}
               value={rule.hashAttribute}
               onChange={(hashAttribute) => onChange({ ...rule, hashAttribute: hashAttribute.trim() })}
             >
@@ -293,24 +317,24 @@ function RuleEditor({
             </TextField>
           </div>
           <p className="text-meta text-muted">
-            The same {rule.hashAttribute || "id"} always lands in the same bucket, so raising the percentage only adds users.
+            {t("ruleEditor.stickyHelp", { attribute: rule.hashAttribute || "id" })}
           </p>
         </section>
       )}
       <section className="flex flex-col gap-2">
-        <h3 className="text-label font-medium">Serve</h3>
+        <h3 className="text-label font-medium">{t("ruleEditor.serve")}</h3>
         <ValueInput valueType={valueType} value={rule.value} onChange={(value) => onChange({ ...rule, value })} />
       </section>
       <TextField value={rule.description} onChange={(description) => onChange({ ...rule, description })} className="max-w-md">
         <Label className="text-label font-medium">
-          Note <span className="font-normal text-muted">(optional)</span>
+          {t("ruleEditor.note")} <span className="font-normal text-muted">{t("shared.optional")}</span>
         </Label>
-        <Input className="h-8 py-1 text-base sm:text-label" placeholder="e.g. QA team, beta customers" />
+        <Input className="h-8 py-1 text-base sm:text-label" placeholder={t("ruleEditor.notePlaceholder")} />
       </TextField>
       <div className="flex items-center justify-between gap-3">
-        <p className={`text-meta ${issue === null ? "text-muted" : "text-danger"}`}>{issue ?? "Changes are kept until you save."}</p>
+        <p className={`text-meta ${issue === null ? "text-muted" : "text-danger"}`}>{issue ?? t("ruleEditor.keptUntilSave")}</p>
         <Button size="sm" variant="tertiary" onPress={onDone}>
-          Done
+          {t("ruleEditor.done")}
         </Button>
       </div>
     </div>
@@ -319,24 +343,25 @@ function RuleEditor({
 
 /** "Add rule" menu: force value or percentage rollout */
 export function AddRuleButton({ onAdd }: { onAdd: (kind: "force" | "rollout") => void }) {
+  const { t } = useTranslation("flags");
   return (
     <Dropdown>
       <Button size="sm" variant="outline">
         <Plus className="size-4" />
-        Add rule
+        {t("addRule.button")}
       </Button>
       <Dropdown.Popover placement="bottom start" className="min-w-64">
-        <Dropdown.Menu aria-label="Rule type" onAction={(key) => (key === "force" || key === "rollout") && onAdd(key)}>
-          <Dropdown.Item id="force" textValue="Force a value">
+        <Dropdown.Menu aria-label={t("addRule.menu")} onAction={(key) => (key === "force" || key === "rollout") && onAdd(key)}>
+          <Dropdown.Item id="force" textValue={t("addRule.force")}>
             <div className="flex flex-col">
-              <Label>Force a value</Label>
-              <span className="text-meta text-muted">Serve one value to everyone who matches</span>
+              <Label>{t("addRule.force")}</Label>
+              <span className="text-meta text-muted">{t("addRule.forceHelp")}</span>
             </div>
           </Dropdown.Item>
-          <Dropdown.Item id="rollout" textValue="Percentage rollout">
+          <Dropdown.Item id="rollout" textValue={t("addRule.rollout")}>
             <div className="flex flex-col">
-              <Label>Percentage rollout</Label>
-              <span className="text-meta text-muted">Serve a value to a share of matching users</span>
+              <Label>{t("addRule.rollout")}</Label>
+              <span className="text-meta text-muted">{t("addRule.rolloutHelp")}</span>
             </div>
           </Dropdown.Item>
         </Dropdown.Menu>

@@ -24,11 +24,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Check, Circle, ExternalLink, Plus, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { ValueInput, defaultValueFor } from "~/components/flags/ValueInput";
 import { slugify } from "~/components/metrics/MetricForm";
-import { formatCount, formatPercent } from "~/components/results/format";
+import { formatCount, formatList, formatPercent } from "~/components/results/format";
 import { ConditionBuilder, type ConditionValue, conditionIssue, conditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { Segmented } from "~/components/ui/Segmented";
+import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 import { CoverageField, evenPercents, MAX_VARIATIONS, VariationSwatch, weightLabel } from "./parts";
@@ -72,8 +74,8 @@ const variationsFor = (feature: Feature | undefined): Array<VariationDraft> => {
   const base = feature === undefined ? "" : feature.defaultValue;
   const treatment = feature?.valueType === "boolean" ? (base === "true" ? "false" : "true") : base;
   return [
-    { key: "control", name: "Control", value: base },
-    { key: "treatment", name: "Treatment", value: treatment },
+    { key: "control", name: i18n.t("experiments:form.defaults.control"), value: base },
+    { key: "treatment", name: i18n.t("experiments:form.defaults.treatment"), value: treatment },
   ];
 };
 
@@ -145,6 +147,7 @@ export function ExperimentForm({
   onSaved: (experiment: Experiment) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation(["experiments", "common"]);
   const isEdit = experiment !== undefined;
   const queryClient = useQueryClient();
   const { environments, current } = useEnvironment();
@@ -186,29 +189,29 @@ export function ExperimentForm({
     (e) => d.environmentIds.includes(e.id) && feature !== undefined && feature.environments.find((c) => c.environmentId === e.id)?.enabled !== true,
   );
   const checks: Array<Check> = [
-    { id: "name", label: "Name", ok: d.name.trim() !== "", blocking: true, section: "step-hypothesis" },
-    { id: "key", label: "Valid key", ok: isEdit || KEY_PATTERN.test(d.key), blocking: true, section: "step-hypothesis" },
-    { id: "flag", label: "Flag selected", ok: feature !== undefined, blocking: true, section: "step-flag" },
+    { id: "name", label: t("form.checks.name"), ok: d.name.trim() !== "", blocking: true, section: "step-hypothesis" },
+    { id: "key", label: t("form.checks.key"), ok: isEdit || KEY_PATTERN.test(d.key), blocking: true, section: "step-hypothesis" },
+    { id: "flag", label: t("form.checks.flag"), ok: feature !== undefined, blocking: true, section: "step-flag" },
     {
       id: "values",
-      label: "Variation values valid",
+      label: t("form.checks.values"),
       ok: feature !== undefined && d.variations.every((v) => validateFeatureValue(feature.valueType, v.value) === null),
       blocking: true,
       section: "step-flag",
     },
     {
       id: "keys",
-      label: "Unique variation keys",
+      label: t("form.checks.keys"),
       ok: variationKeys.every((k) => KEY_PATTERN.test(k)) && new Set(variationKeys).size === variationKeys.length,
       blocking: true,
       section: "step-flag",
     },
-    { id: "weights", label: "Weights total 100%", ok: Math.abs(totalPercent - 100) < 0.01 && weights.every((w) => w > 0), blocking: true, section: "step-flag" },
-    { id: "targeting", label: "Targeting complete", ok: d.conditions.every((c) => conditionIssue(c) === null), blocking: true, section: "step-traffic" },
-    { id: "envs", label: "At least one environment", ok: d.environmentIds.length > 0, blocking: true, section: "step-traffic" },
-    { id: "hash", label: "Hash attribute", ok: d.hashAttribute.trim() !== "", blocking: true, section: "step-traffic" },
-    { id: "primary", label: "Primary metric (needed to start)", ok: primary !== undefined, blocking: false, section: "step-metrics" },
-    { id: "plan", label: "Sample size planned", ok: plan.perVariation !== null, blocking: false, section: "step-plan" },
+    { id: "weights", label: t("form.checks.weights"), ok: Math.abs(totalPercent - 100) < 0.01 && weights.every((w) => w > 0), blocking: true, section: "step-flag" },
+    { id: "targeting", label: t("form.checks.targeting"), ok: d.conditions.every((c) => conditionIssue(c) === null), blocking: true, section: "step-traffic" },
+    { id: "envs", label: t("form.checks.envs"), ok: d.environmentIds.length > 0, blocking: true, section: "step-traffic" },
+    { id: "hash", label: t("form.checks.hash"), ok: d.hashAttribute.trim() !== "", blocking: true, section: "step-traffic" },
+    { id: "primary", label: t("form.checks.primary"), ok: primary !== undefined, blocking: false, section: "step-metrics" },
+    { id: "plan", label: t("form.checks.plan"), ok: plan.perVariation !== null, blocking: false, section: "step-plan" },
   ];
   const blocked = checks.some((c) => c.blocking && !c.ok);
 
@@ -256,7 +259,7 @@ export function ExperimentForm({
     const n = d.variations.length;
     const value = feature === undefined ? "" : (d.variations[n - 1]?.value ?? defaultValueFor(feature.valueType));
     set({
-      variations: [...d.variations, { key: `treatment-${n}`, name: `Treatment ${n}`, value }],
+      variations: [...d.variations, { key: `treatment-${n}`, name: t("form.defaults.treatmentN", { n }), value }],
       percents: d.evenSplit ? evenPercents(n + 1) : [...d.percents, 0],
     });
   };
@@ -284,7 +287,7 @@ export function ExperimentForm({
       className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]"
     >
       <div className="flex min-w-0 flex-col gap-4">
-        <Step n={1} id="step-hypothesis" title="Hypothesis" description="What you change, what you expect, and why.">
+        <Step n={1} id="step-hypothesis" title={t("form.hypothesis.title")} description={t("form.hypothesis.description")}>
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               value={d.name}
@@ -293,9 +296,9 @@ export function ExperimentForm({
               isRequired
               autoFocus={!isEdit}
             >
-              <Label>Name</Label>
-              <Input placeholder="One-page checkout" />
-              <FieldError>Give the experiment a name.</FieldError>
+              <Label>{t("form.hypothesis.name")}</Label>
+              <Input placeholder={t("form.hypothesis.namePlaceholder")} />
+              <FieldError>{t("form.hypothesis.nameError")}</FieldError>
             </TextField>
             <TextField
               value={d.key}
@@ -304,37 +307,33 @@ export function ExperimentForm({
               isReadOnly={isEdit}
               isRequired={!isEdit}
             >
-              <Label>Key</Label>
+              <Label>{t("form.hypothesis.key")}</Label>
               <Input placeholder="one-page-checkout" spellCheck={false} className="font-mono" />
-              <Description>{isEdit ? "Keys can't change after creation." : "Sent with every exposure. Can't change later."}</Description>
-              <FieldError>Use lowercase letters, digits, - and _.</FieldError>
+              <Description>{isEdit ? t("form.hypothesis.keyLocked") : t("form.hypothesis.keyHelp")}</Description>
+              <FieldError>{t("form.hypothesis.keyError")}</FieldError>
             </TextField>
           </div>
           <TextField value={d.hypothesis} onChange={(hypothesis) => set({ hypothesis })}>
-            <Label>Hypothesis</Label>
-            <TextArea
-              rows={3}
-              className="resize-y"
-              placeholder="If we collapse checkout into one page, then more visitors will complete a purchase, because fewer steps means fewer chances to drop off."
-            />
-            <Description>Written before the data arrives, so the result can't change what you were testing.</Description>
+            <Label>{t("form.hypothesis.hypothesis")}</Label>
+            <TextArea rows={3} className="resize-y" placeholder={t("form.hypothesis.hypothesisPlaceholder")} />
+            <Description>{t("form.hypothesis.hypothesisHelp")}</Description>
           </TextField>
         </Step>
 
-        <Step n={2} id="step-flag" title="Flag & variations" description="The experiment takes over this flag's rule; each variation serves its own value.">
+        <Step n={2} id="step-flag" title={t("form.flag.title")} description={t("form.flag.description")}>
           <ComboBox
             value={d.featureId}
             onChange={(k) => setFeature(typeof k === "string" ? k : null)}
             isInvalid={submitted && feature === undefined}
             className="sm:max-w-md"
           >
-            <Label>Flag</Label>
+            <Label>{t("form.flag.label")}</Label>
             <ComboBox.InputGroup>
-              <Input placeholder={featuresQuery.isPending ? "Loading flags…" : "Search flags"} className="font-mono placeholder:font-sans" />
+              <Input placeholder={featuresQuery.isPending ? t("form.flag.loading") : t("form.flag.search")} className="font-mono placeholder:font-sans" />
               <ComboBox.Trigger />
             </ComboBox.InputGroup>
             <ComboBox.Popover>
-              <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">No flags match.</p>}>
+              <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t("form.flag.noMatch")}</p>}>
                 {features.map((f) => (
                   <ListBox.Item key={f.id} id={f.id} textValue={f.key}>
                     <span className="flex-1 truncate font-mono text-label">{f.key}</span>
@@ -348,27 +347,27 @@ export function ExperimentForm({
               <p className="text-meta text-danger">{errorMessage(featuresQuery.error)}</p>
             ) : features.length === 0 && !featuresQuery.isPending ? (
               <Description>
-                No flags yet.{" "}
-                <Link to="/flags" search={{ new: "1" }} className="text-link hover:underline">
-                  Create a flag
-                </Link>{" "}
-                first; the experiment serves its values.
+                <Trans
+                  t={t}
+                  i18nKey="form.flag.noFlags"
+                  components={{ link: <Link to="/flags" search={{ new: "1" }} className="text-link hover:underline" /> }}
+                />
               </Description>
             ) : (
-              <FieldError>Choose the flag this experiment runs on.</FieldError>
+              <FieldError>{t("form.flag.error")}</FieldError>
             )}
           </ComboBox>
 
           {feature !== undefined && (
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-label font-medium">Variations</p>
+                <p className="text-label font-medium">{t("form.flag.variations")}</p>
                 <Switch size="sm" isSelected={d.evenSplit} onChange={toggleEven}>
                   <Switch.Content>
                     <Switch.Control>
                       <Switch.Thumb />
                     </Switch.Control>
-                    <span className="text-label">Even split</span>
+                    <span className="text-label">{t("form.flag.evenSplit")}</span>
                   </Switch.Content>
                 </Switch>
               </div>
@@ -382,25 +381,25 @@ export function ExperimentForm({
                           <VariationSwatch index={i} />
                         </span>
                         <TextField
-                          aria-label={`Variation ${i + 1} name`}
+                          aria-label={t("form.flag.variationName", { n: i + 1 })}
                           value={v.name}
                           onChange={(name) => setVariation(i, { name })}
                           className="min-w-0 flex-1 basis-32"
                         >
-                          <Input placeholder={i === 0 ? "Control" : "Treatment"} />
+                          <Input placeholder={i === 0 ? t("form.defaults.control") : t("form.defaults.treatment")} />
                         </TextField>
                         <TextField
-                          aria-label={`Variation ${i + 1} key`}
+                          aria-label={t("form.flag.variationKey", { n: i + 1 })}
                           value={v.key}
                           onChange={(key) => setVariation(i, { key })}
                           isInvalid={!KEY_PATTERN.test(v.key) || dupe}
                           className="min-w-0 flex-1 basis-32"
                         >
                           <Input className="font-mono" spellCheck={false} />
-                          <FieldError>{dupe ? "Key already used" : "Lowercase letters, digits, - and _"}</FieldError>
+                          <FieldError>{dupe ? t("form.flag.keyUsed") : t("form.flag.keyFormat")}</FieldError>
                         </TextField>
                         <NumberField
-                          aria-label={`Variation ${i + 1} weight`}
+                          aria-label={t("form.flag.variationWeight", { n: i + 1 })}
                           value={d.evenSplit ? Number((100 / d.variations.length).toFixed(1)) : d.percents[i]}
                           onChange={(p) => set({ percents: d.percents.map((x, j) => (j === i ? p : x)) })}
                           isDisabled={d.evenSplit}
@@ -418,7 +417,7 @@ export function ExperimentForm({
                           isIconOnly
                           size="sm"
                           variant="ghost"
-                          aria-label={`Remove ${v.name || `variation ${i + 1}`}`}
+                          aria-label={t("form.flag.remove", { name: v.name || t("form.flag.variationN", { n: i + 1 }) })}
                           isDisabled={i === 0 || d.variations.length <= 2}
                           onPress={() => removeVariation(i)}
                           className="mt-0.5 text-muted"
@@ -431,10 +430,12 @@ export function ExperimentForm({
                           valueType={feature.valueType}
                           value={v.value}
                           onChange={(value) => setVariation(i, { value })}
-                          label={i === 0 ? "Value (baseline)" : "Value"}
+                          label={i === 0 ? t("form.flag.valueBaseline") : t("form.flag.value")}
                         />
                         {i > 0 && v.value === d.variations[0]?.value && (
-                          <p className="mt-1 text-meta text-muted">Same value as {d.variations[0]?.name || "control"}: this arm is an A/A check.</p>
+                          <p className="mt-1 text-meta text-muted">
+                            {t("form.flag.sameValue", { name: d.variations[0]?.name || t("form.flag.controlFallback") })}
+                          </p>
                         )}
                       </div>
                     </li>
@@ -444,29 +445,29 @@ export function ExperimentForm({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <Button size="sm" variant="outline" onPress={addVariation} isDisabled={d.variations.length >= MAX_VARIATIONS}>
                   <Plus className="size-4" />
-                  Add variation
+                  {t("form.flag.add")}
                 </Button>
                 <p className={`font-mono text-label tabular ${Math.abs(totalPercent - 100) < 0.01 ? "text-muted" : "text-danger"}`} aria-live="polite">
-                  Total {Number(totalPercent.toFixed(2))}%{Math.abs(totalPercent - 100) >= 0.01 && " · must be 100%"}
+                  {t(Math.abs(totalPercent - 100) < 0.01 ? "form.flag.total" : "form.flag.totalInvalid", { percent: Number(totalPercent.toFixed(2)) })}
                 </p>
               </div>
             </div>
           )}
         </Step>
 
-        <Step n={3} id="step-traffic" title="Targeting & traffic" description="Who can enter, how many of them, and where the experiment runs.">
+        <Step n={3} id="step-traffic" title={t("form.traffic.title")} description={t("form.traffic.description")}>
           <div className="flex flex-col gap-2">
-            <p className="text-label font-medium">Who can enter</p>
+            <p className="text-label font-medium">{t("form.traffic.whoCanEnter")}</p>
             <ConditionBuilder value={d.conditions} onChange={(conditions) => set({ conditions })} />
           </div>
           <CoverageField
             value={d.coverage}
             onChange={(coverage) => set({ coverage })}
-            description="Share of matching users who enter; the rest get the flag's other rules. You can raise it later without restarting."
+            description={t("form.traffic.coverageHelp")}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <CheckboxGroup value={[...d.environmentIds]} onChange={setEnvironments}>
-              <Label>Environments</Label>
+              <Label>{t("form.traffic.environments")}</Label>
               {environments.map((e) => (
                 <Checkbox key={e.id} value={e.id}>
                   <Checkbox.Content>
@@ -477,7 +478,7 @@ export function ExperimentForm({
                   </Checkbox.Content>
                 </Checkbox>
               ))}
-              <Description>The experiment rule is added to the flag in each.</Description>
+              <Description>{t("form.traffic.environmentsHelp")}</Description>
             </CheckboxGroup>
             <div className="flex flex-col gap-4">
               <Select
@@ -485,7 +486,7 @@ export function ExperimentForm({
                 onChange={(k) => typeof k === "string" && set({ analysisEnvironmentId: k })}
                 isDisabled={d.environmentIds.length === 0}
               >
-                <Label>Analyze exposures from</Label>
+                <Label>{t("form.traffic.analyzeFrom")}</Label>
                 <Select.Trigger>
                   <Select.Value />
                   <Select.Indicator />
@@ -502,12 +503,12 @@ export function ExperimentForm({
                       ))}
                   </ListBox>
                 </Select.Popover>
-                <Description>Usually production; other environments are for QA.</Description>
+                <Description>{t("form.traffic.analyzeHelp")}</Description>
               </Select>
               <TextField value={d.hashAttribute} onChange={(hashAttribute) => set({ hashAttribute })} isRequired>
-                <Label>Assign by attribute</Label>
+                <Label>{t("form.traffic.assignBy")}</Label>
                 <Input className="font-mono" spellCheck={false} />
-                <Description>Users with the same value always get the same variation.</Description>
+                <Description>{t("form.traffic.assignByHelp")}</Description>
               </TextField>
             </div>
           </div>
@@ -515,8 +516,12 @@ export function ExperimentForm({
             <p className="flex items-start gap-2 rounded-md border border-border bg-surface-secondary px-3 py-2 text-label">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden="true" />
               <span>
-                <span className="font-mono">{feature?.key}</span> is off in {offIn.map((e) => e.name).join(", ")}. Turn it on before
-                starting, or nobody there is assigned.
+                <Trans
+                  t={t}
+                  i18nKey="form.traffic.flagOff"
+                  values={{ flag: feature?.key ?? "", environments: formatList(offIn.map((e) => e.name)) }}
+                  components={{ code: <span className="font-mono" /> }}
+                />
               </span>
             </p>
           )}
@@ -525,27 +530,27 @@ export function ExperimentForm({
         <Step
           n={4}
           id="step-metrics"
-          title="Metrics"
-          description="Decide up front what counts as success, so the result can't be cherry-picked later."
+          title={t("form.metrics.title")}
+          description={t("form.metrics.description")}
           actions={
             <a href="/metrics?new=1" target="_blank" rel="noreferrer" className="button button--ghost button--sm shrink-0 text-muted">
-              New metric
+              {t("form.metrics.newMetric")}
               <ExternalLink className="size-3.5" aria-hidden="true" />
             </a>
           }
         >
           <ComboBox value={d.primaryMetricId} onChange={(k) => set({ primaryMetricId: typeof k === "string" ? k : null })} className="sm:max-w-md">
-            <Label>Primary metric</Label>
+            <Label>{t("form.metrics.primary")}</Label>
             <ComboBox.InputGroup>
-              <Input placeholder={metricsQuery.isPending ? "Loading metrics…" : "Search metrics"} />
+              <Input placeholder={metricsQuery.isPending ? t("form.metrics.loading") : t("form.metrics.search")} />
               <ComboBox.Trigger />
             </ComboBox.InputGroup>
             <ComboBox.Popover>
-              <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">No metrics match.</p>}>
+              <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t("form.metrics.noMatch")}</p>}>
                 {metrics.map((m) => (
                   <ListBox.Item key={m.id} id={m.id} textValue={m.name}>
                     <span className="flex-1 truncate">{m.name}</span>
-                    <span className="text-meta text-muted">{m.type === "proportion" ? "conversion" : m.type}</span>
+                    <span className="text-meta text-muted">{t(`form.metrics.types.${m.type}`)}</span>
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
                 ))}
@@ -553,21 +558,21 @@ export function ExperimentForm({
             </ComboBox.Popover>
             <Description>
               {metrics.length === 0 && !metricsQuery.isPending
-                ? "No metrics yet. Create one in a new tab; this list refreshes when you come back."
-                : "The one metric that decides ship or roll back. Required to start."}
+                ? t("form.metrics.noMetrics")
+                : t("form.metrics.primaryHelp")}
             </Description>
           </ComboBox>
           <div className="grid gap-4 sm:grid-cols-2">
             <MetricMultiSelect
-              label="Secondary metrics"
-              description="Explain why the primary moved."
+              label={t("form.metrics.secondary")}
+              description={t("form.metrics.secondaryHelp")}
               value={d.secondaryMetricIds}
               onChange={(secondaryMetricIds) => set({ secondaryMetricIds })}
               options={sameSource.filter((m) => m.id !== d.primaryMetricId && !d.guardrailMetricIds.includes(m.id))}
             />
             <MetricMultiSelect
-              label="Guardrails"
-              description="Must not get worse, e.g. errors or latency."
+              label={t("form.metrics.guardrails")}
+              description={t("form.metrics.guardrailsHelp")}
               value={d.guardrailMetricIds}
               onChange={(guardrailMetricIds) => set({ guardrailMetricIds })}
               options={sameSource.filter((m) => m.id !== d.primaryMetricId && !d.secondaryMetricIds.includes(m.id))}
@@ -575,7 +580,7 @@ export function ExperimentForm({
           </div>
         </Step>
 
-        <Step n={5} id="step-plan" title="Plan" description="How many users you need to detect the effect you care about, and how long that takes.">
+        <Step n={5} id="step-plan" title={t("form.plan.title")} description={t("form.plan.description")}>
           <PowerPlanner d={d} set={set} plan={plan} primary={primary} variations={d.variations.length} />
         </Step>
 
@@ -583,11 +588,16 @@ export function ExperimentForm({
           <Disclosure.Heading>
             <Disclosure.Trigger className="flex w-full items-center justify-between px-5 py-4 text-left">
               <span>
-                <span className="block text-body font-medium">Advanced: statistics</span>
+                <span className="block text-body font-medium">{t("form.stats.title")}</span>
                 <span className="block text-label font-normal text-muted">
-                  {d.stats.engine === "bayesian" ? "Bayesian" : d.stats.sequential ? "Sequential frequentist" : "Fixed-horizon frequentist"} ·{" "}
-                  {Math.round((1 - d.stats.alpha) * 100)}% · {d.stats.cuped ? "CUPED on" : "CUPED off"}
-                  {isEdit ? "" : " · locked when the experiment starts"}
+                  {[
+                    d.stats.engine === "bayesian" ? t("form.stats.bayesian") : d.stats.sequential ? t("form.stats.sequential") : t("form.stats.fixed"),
+                    `${Math.round((1 - d.stats.alpha) * 100)}%`,
+                    d.stats.cuped ? t("form.stats.cupedOn") : t("form.stats.cupedOff"),
+                    isEdit ? null : t("form.stats.lockedOnStart"),
+                  ]
+                    .filter((p) => p !== null)
+                    .join(" · ")}
                 </span>
               </span>
               <Disclosure.Indicator />
@@ -603,14 +613,14 @@ export function ExperimentForm({
 
       <aside className="flex flex-col gap-4 rounded-[10px] border border-border bg-surface p-5 lg:sticky lg:top-8">
         <div>
-          <h2 className="text-meta font-medium text-muted">Summary</h2>
-          <p className="mt-1 truncate text-body font-medium">{d.name.trim() || "Untitled experiment"}</p>
+          <h2 className="text-meta font-medium text-muted">{t("form.summary.title")}</h2>
+          <p className="mt-1 truncate text-body font-medium">{d.name.trim() || t("form.summary.untitled")}</p>
           {!isEdit && d.key !== "" && <p className="truncate font-mono text-meta text-muted">{d.key}</p>}
         </div>
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 border-t border-border pt-3 text-label">
-          <dt className="text-muted">Flag</dt>
+          <dt className="text-muted">{t("form.summary.flag")}</dt>
           <dd className="truncate font-mono">{feature?.key ?? "–"}</dd>
-          <dt className="text-muted">Split</dt>
+          <dt className="text-muted">{t("form.summary.split")}</dt>
           <dd className="flex items-center gap-1.5 tabular">
             {d.variations.map((v, i) => (
               <span key={i} className="inline-flex items-center gap-1" title={v.name}>
@@ -619,22 +629,27 @@ export function ExperimentForm({
               </span>
             ))}
           </dd>
-          <dt className="text-muted">Traffic</dt>
+          <dt className="text-muted">{t("form.summary.traffic")}</dt>
           <dd className="truncate" title={conditionsSummary(d.conditions)}>
-            {formatPercent(d.coverage, 0)} of {d.conditions.length === 0 ? "everyone" : "matching users"}
+            {t(d.conditions.length === 0 ? "form.summary.ofEveryone" : "form.summary.ofMatching", { percent: formatPercent(d.coverage, 0) })}
           </dd>
-          <dt className="text-muted">Runs in</dt>
-          <dd className="truncate">{environments.filter((e) => d.environmentIds.includes(e.id)).map((e) => e.name).join(", ") || "–"}</dd>
-          <dt className="text-muted">Primary</dt>
+          <dt className="text-muted">{t("form.summary.runsIn")}</dt>
+          <dd className="truncate">{formatList(environments.filter((e) => d.environmentIds.includes(e.id)).map((e) => e.name)) || "–"}</dd>
+          <dt className="text-muted">{t("form.summary.primary")}</dt>
           <dd className="truncate">{primary?.name ?? "–"}</dd>
-          <dt className="text-muted">Plan</dt>
+          <dt className="text-muted">{t("form.summary.plan")}</dt>
           <dd className="tabular">
             {plan.perVariation === null
               ? "–"
-              : `${formatCount(plan.perVariation)}/variation${plan.days === null ? "" : ` · ~${plan.days} days`}`}
+              : [
+                  t("form.summary.perVariation", { n: formatCount(plan.perVariation) }),
+                  plan.days === null ? null : t("form.summary.days", { count: plan.days }),
+                ]
+                  .filter((p) => p !== null)
+                  .join(" · ")}
           </dd>
         </dl>
-        <ul className="flex flex-col gap-1 border-t border-border pt-3" aria-label="Checklist">
+        <ul className="flex flex-col gap-1 border-t border-border pt-3" aria-label={t("form.checks.label")}>
           {checks.map((c) => (
             <li key={c.id}>
               <a
@@ -644,9 +659,9 @@ export function ExperimentForm({
                 }`}
               >
                 {c.ok ? (
-                  <Check className="size-3.5 shrink-0 text-win" aria-label="Done" />
+                  <Check className="size-3.5 shrink-0 text-win" aria-label={t("form.checks.done")} />
                 ) : (
-                  <Circle className={`size-3.5 shrink-0 ${c.blocking ? "" : "text-muted"}`} aria-label={c.blocking ? "Required" : "Recommended"} />
+                  <Circle className={`size-3.5 shrink-0 ${c.blocking ? "" : "text-muted"}`} aria-label={c.blocking ? t("form.checks.required") : t("form.checks.recommended")} />
                 )}
                 {c.label}
               </a>
@@ -660,14 +675,12 @@ export function ExperimentForm({
         )}
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <Button type="submit" size="sm" fullWidth isPending={save.isPending} isDisabled={submitted && blocked}>
-            {isEdit ? "Save changes" : "Create draft"}
+            {isEdit ? t("form.summary.save") : t("form.summary.create")}
           </Button>
           <Button size="sm" variant="ghost" fullWidth onPress={onCancel} isDisabled={save.isPending}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
-          <p className="text-center text-meta text-muted">
-            {isEdit ? "Still a draft: nothing is live until you start it." : "Drafts don't change what users see."}
-          </p>
+          <p className="text-center text-meta text-muted">{isEdit ? t("form.summary.editNote") : t("form.summary.createNote")}</p>
         </div>
       </aside>
     </form>
@@ -721,12 +734,13 @@ function MetricMultiSelect({
   onChange: (ids: ReadonlyArray<string>) => void;
   options: ReadonlyArray<Metric>;
 }) {
+  const { t } = useTranslation(["experiments", "common"]);
   return (
     <Select
       selectionMode="multiple"
       value={[...value]}
       onChange={(keys) => onChange((keys as Array<string | number>).map(String))}
-      placeholder="None"
+      placeholder={t("common:states.none")}
     >
       <Label>{label}</Label>
       <Select.Trigger>
@@ -734,7 +748,7 @@ function MetricMultiSelect({
         <Select.Indicator />
       </Select.Trigger>
       <Select.Popover>
-        <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">No other metrics from this data source.</p>}>
+        <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t("form.metrics.noOthers")}</p>}>
           {options.map((m) => (
             <ListBox.Item key={m.id} id={m.id} textValue={m.name}>
               {m.name}
@@ -788,68 +802,76 @@ function PowerPlanner({
   primary: Metric | undefined;
   variations: number;
 }) {
+  const { t } = useTranslation("experiments");
   return (
     <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)]">
       <div className="grid content-start gap-4 sm:grid-cols-2">
         {plan.kind === "proportion" ? (
           <PlanNumber
-            label="Baseline conversion rate"
+            label={t("form.plan.baselineRate")}
             value={d.baselineRate}
             onChange={(baselineRate) => set({ baselineRate })}
             suffix="%"
             step={0.1}
-            description={primary === undefined ? "Today's rate of the primary metric." : `Today's ${primary.name}.`}
+            description={primary === undefined ? t("form.plan.baselineRateHelp") : t("form.plan.baselineRateOf", { metric: primary.name })}
           />
         ) : (
           <>
-            <PlanNumber label="Baseline mean per user" value={d.baselineMean} onChange={(baselineMean) => set({ baselineMean })} step={0.1} />
+            <PlanNumber label={t("form.plan.baselineMean")} value={d.baselineMean} onChange={(baselineMean) => set({ baselineMean })} step={0.1} />
             <PlanNumber
-              label="Standard deviation"
+              label={t("form.plan.stdDev")}
               value={d.baselineStdDev}
               onChange={(baselineStdDev) => set({ baselineStdDev })}
               step={0.1}
-              description="Of the per-user value."
+              description={t("form.plan.stdDevHelp")}
             />
           </>
         )}
         <PlanNumber
-          label="Daily eligible users"
+          label={t("form.plan.dailyUsers")}
           value={d.dailyTraffic}
           onChange={(dailyTraffic) => set({ dailyTraffic })}
-          suffix="/ day"
-          description="Users who evaluate the flag and match the targeting."
+          suffix={t("form.plan.perDay")}
+          description={t("form.plan.dailyUsersHelp")}
         />
         <PlanNumber
-          label="Minimum detectable effect"
+          label={t("form.plan.mde")}
           value={d.mdePercent}
           onChange={(mdePercent) => set({ mdePercent })}
-          suffix="% relative"
+          suffix={t("form.plan.relative")}
           step={0.5}
-          description="Smallest lift worth detecting."
+          description={t("form.plan.mdeHelp")}
         />
       </div>
       <div className="flex flex-col gap-3 rounded-lg bg-surface-secondary p-4" aria-live="polite">
         <div>
-          <p className="text-meta text-muted">Users per variation</p>
+          <p className="text-meta text-muted">{t("form.plan.usersPerVariation")}</p>
           <p className="text-figure font-semibold tracking-tight tabular">{plan.perVariation === null ? "–" : formatCount(plan.perVariation)}</p>
-          {plan.total !== null && <p className="text-meta text-muted">{formatCount(plan.total)} across {variations} variations</p>}
+          {plan.total !== null && (
+            <p className="text-meta text-muted">{t("form.plan.acrossVariations", { total: formatCount(plan.total), n: variations })}</p>
+          )}
         </div>
         <div>
-          <p className="text-meta text-muted">Estimated duration</p>
+          <p className="text-meta text-muted">{t("form.plan.duration")}</p>
           <p className="text-section font-medium tabular">
-            {plan.days === null ? "–" : `${formatCount(plan.days)} ${plan.days === 1 ? "day" : "days"}`}
+            {plan.days === null ? "–" : t("form.plan.days", { count: plan.days, days: formatCount(plan.days) })}
           </p>
-          {plan.days !== null && plan.days < 7 && <p className="text-meta text-muted">Run at least 7 days to cover weekly cycles.</p>}
+          {plan.days !== null && plan.days < 7 && <p className="text-meta text-muted">{t("form.plan.minWeek")}</p>}
         </div>
         {plan.mdeIn14 !== null && (
           <p className="border-t border-border pt-3 text-meta text-muted">
-            In 14 days you could detect a <span className="font-mono text-foreground tabular">{formatPercent(plan.mdeIn14)}</span> lift.
+            <Trans
+              t={t}
+              i18nKey="form.plan.in14Days"
+              values={{ mde: formatPercent(plan.mdeIn14) }}
+              components={{ value: <span className="font-mono text-foreground tabular" /> }}
+            />
           </p>
         )}
         <p className="text-meta text-muted">
           {plan.perVariation === null
-            ? "Fill in the baseline and traffic to see the sample size."
-            : "80% power, fixed horizon. The planned total also tunes the sequential test."}
+            ? t("form.plan.fillIn")
+            : t("form.plan.assumptions")}
         </p>
       </div>
     </div>
@@ -863,6 +885,7 @@ function StatsFields({
   stats: ReturnType<typeof defaultStatsSettings>;
   onChange: (stats: ReturnType<typeof defaultStatsSettings>) => void;
 }) {
+  const { t } = useTranslation("experiments");
   const patch = (p: Partial<ReturnType<typeof defaultStatsSettings>>) => onChange({ ...stats, ...p });
   const frequentist = stats.engine === "frequentist";
   const toggle = (label: string, description: string, isSelected: boolean, change: (v: boolean) => void, isDisabled = false) => (
@@ -879,38 +902,36 @@ function StatsFields({
   return (
     <>
       <Segmented
-        label="Engine"
+        label={t("form.stats.engine")}
         value={stats.engine}
         onChange={(engine) => patch({ engine })}
         options={[
-          { value: "frequentist", label: "Frequentist", description: "p-values and confidence intervals." },
-          { value: "bayesian", label: "Bayesian", description: "Chance to win and credible intervals." },
+          { value: "frequentist", label: t("form.stats.frequentist"), description: t("form.stats.frequentistHelp") },
+          { value: "bayesian", label: t("form.stats.bayesian"), description: t("form.stats.bayesianHelp") },
         ]}
       />
       {toggle(
-        "Sequential testing",
-        frequentist
-          ? "Intervals stay valid however often you check results. Keep it on unless you will look exactly once."
-          : "Frequentist only.",
+        t("form.stats.sequentialTesting"),
+        frequentist ? t("form.stats.sequentialHelp") : t("form.stats.frequentistOnly"),
         stats.sequential,
         (sequential) => patch({ sequential }),
         !frequentist,
       )}
       {toggle(
-        "CUPED",
-        "Uses each user's behavior in the 14 days before exposure to shrink intervals, so you need fewer users.",
+        t("form.stats.cuped"),
+        t("form.stats.cupedHelp"),
         stats.cuped,
         (cuped) => patch({ cuped }),
       )}
       {toggle(
-        "Holm correction",
-        frequentist ? "Adjusts p-values when several metrics and variations are compared, to keep false wins rare." : "Frequentist only.",
+        t("form.stats.holm"),
+        frequentist ? t("form.stats.holmHelp") : t("form.stats.frequentistOnly"),
         stats.correction === "holm",
         (on) => patch({ correction: on ? "holm" : "none" }),
         !frequentist,
       )}
       <Segmented
-        label="Confidence level"
+        label={t("form.stats.confidence")}
         value={String(stats.alpha) as "0.01" | "0.05" | "0.1"}
         onChange={(a) => patch({ alpha: Number(a) })}
         options={[
@@ -918,7 +939,7 @@ function StatsFields({
           { value: "0.05", label: "95%" },
           { value: "0.01", label: "99%" },
         ]}
-        description="A higher level means fewer false wins but needs more users."
+        description={t("form.stats.confidenceHelp")}
       />
     </>
   );

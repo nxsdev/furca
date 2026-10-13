@@ -17,12 +17,15 @@ import { BUILTIN_DATA_SOURCE_ID, type DataSource } from "@furca/core/datasources
 import type { EventAggregation, Metric, MetricType } from "@furca/core/metrics/Metric";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { dataSourceName } from "~/components/datasources/name";
 import { formatCount } from "~/components/results/format";
 import { RelativeTime } from "~/components/ui/primitives";
 import { Segmented } from "~/components/ui/Segmented";
+import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { type client, errorMessage, orpc } from "~/lib/rpc";
-import { Direction, metricTypeLabel, MetricSentence } from "./describe";
+import { Direction, formatHours, metricTypeLabel, MetricSentence } from "./describe";
 
 type MetricInput = Omit<Parameters<typeof client.metrics.create>[0], "key">;
 type WindowChoice = "24" | "72" | "168" | "none" | "custom";
@@ -113,23 +116,23 @@ type Errors = Partial<Record<"name" | "key" | "num" | "den" | "window" | "delay"
 
 const validate = (d: Draft, isSql: boolean, isEdit: boolean): Errors => {
   const e: Errors = {};
-  if (d.name.trim() === "") e.name = "Give the metric a name";
-  if (!isEdit && !KEY_PATTERN.test(d.key)) e.key = "Use lowercase letters, digits, - and _ (max 64)";
+  if (d.name.trim() === "") e.name = i18n.t("metrics:form.errors.name");
+  if (!isEdit && !KEY_PATTERN.test(d.key)) e.key = i18n.t("metrics:form.errors.key");
   if (isSql) {
-    if (d.numSql.trim() === "") e.num = "Write the SQL that returns one row per event";
-    if (d.type === "ratio" && d.denSql.trim() === "") e.den = "Ratio metrics need a denominator query";
+    if (d.numSql.trim() === "") e.num = i18n.t("metrics:form.errors.numSql");
+    if (d.type === "ratio" && d.denSql.trim() === "") e.den = i18n.t("metrics:form.errors.denSql");
   } else {
-    if (d.num.event.trim() === "") e.num = "Pick or type an event name";
-    if (d.type === "ratio" && d.den.event.trim() === "") e.den = "Ratio metrics need a denominator event";
+    if (d.num.event.trim() === "") e.num = i18n.t("metrics:form.errors.numEvent");
+    if (d.type === "ratio" && d.den.event.trim() === "") e.den = i18n.t("metrics:form.errors.denEvent");
   }
   const w = windowHoursOf(d);
-  if (w !== null && !(w > 0)) e.window = "The window must be longer than 0 hours";
-  if (!(d.delayHours >= 0)) e.delay = "Delay can't be negative";
-  else if (w !== null && d.delayHours >= w) e.delay = "Delay must be shorter than the window";
+  if (w !== null && !(w > 0)) e.window = i18n.t("metrics:form.errors.window");
+  if (!(d.delayHours >= 0)) e.delay = i18n.t("metrics:form.errors.delayNegative");
+  else if (w !== null && d.delayHours >= w) e.delay = i18n.t("metrics:form.errors.delayTooLong");
   if (d.type !== "proportion") {
-    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.cap = "Cap must be greater than 0";
+    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.cap = i18n.t("metrics:form.errors.capAbsolute");
     if (d.capType === "percentile" && !(d.capPercentile >= 50 && d.capPercentile < 100))
-      e.cap = "Use a percentile between 50 and 99.99";
+      e.cap = i18n.t("metrics:form.errors.capPercentile");
   }
   return e;
 };
@@ -200,27 +203,22 @@ function EventField({
   );
 }
 
-const aggregationHelp: Record<EventAggregation, ReactNode> = {
-  count: "Counts each track() call.",
-  sum: (
-    <>
-      Adds up the <code className="font-mono">value</code> passed to{" "}
-      <code className="font-mono">track(name, value)</code>, e.g. revenue in cents.
-    </>
-  ),
-};
+const code = <code className="font-mono" />;
 
 function AggregationField({ value, onChange }: { value: EventAggregation; onChange: (v: EventAggregation) => void }) {
+  const { t } = useTranslation("metrics");
   return (
     <Segmented
-      label="Aggregate"
+      label={t("form.aggregation.label")}
       value={value}
       onChange={onChange}
       options={[
-        { value: "count", label: "Count" },
-        { value: "sum", label: "Sum of value" },
+        { value: "count", label: t("form.aggregation.count") },
+        { value: "sum", label: t("form.aggregation.sum") },
       ]}
-      description={aggregationHelp[value]}
+      description={
+        value === "count" ? t("form.aggregation.countHelp") : <Trans t={t} i18nKey="form.aggregation.sumHelp" components={{ c: code }} />
+      }
     />
   );
 }
@@ -238,12 +236,13 @@ function SqlField({
   onTemplate: () => void;
   error?: string;
 }) {
+  const { t } = useTranslation("metrics");
   return (
     <TextField value={value} onChange={onChange} isInvalid={error !== undefined} className="w-full">
       <div className="flex items-end justify-between gap-3">
         <Label>{label}</Label>
         <Button size="sm" variant="ghost" className="h-7 text-label" onPress={onTemplate}>
-          Insert template
+          {t("form.sql.insertTemplate")}
         </Button>
       </div>
       <TextArea
@@ -255,9 +254,7 @@ function SqlField({
         className="w-full resize-y font-mono text-[0.8125rem] leading-5"
       />
       <Description>
-        One row per event with columns <code className="font-mono">user_id</code> STRING,{" "}
-        <code className="font-mono">timestamp</code> TIMESTAMP, <code className="font-mono">value</code> FLOAT64 (use 1 to
-        count). furca joins it to exposures by <code className="font-mono">user_id</code>.
+        <Trans t={t} i18nKey="form.sql.help" components={{ c: code }} />
       </Description>
       <FieldError>{error}</FieldError>
     </TextField>
@@ -274,6 +271,7 @@ export function MetricForm({
   onSaved: (metric: Metric) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation(["metrics", "common"]);
   const isEdit = metric !== undefined;
   const queryClient = useQueryClient();
   const { current: env } = useEnvironment();
@@ -323,7 +321,7 @@ export function MetricForm({
       className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]"
     >
       <section className="min-w-0 rounded-[10px] border border-border bg-surface">
-        <Section title="Basics">
+        <Section title={t("form.sections.basics")}>
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               value={d.name}
@@ -332,8 +330,8 @@ export function MetricForm({
               isRequired
               autoFocus={!isEdit}
             >
-              <Label>Name</Label>
-              <Input placeholder="Checkout conversion" />
+              <Label>{t("form.name.label")}</Label>
+              <Input placeholder={t("form.name.placeholder")} />
               <FieldError>{errors.name}</FieldError>
             </TextField>
             <TextField
@@ -343,35 +341,35 @@ export function MetricForm({
               isReadOnly={isEdit}
               isRequired={!isEdit}
             >
-              <Label>Key</Label>
+              <Label>{t("form.key.label")}</Label>
               <Input placeholder="checkout-conversion" spellCheck={false} className="font-mono" />
-              <Description>{isEdit ? "Keys can't change once created." : "Used in URLs and the API."}</Description>
+              <Description>{isEdit ? t("form.key.readOnly") : t("form.key.help")}</Description>
               <FieldError>{errors.key}</FieldError>
             </TextField>
           </div>
           <TextField value={d.description} onChange={(description) => set({ description })}>
-            <Label>Description</Label>
-            <TextArea rows={2} placeholder="Optional. What this metric tells you and when to use it." className="resize-y" />
+            <Label>{t("form.description.label")}</Label>
+            <TextArea rows={2} placeholder={t("form.description.placeholder")} className="resize-y" />
           </TextField>
         </Section>
 
-        <Section title="What to measure">
+        <Section title={t("form.sections.measure")}>
           <Segmented
-            label="Type"
+            label={t("form.type.label")}
             value={d.type}
             onChange={changeType}
-            options={[
-              { value: "proportion", label: "Conversion", description: "Share of users who did X at least once." },
-              { value: "mean", label: "Mean", description: "Average count or sum of X per user." },
-              { value: "ratio", label: "Ratio", description: "Sum of X ÷ sum of Y across users." },
-            ]}
+            options={(["proportion", "mean", "ratio"] as const).map((type) => ({
+              value: type,
+              label: metricTypeLabel(type),
+              description: t(`form.type.${type}`),
+            }))}
           />
           <Select
             value={d.dataSourceId}
             onChange={(id) => typeof id === "string" && set({ dataSourceId: id })}
             className="sm:max-w-sm"
           >
-            <Label>Data source</Label>
+            <Label>{t("form.dataSource.label")}</Label>
             <Select.Trigger>
               <Select.Value>{({ selectedText }) => selectedText}</Select.Value>
               <Select.Indicator />
@@ -380,25 +378,25 @@ export function MetricForm({
               <ListBox>
                 {(sourceList.length > 0
                   ? sourceList
-                  : [{ id: BUILTIN_DATA_SOURCE_ID, name: "Built-in events", type: "builtin" as const }]
+                  : [{ id: BUILTIN_DATA_SOURCE_ID, name: t("builtinEvents"), type: "builtin" as const }]
                 ).map((s) => (
-                  <ListBox.Item key={s.id} id={s.id} textValue={s.name}>
-                    <span className="flex-1 truncate">{s.name}</span>
-                    <span className="text-meta text-muted">{s.type === "builtin" ? "SDK events" : "BigQuery"}</span>
+                  <ListBox.Item key={s.id} id={s.id} textValue={dataSourceName(s)}>
+                    <span className="flex-1 truncate">{dataSourceName(s)}</span>
+                    <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : "BigQuery"}</span>
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
                 ))}
               </ListBox>
             </Select.Popover>
             <Description>
-              {isSql ? "Events come from your BigQuery SQL." : "Events your app sends with the SDK's track()."}
+              {isSql ? t("form.dataSource.sqlHelp") : t("form.dataSource.sdkHelp")}
             </Description>
           </Select>
 
           {isSql ? (
             <>
               <SqlField
-                label={d.type === "ratio" ? "Numerator SQL" : "Event SQL"}
+                label={d.type === "ratio" ? t("form.sql.numerator") : t("form.sql.event")}
                 value={d.numSql}
                 onChange={(numSql) => set({ numSql })}
                 onTemplate={() => set({ numSql: sqlTemplate(source?.bigquery ?? null, "purchase") })}
@@ -406,7 +404,7 @@ export function MetricForm({
               />
               {d.type === "ratio" && (
                 <SqlField
-                  label="Denominator SQL"
+                  label={t("form.sql.denominator")}
                   value={d.denSql}
                   onChange={(denSql) => set({ denSql })}
                   onTemplate={() => set({ denSql: sqlTemplate(source?.bigquery ?? null, "add_to_cart") })}
@@ -417,10 +415,10 @@ export function MetricForm({
           ) : (
             <>
               <div className="flex flex-col gap-4">
-                {d.type === "ratio" && <p className="-mb-2 text-label font-medium text-muted">Numerator</p>}
+                {d.type === "ratio" && <p className="-mb-2 text-label font-medium text-muted">{t("form.event.numerator")}</p>}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                   <EventField
-                    label="Event"
+                    label={t("form.event.label")}
                     value={d.num.event}
                     onChange={(event) => set({ num: { ...d.num, event } })}
                     names={eventNames}
@@ -438,10 +436,10 @@ export function MetricForm({
               </div>
               {d.type === "ratio" && (
                 <div className="flex flex-col gap-4 border-t border-border pt-4">
-                  <p className="-mb-2 text-label font-medium text-muted">Denominator</p>
+                  <p className="-mb-2 text-label font-medium text-muted">{t("form.event.denominator")}</p>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <EventField
-                      label="Event"
+                      label={t("form.event.label")}
                       value={d.den.event}
                       onChange={(event) => set({ den: { ...d.den, event } })}
                       names={eventNames}
@@ -458,30 +456,25 @@ export function MetricForm({
               )}
               <p className="text-xs text-muted">
                 {names.isError
-                  ? "Event suggestions are unavailable right now. Type the event name you send with track()."
-                  : eventNames.length > 0
-                    ? `Suggestions are events received in ${env?.name ?? "this environment"} over the last 30 days. You can also type a name that hasn't arrived yet.`
-                    : `No events received in ${env?.name ?? "this environment"} yet. Type the name you will send with furca.track("purchase").`}
+                  ? t("form.event.unavailable")
+                  : t(eventNames.length > 0 ? "form.event.suggestions" : "form.event.none", {
+                      environment: env?.name ?? t("form.event.thisEnvironment"),
+                    })}
               </p>
             </>
           )}
         </Section>
 
-        <Section
-          title="Conversion window"
-          description="Counted from each user's first exposure to the experiment. Shorter windows give faster, cleaner reads."
-        >
+        <Section title={t("form.sections.window")} description={t("form.sections.windowDescription")}>
           <div className="flex flex-wrap items-end gap-4">
             <Segmented
-              label="Window"
+              label={t("form.window.label")}
               value={d.window}
               onChange={(window) => set({ window })}
               options={[
-                { value: "24", label: "24h" },
-                { value: "72", label: "72h" },
-                { value: "168", label: "7d" },
-                { value: "none", label: "None" },
-                { value: "custom", label: "Custom" },
+                ...presetWindows.map((w) => ({ value: w, label: formatHours(Number(w)) })),
+                { value: "none", label: t("common:states.none") },
+                { value: "custom", label: t("form.window.custom") },
               ]}
             />
             {d.window === "custom" && (
@@ -491,11 +484,11 @@ export function MetricForm({
                 minValue={1}
                 isInvalid={errors.window !== undefined}
                 className="w-32"
-                aria-label="Window in hours"
+                aria-label={t("form.window.customLabel")}
               >
                 <NumberField.Group className="grid-cols-[1fr_auto]">
                   <NumberField.Input className="tabular" />
-                  <span className="pr-3 text-label text-muted">hours</span>
+                  <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
                 </NumberField.Group>
               </NumberField>
             )}
@@ -508,40 +501,38 @@ export function MetricForm({
             isInvalid={errors.delay !== undefined}
             className="w-full sm:max-w-sm"
           >
-            <Label>Delay</Label>
+            <Label>{t("form.window.delay")}</Label>
             <NumberField.Group className="grid-cols-[1fr_auto]">
               <NumberField.Input className="tabular" />
-              <span className="pr-3 text-label text-muted">hours</span>
+              <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
             </NumberField.Group>
-            <Description>Ignore events in the first hours after exposure, e.g. to skip the visit that triggered it.</Description>
+            <Description>{t("form.window.delayHelp")}</Description>
             <FieldError>{errors.delay}</FieldError>
           </NumberField>
         </Section>
 
-        <Section title="Analysis">
+        <Section title={t("form.sections.analysis")}>
           <Switch isSelected={d.inverse} onChange={(inverse) => set({ inverse })} className="[--switch-control-bg:oklch(0.9_0_0)] dark:[--switch-control-bg:var(--default)]">
             <Switch.Content>
               <Switch.Control>
                 <Switch.Thumb className={d.inverse ? "" : "dark:bg-[oklch(0.62_0_0)]"} />
               </Switch.Control>
-              Lower is better
+              {t("direction.lowerIsBetter")}
             </Switch.Content>
-            <Description>
-              For metrics you want to go down, like latency, errors or churn. A decrease then counts as winning.
-            </Description>
+            <Description>{t("form.inverseHelp")}</Description>
           </Switch>
           {d.type !== "proportion" && (
             <div className="flex flex-col gap-3">
               <Segmented
-                label="Capping"
+                label={t("form.capping.label")}
                 value={d.capType}
                 onChange={(capType) => set({ capType })}
                 options={[
-                  { value: "none", label: "None" },
-                  { value: "absolute", label: "Absolute" },
-                  { value: "percentile", label: "Percentile" },
+                  { value: "none", label: t("common:states.none") },
+                  { value: "absolute", label: t("form.capping.absolute") },
+                  { value: "percentile", label: t("form.capping.percentile") },
                 ]}
-                description="Protects against a single whale: one user with an unusually large total can swing the average. Capping limits each user's total before variations are compared."
+                description={t("form.capping.help")}
               />
               {d.capType !== "none" && (
                 <NumberField
@@ -552,15 +543,13 @@ export function MetricForm({
                   isInvalid={errors.cap !== undefined}
                   className="w-full sm:max-w-sm"
                 >
-                  <Label>{d.capType === "absolute" ? "Cap each user's total at" : "Cap each user at percentile"}</Label>
+                  <Label>{d.capType === "absolute" ? t("form.capping.absoluteLabel") : t("form.capping.percentileLabel")}</Label>
                   <NumberField.Group className={d.capType === "percentile" ? "grid-cols-[1fr_auto]" : undefined}>
                     <NumberField.Input className="tabular" />
-                    {d.capType === "percentile" && <span className="pr-3 text-label text-muted">th</span>}
+                    {d.capType === "percentile" && <span className="pr-3 text-label text-muted">{t("form.capping.percentileSuffix")}</span>}
                   </NumberField.Group>
                   <Description>
-                    {d.capType === "absolute"
-                      ? "In the metric's own unit, e.g. 50000 for revenue in cents."
-                      : "Computed across all variations at each analysis. 99 is a good default."}
+                    {d.capType === "absolute" ? t("form.capping.absoluteHelp") : t("form.capping.percentileHelp")}
                   </Description>
                   <FieldError>{errors.cap}</FieldError>
                 </NumberField>
@@ -577,32 +566,32 @@ export function MetricForm({
           )}
           {submitted && Object.keys(errors).length > 0 && save.error === null && (
             <p role="alert" className="basis-full text-label text-danger sm:mr-auto sm:basis-auto">
-              Fix the highlighted fields to continue.
+              {t("form.errors.fixFields")}
             </p>
           )}
           <Button variant="tertiary" size="sm" onPress={onCancel} isDisabled={save.isPending}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button type="submit" size="sm" isPending={save.isPending}>
-            {isEdit ? "Save changes" : "Create metric"}
+            {isEdit ? t("form.saveChanges") : t("form.create")}
           </Button>
         </footer>
       </section>
 
       <aside className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-5 lg:sticky lg:top-8">
-        <h3 className="text-meta font-medium text-muted">Preview</h3>
+        <h3 className="text-meta font-medium text-muted">{t("form.preview.title")}</h3>
         <p className="text-body leading-relaxed" aria-live="polite">
           <MetricSentence metric={input} />
         </p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 border-t border-border pt-3 text-label">
-          <dt className="text-muted">Type</dt>
-          <dd>{metricTypeLabel[d.type]}</dd>
-          <dt className="text-muted">Goal</dt>
+          <dt className="text-muted">{t("form.preview.type")}</dt>
+          <dd>{metricTypeLabel(d.type)}</dd>
+          <dt className="text-muted">{t("form.preview.goal")}</dt>
           <dd>
             <Direction inverse={d.inverse} />
           </dd>
-          <dt className="text-muted">Source</dt>
-          <dd className="truncate">{source?.name ?? "Built-in events"}</dd>
+          <dt className="text-muted">{t("form.preview.source")}</dt>
+          <dd className="truncate">{source === undefined ? t("builtinEvents") : dataSourceName(source)}</dd>
         </dl>
       </aside>
     </form>

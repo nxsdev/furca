@@ -1,21 +1,27 @@
 import type { ExperimentHealth, MetricResult, VariationComparison, Verdict } from "@furca/core/results/ExperimentResult";
 import { ArrowDownRight, ArrowUpRight, CircleDashed, Minus } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { i18n } from "~/i18n";
 
-export const verdictStyle: Record<Verdict, { label: string; text: string; fill: string; band: string; icon: typeof Minus }> = {
-  winning: { label: "Winning", text: "text-win", fill: "fill-win", band: "fill-win/25", icon: ArrowUpRight },
-  losing: { label: "Losing", text: "text-lose", fill: "fill-lose", band: "fill-lose/25", icon: ArrowDownRight },
-  neutral: { label: "No difference", text: "text-muted", fill: "fill-muted", band: "fill-muted/25", icon: Minus },
-  inconclusive: { label: "Not enough data", text: "text-muted", fill: "fill-muted", band: "fill-muted/15", icon: CircleDashed },
+export const verdictStyle: Record<Verdict, { text: string; fill: string; band: string; icon: typeof Minus }> = {
+  winning: { text: "text-win", fill: "fill-win", band: "fill-win/25", icon: ArrowUpRight },
+  losing: { text: "text-lose", fill: "fill-lose", band: "fill-lose/25", icon: ArrowDownRight },
+  neutral: { text: "text-muted", fill: "fill-muted", band: "fill-muted/25", icon: Minus },
+  inconclusive: { text: "text-muted", fill: "fill-muted", band: "fill-muted/15", icon: CircleDashed },
 };
+
+/** "Winning" / "No difference" … in the current language */
+export const verdictLabel = (verdict: Verdict): string => i18n.t(`results:verdict.${verdict}`);
 
 /** Icon + label, never color alone */
 export function VerdictLabel({ verdict }: { verdict: Verdict }) {
+  const { t } = useTranslation("results");
   const s = verdictStyle[verdict];
   const Icon = s.icon;
   return (
     <span className={`inline-flex items-center gap-1 whitespace-nowrap text-label font-medium ${s.text}`}>
       <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-      {s.label}
+      {t(`verdict.${verdict}`)}
     </span>
   );
 }

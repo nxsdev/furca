@@ -1,0 +1,60 @@
+{
+  "pageTitle": "監査ログ · furca",
+  "page": {
+    "title": "監査ログ",
+    "description": "フラグ、実験、指標、設定へのすべての変更について、誰が・いつ・何を変えたかを記録します。",
+    "filterLabel": "種類で絞り込み",
+    "type": "種類",
+    "allChanges": "すべての変更",
+    "hint": "新しい順に表示しています。行を展開すると差分を確認できます。"
+  },
+  "entityTypes": {
+    "feature": "フラグ",
+    "experiment": "実験",
+    "metric": "指標",
+    "datasource": "データソース",
+    "environment": "環境",
+    "member": "メンバー"
+  },
+  "actions": {
+    "created": "作成",
+    "updated": "更新",
+    "enabled": "有効化",
+    "disabled": "無効化",
+    "archived": "アーカイブ",
+    "unarchived": "復元",
+    "deleted": "削除",
+    "started": "開始",
+    "stopped": "停止",
+    "invited": "招待",
+    "removed": "メンバーから削除",
+    "rules": { "updated": "ルールを更新" },
+    "phase": { "started": "新しいフェーズを開始" },
+    "traffic": { "updated": "トラフィックを更新" },
+    "sdkKey": { "rotated": "SDK キーを再発行" },
+    "credentials": { "updated": "認証情報を差し替え" },
+    "invitation": { "revoked": "招待を取り消し" }
+  },
+  "list": {
+    "loadFailed": "監査ログを読み込めませんでした。{{message}}",
+    "emptyTitle": "変更はまだありません",
+    "emptyDescription": "フラグ、実験、指標、データソース、環境、メンバーへの変更が、発生するたびにここに表示されます。",
+    "expand": "展開",
+    "entity": "対象",
+    "change": "変更内容",
+    "by": "変更者",
+    "when": "日時",
+    "showDetails": "変更の詳細を表示",
+    "hideDetails": "変更の詳細を閉じる",
+    "caption": "{{email}} · {{date}}"
+  },
+  "diff": {
+    "createdWith": "作成時の内容",
+    "stateBefore": "変更前の状態",
+    "noFieldChanged": "変更されたフィールドはありません",
+    "changedLines_other": "{{count}}行の変更",
+    "unchangedLines_other": "変更のない{{count}}行",
+    "added": "追加：",
+    "removed": "削除："
+  }
+}

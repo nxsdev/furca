@@ -1,6 +1,7 @@
 import type { Environment } from "@furca/core/environments/Environment";
 import type { Feature } from "@furca/core/features/Feature";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Panel, PanelHeader } from "~/components/ui/primitives";
 import { CodeBlock } from "./CodeBlock";
 import { Segmented } from "./Segmented";
@@ -24,6 +25,7 @@ export function ImplementationPanel({
   environments: ReadonlyArray<Environment>;
   initialEnvironmentId: string | undefined;
 }) {
+  const { t } = useTranslation("flags");
   const [envId, setEnvId] = useState(initialEnvironmentId ?? environments[0]?.id ?? "");
   const env = environments.find((e) => e.id === envId) ?? environments[0];
   const apiHost = typeof window === "undefined" ? "https://furca.example.com" : window.location.origin;
@@ -62,17 +64,18 @@ ${usage(feature, "    ")}
   return (
     <Panel>
       <PanelHeader
-        title="Use this flag in code"
+        title={t("implementation.title")}
         description={
-          <>
-            Install with <code className="rounded-[4px] bg-default px-1 font-mono text-meta">npm install @furca/sdk</code>. The SDK
-            evaluates locally, so checks don't make a network call.
-          </>
+          <Trans
+            t={t}
+            i18nKey="implementation.description"
+            components={{ code: <code className="rounded-[4px] bg-default px-1 font-mono text-meta" /> }}
+          />
         }
         actions={
           environments.length > 1 && (
             <Segmented
-              aria-label="Environment"
+              aria-label={t("implementation.environment")}
               value={env?.id ?? ""}
               onChange={setEnvId}
               options={environments.map((e) => ({ id: e.id, label: e.name }))}
@@ -81,11 +84,9 @@ ${usage(feature, "    ")}
         }
       />
       <div className="flex flex-col gap-4 p-4 sm:p-5">
-        <CodeBlock title="Browser" code={browser} />
+        <CodeBlock title={t("implementation.browser")} code={browser} />
         <CodeBlock title="Cloudflare Worker" code={worker} />
-        <p className="text-meta text-muted">
-          The SDK key is public: it can only read this environment's payload and send events.
-        </p>
+        <p className="text-meta text-muted">{t("implementation.sdkKeyNote")}</p>
       </div>
     </Panel>
   );

@@ -1,14 +1,15 @@
-import { type FeatureValueType, validateFeatureValue } from "@furca/core/features/Feature";
+import type { FeatureValueType } from "@furca/core/features/Feature";
 import { Button, Description, FieldError, Input, Label, TextField, toast } from "@heroui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ORPCError } from "@orpc/client";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TagInput } from "~/components/targeting/ConditionBuilder";
 import { Panel, PanelHeader } from "~/components/ui/primitives";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 import { Segmented } from "./Segmented";
-import { defaultValueFor, ValueInput } from "./ValueInput";
+import { defaultValueFor, ValueInput, valueIssue } from "./ValueInput";
 
 const KEY = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 
@@ -22,15 +23,12 @@ const slugify = (text: string) =>
     .replace(/^[-_]+/, "")
     .slice(0, 64);
 
-export const valueTypeOptions: ReadonlyArray<{ id: FeatureValueType; label: string }> = [
-  { id: "boolean", label: "Boolean" },
-  { id: "string", label: "String" },
-  { id: "number", label: "Number" },
-  { id: "json", label: "JSON" },
-];
+/** Labels live under `flags:valueTypes` */
+export const valueTypes: ReadonlyArray<FeatureValueType> = ["boolean", "string", "number", "json"];
 
 /** Inline "Create flag" panel on /flags. Goes to the new flag's page on success */
 export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
+  const { t } = useTranslation(["flags", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [key, setKey] = useState("");
@@ -45,7 +43,7 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
     mutationFn: () => client.features.create({ key, description: description.trim(), valueType, defaultValue, tags }),
     onSuccess: async (feature) => {
       await queryClient.invalidateQueries({ queryKey: orpc.features.key() });
-      toast.success(`Created ${feature.key}`);
+      toast.success(t("create.created", { key: feature.key }));
       await navigate({ to: "/flags/$featureId", params: { featureId: feature.id } });
     },
     onError: (error) => {
@@ -55,17 +53,17 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
     },
   });
 
-  const valueError = validateFeatureValue(valueType, defaultValue);
+  const valueError = valueIssue(valueType, defaultValue);
   const keyInvalid = key !== "" && !KEY.test(key);
 
   return (
     <Panel className="mb-6">
-      <PanelHeader title="Create flag" description="Pick a key you'll reference in code, its type, and the value served when no rule matches." />
+      <PanelHeader title={t("shared.createFlag")} description={t("create.description")} />
       <form
         onSubmit={(e) => {
           e.preventDefault();
           setFormError(null);
-          if (key === "") return setKeyError("Enter a key");
+          if (key === "") return setKeyError(t("create.enterKey"));
           if (keyInvalid || valueError !== null) return;
           create.mutate();
         }}
@@ -80,42 +78,42 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
             isInvalid={keyError !== null || keyInvalid}
             autoFocus
           >
-            <Label>Key</Label>
+            <Label>{t("shared.key")}</Label>
             <Input className="font-mono text-base sm:text-label" placeholder="new-checkout" autoComplete="off" spellCheck={false} />
             {keyError !== null || keyInvalid ? (
-              <FieldError>{keyError ?? "Use lowercase letters, digits, - and _ (max 64)"}</FieldError>
+              <FieldError>{keyError ?? t("create.keyInvalid")}</FieldError>
             ) : (
-              <Description>Lowercase, digits, - and _. Can't be changed later.</Description>
+              <Description>{t("create.keyHelp")}</Description>
             )}
           </TextField>
           <div className="flex flex-col gap-1.5">
-            <Label>Type</Label>
+            <Label>{t("shared.type")}</Label>
             <Segmented
-              aria-label="Type"
+              aria-label={t("shared.type")}
               value={valueType}
-              onChange={(t) => {
-                setValueType(t);
-                setDefaultValue(defaultValueFor(t));
+              onChange={(next) => {
+                setValueType(next);
+                setDefaultValue(defaultValueFor(next));
               }}
-              options={valueTypeOptions}
+              options={valueTypes.map((id) => ({ id, label: t(`valueTypes.${id}`) }))}
               className="w-fit"
             />
           </div>
           <div className="flex flex-col gap-1 sm:col-span-2">
-            <ValueInput valueType={valueType} value={defaultValue} onChange={setDefaultValue} label="Default value" />
-            <p className="text-meta text-muted">Served when the flag is on and no rule matches.</p>
+            <ValueInput valueType={valueType} value={defaultValue} onChange={setDefaultValue} label={t("shared.defaultValue")} />
+            <p className="text-meta text-muted">{t("create.defaultValueHelp")}</p>
           </div>
           <TextField value={description} onChange={setDescription} className="sm:col-span-2">
             <Label>
-              Description <span className="font-normal text-muted">(optional)</span>
+              {t("shared.description")} <span className="font-normal text-muted">{t("shared.optional")}</span>
             </Label>
-            <Input placeholder="What does this flag control?" />
+            <Input placeholder={t("shared.descriptionPlaceholder")} />
           </TextField>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label>
-              Tags <span className="font-normal text-muted">(optional)</span>
+              {t("shared.tags")} <span className="font-normal text-muted">{t("shared.optional")}</span>
             </Label>
-            <TagInput aria-label="Tags" values={tags} onChange={setTags} placeholder="checkout, growth" />
+            <TagInput aria-label={t("shared.tags")} values={tags} onChange={setTags} placeholder="checkout, growth" />
           </div>
         </div>
         {formError !== null && (
@@ -125,10 +123,10 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
         )}
         <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
           <Button size="sm" variant="tertiary" onPress={onCancel}>
-            Cancel
+            {t("common:actions.cancel")}
           </Button>
           <Button size="sm" type="submit" isPending={create.isPending} isDisabled={keyInvalid || valueError !== null}>
-            Create flag
+            {t("shared.createFlag")}
           </Button>
         </div>
       </form>

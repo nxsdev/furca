@@ -9,10 +9,10 @@ import {
   type ToOptions,
   useRouter,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import "~/i18n";
-import { intlLocale } from "~/i18n";
+import { i18n, intlLocale } from "~/i18n";
 import appCss from "../styles/app.css?url";
 
 declare module "react-aria-components" {
@@ -80,6 +80,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   // Re-renders the tree (and React Aria's number/date formatting) when the language changes
   useTranslation();
+  // head() titles are computed by the router, so re-run them on a language switch
+  useEffect(() => {
+    const refresh = () => void router.invalidate();
+    i18n.on("languageChanged", refresh);
+    return () => i18n.off("languageChanged", refresh);
+  }, [router]);
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider

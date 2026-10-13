@@ -1,0 +1,276 @@
+{
+  "page": {
+    "listTitle": "Flags · furca",
+    "detailTitle": "Flag · furca"
+  },
+  "valueTypes": {
+    "boolean": "Boolean",
+    "string": "String",
+    "number": "Number",
+    "json": "JSON"
+  },
+  "shared": {
+    "flags": "Flags",
+    "createFlag": "Create flag",
+    "optional": "(optional)",
+    "key": "Key",
+    "type": "Type",
+    "description": "Description",
+    "descriptionPlaceholder": "What does this flag control?",
+    "tags": "Tags",
+    "defaultValue": "Default value",
+    "copyKey": "Copy key",
+    "archived": "Archived",
+    "on": "On",
+    "off": "Off",
+    "switchLabel": "{{key}} in {{environment}}",
+    "matchesTestUser": "Matches test user",
+    "serve": "serve <value/>",
+    "rulesIn": "Rules in {{environment}}"
+  },
+  "list": {
+    "description": "Turn features on per environment, target users by attribute, and roll out gradually.",
+    "loadError": "Could not load flags. {{error}}",
+    "emptyTitle": "Create your first flag",
+    "emptyDescription": "A flag is a value your code asks furca for at runtime. Change who gets what per environment, without a deploy.",
+    "search": "Search flags",
+    "searchPlaceholder": "Search key, description or tag",
+    "allTypes": "All types",
+    "showArchived": "Show archived",
+    "noMatches": "No flags match these filters. <clear>Clear filters</clear>",
+    "noFlags": "No flags yet.",
+    "columns": {
+      "flag": "Flag",
+      "type": "Type",
+      "rules": "Rules",
+      "rulesInSr": " in {{environment}}",
+      "experiment": "Experiment",
+      "updated": "Updated"
+    }
+  },
+  "create": {
+    "description": "Pick a key you'll reference in code, its type, and the value served when no rule matches.",
+    "created": "Created {{key}}",
+    "enterKey": "Enter a key",
+    "keyInvalid": "Use lowercase letters, digits, - and _ (max 64)",
+    "keyHelp": "Lowercase, digits, - and _. Can't be changed later.",
+    "defaultValueHelp": "Served when the flag is on and no rule matches."
+  },
+  "detail": {
+    "notFoundTitle": "Flag not found",
+    "notFoundDescription": "It may have been deleted. Flags are listed on the Flags page.",
+    "backToFlags": "Back to flags",
+    "loadError": "Could not load this flag. {{error}}",
+    "loading": "Loading flag",
+    "sections": "Flag sections",
+    "tabs": {
+      "targeting": "Targeting",
+      "implementation": "Implementation",
+      "history": "History"
+    },
+    "rulesTitle": "Rules",
+    "rulesDescription": "Evaluated top to bottom. The first rule that matches serves its value.",
+    "rulesEnvironment": "Environment for rules",
+    "unsaved": "unsaved",
+    "experimentRulesHint": "Experiment rules are added from the experiment.",
+    "rulesSaved": "Rules saved",
+    "rulesSavedDescription": "SDKs pick them up on their next payload fetch.",
+    "saveRulesFailed": "Could not save rules",
+    "unsavedRegion": "Unsaved changes",
+    "unsavedChanges": "Unsaved changes to {{environments}} rules",
+    "fixFirst_one": "fix {{count}} rule first",
+    "fixFirst_other": "fix {{count}} rules first",
+    "leaveTitle": "Discard unsaved rule changes?",
+    "leaveDescription": "Your edits to the rules haven't been saved. Leaving this page discards them.",
+    "keepEditing": "Keep editing",
+    "discardAndLeave": "Discard and leave"
+  },
+  "header": {
+    "breadcrumb": "Breadcrumb",
+    "noDescription": "No description",
+    "editDetails": "Edit description and tags",
+    "saveDetailsFailed": "Could not save details",
+    "archivedToast": "Archived {{key}}",
+    "restoredToast": "Restored {{key}}",
+    "archivedDescription": "Hidden from the flags list. Its environment switches and rules still apply.",
+    "updateFailed": "Could not update the flag",
+    "deletedToast": "Deleted {{key}}",
+    "actions": "Flag actions",
+    "restore": "Restore",
+    "deleteFlag": "Delete flag",
+    "usedBy_one": "Used by {{count}} experiment",
+    "usedBy_other": "Used by {{count}} experiments",
+    "deleteTitle": "Delete {{key}}?",
+    "deleteDescription": "It disappears from every environment's payload right away, so SDKs return the fallback in your code. This can't be undone."
+  },
+  "environments": {
+    "title": "Environments",
+    "description": "When a flag is off, it's left out of that environment's payload and SDKs return the fallback you pass in code.",
+    "noRules": "No rules",
+    "ruleCount_one": "{{count}} rule",
+    "ruleCount_other": "{{count}} rules"
+  },
+  "defaultRow": {
+    "saved": "Default value saved",
+    "badge": "Default",
+    "everyoneElse": "Everyone else",
+    "sameEverywhere": "· same in every environment",
+    "close": "Close default value",
+    "edit": "Edit default value",
+    "help": "Saved on its own, for every environment.",
+    "save": "Save default"
+  },
+  "offNote": {
+    "experimentStarved": "{{key}} is off in {{environment}}, so {{experiment}} gets no traffic. Turn the flag on to run it.",
+    "rulesInactive": "{{key}} is off in {{environment}}. These rules take effect when you turn it on."
+  },
+  "rules": {
+    "types": {
+      "force": "Force",
+      "rollout": "Rollout",
+      "experiment": "Experiment"
+    },
+    "issues": {
+      "condition": "Condition: {{issue}}",
+      "value": "Value: {{issue}}",
+      "coverage": "Coverage must be between 0% and 100%",
+      "hashAttribute": "Choose an attribute to bucket by"
+    },
+    "empty": "No rules in {{environment}}. Everyone gets the default value when the flag is on.",
+    "managedBy": "Managed by experiment <link>{{name}}</link>",
+    "rolloutOf": "<pct>{{percent}}</pct> of matching users by {{attribute}}",
+    "ruleEnabled": "Rule {{number}} enabled",
+    "closeRule": "Close rule {{number}}",
+    "editRule": "Edit rule {{number}}",
+    "moreActions": "More actions for rule {{number}}",
+    "ruleActions": "Rule {{number}} actions",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "deleteRule": "Delete rule",
+    "experimentStatus": {
+      "draft": "Draft · not serving yet",
+      "running": "Running",
+      "stopped": "Stopped"
+    },
+    "ofMatchingUsers": "<pct>{{percent}}</pct> of matching users",
+    "variations_one": "{{count}} variation",
+    "variations_other": "{{count}} variations"
+  },
+  "ruleEditor": {
+    "who": "Who",
+    "howMany": "How many",
+    "coverage": "Rollout coverage",
+    "coveragePercent": "Rollout coverage percent",
+    "bucketedBy": "of matching users, bucketed by",
+    "bucketBy": "Bucket by attribute",
+    "stickyHelp": "The same {{attribute}} always lands in the same bucket, so raising the percentage only adds users.",
+    "serve": "Serve",
+    "note": "Note",
+    "notePlaceholder": "e.g. QA team, beta customers",
+    "keptUntilSave": "Changes are kept until you save.",
+    "done": "Done"
+  },
+  "addRule": {
+    "button": "Add rule",
+    "menu": "Rule type",
+    "force": "Force a value",
+    "forceHelp": "Serve one value to everyone who matches",
+    "rollout": "Percentage rollout",
+    "rolloutHelp": "Serve a value to a share of matching users"
+  },
+  "testUser": {
+    "title": "Test a user",
+    "description": "Evaluates the published {{environment}} payload, exactly like the SDK.",
+    "attributes": "Attributes",
+    "editor": "Attribute editor",
+    "fields": "Fields",
+    "json": "JSON",
+    "attributeName": "Attribute name",
+    "attribute": "attribute",
+    "notSet": "not set",
+    "valueOf": "Value of {{attribute}}",
+    "remove": "Remove {{attribute}}",
+    "addAttribute": "Add attribute",
+    "attributesJson": "Attributes JSON",
+    "jsonErrors": {
+      "notObject": "Attributes must be a JSON object",
+      "invalid": "Not valid JSON yet"
+    },
+    "payloadError": "Could not load the payload. {{error}}",
+    "fixJson": "Fix the attributes JSON to see the result.",
+    "unsavedHint": "You have unsaved rule changes. Save them to test the new rules.",
+    "publishedRule": "Published rule {{number}}",
+    "rule": "Rule {{number}}",
+    "serves": "Serves",
+    "fallback": "Your code's fallback",
+    "notInPayload": "{{key}} is off in {{environment}} (or not published yet), so it isn't in the payload.",
+    "defaultServed": "No rule matched, so the default value is served.",
+    "matched": "{{rule}} matched.",
+    "matchedVariation": "{{rule}} matched: variation {{variation}}.",
+    "steps": "Evaluation steps",
+    "stepMatched": "Matched",
+    "stepSkipped": "Skipped"
+  },
+  "simulate": {
+    "needs": "Needs {{condition}} ({{actual}})",
+    "notSet": "not set",
+    "has": "has {{value}}",
+    "conditionsMatch": "Conditions match",
+    "unknownType": "Unknown rule type",
+    "noHashAttribute": "No {{attribute}} attribute to bucket by",
+    "inRollout": "In the {{percent}} rollout (bucket {{bucket}})",
+    "outsideRollout": "Outside the {{percent}} rollout (bucket {{bucket}})",
+    "outsideExperiment": "Outside experiment coverage (bucket {{bucket}})",
+    "assigned": "Assigned to {{variation}} (bucket {{bucket}})"
+  },
+  "history": {
+    "verbs": {
+      "created": "<actor>{{actor}}</actor> created the flag",
+      "updated": "<actor>{{actor}}</actor> updated the flag",
+      "rulesUpdated": "<actor>{{actor}}</actor> changed rules",
+      "enabled": "<actor>{{actor}}</actor> turned the flag on",
+      "disabled": "<actor>{{actor}}</actor> turned the flag off",
+      "archived": "<actor>{{actor}}</actor> archived the flag",
+      "unarchived": "<actor>{{actor}}</actor> restored the flag",
+      "deleted": "<actor>{{actor}}</actor> deleted the flag"
+    },
+    "loadError": "Could not load history. {{error}}",
+    "emptyTitle": "No changes recorded",
+    "emptyDescription": "Every change to this flag (rules, switches, values) is logged here with who made it.",
+    "loadOlder": "Load older changes",
+    "hideChanges": "Hide changes",
+    "showChanges": "Show changes",
+    "noDiff": "No field-level differences.",
+    "wholeValue": "(value)"
+  },
+  "implementation": {
+    "title": "Use this flag in code",
+    "description": "Install with <code>npm install @furca/sdk</code>. The SDK evaluates locally, so checks don't make a network call.",
+    "environment": "Environment",
+    "browser": "Browser",
+    "sdkKeyNote": "The SDK key is public: it can only read this environment's payload and send events."
+  },
+  "codeBlock": {
+    "copy": "Copy code"
+  },
+  "value": {
+    "label": "Value",
+    "emptyString": "Empty string",
+    "enterNumber": "Enter a number",
+    "format": "Format",
+    "validJson": "Valid JSON",
+    "invalidJson": "Value is not valid JSON",
+    "expectedBoolean": "Expected true or false",
+    "expectedString": "Expected a string",
+    "expectedNumber": "Expected a number"
+  },
+  "toggle": {
+    "turnOnFailed": "Could not turn on {{key}} in {{environment}}",
+    "turnOffFailed": "Could not turn off {{key}} in {{environment}}",
+    "turnedOn": "{{key}} is on in {{environment}}",
+    "turnedOff": "{{key}} is off in {{environment}}",
+    "turnedOnDescription": "SDKs pick it up on their next payload fetch.",
+    "turnedOffDescription": "SDKs now return the fallback from your code.",
+    "undo": "Undo"
+  }
+}

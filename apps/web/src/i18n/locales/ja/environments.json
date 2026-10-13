@@ -1,0 +1,70 @@
+{
+  "pageTitle": "SDK と環境 · furca",
+  "page": {
+    "title": "SDK と環境",
+    "description": "環境ごとに SDK キー、フラグの状態、ペイロードを持ちます。SDK はペイロードを一度ダウンロードし、フラグをローカルで評価します。",
+    "newEnvironment": "環境を作成",
+    "loadFailed": "環境を読み込めませんでした。{{message}}",
+    "emptyTitle": "環境がありません",
+    "emptyDescription": "環境を作成すると SDK キーが発行されます。多くのチームは production と development から始めます。"
+  },
+  "table": {
+    "environment": "環境",
+    "sdkKey": "SDK キー",
+    "payload": "ペイロード",
+    "flagsOn": "有効なフラグ",
+    "last24h": "過去24時間",
+    "actions": "操作"
+  },
+  "row": {
+    "copySdkKey": "SDK キーをコピー",
+    "payload": "ペイロード",
+    "moreActions": "{{name}} のその他の操作",
+    "rotateSdkKey": "SDK キーを再発行",
+    "rotateSdkKeyMenu": "SDK キーを再発行…"
+  },
+  "payloadSize": {
+    "notPublished": "未公開",
+    "large": "大容量",
+    "largeHint": "100 KB を超えると、モバイル回線で SDK の起動が遅くなります。使っていないフラグをアーカイブするか、大きな JSON 値をフラグの外に移してください。"
+  },
+  "create": {
+    "name": "名前",
+    "key": "キー",
+    "keyHelp": "あとから変更できません。",
+    "keyInvalid": "英小文字、数字、-、_ のみ使用できます",
+    "created": "{{name}} を作成しました",
+    "createdDescription": "この環境ではフラグが無効の状態で始まります。SDK キーは下の一覧からコピーできます。"
+  },
+  "payloadDrawer": {
+    "title": "ペイロード · {{name}}",
+    "description": "SDK が <code>{{path}}</code> からダウンロードする JSON そのものです。無効なフラグは含まれません。",
+    "loadFailed": "ペイロードを読み込めませんでした。{{message}}",
+    "copyJson": "JSON をコピー"
+  },
+  "rotate": {
+    "title": "{{name}} の SDK キーを再発行しますか？",
+    "confirm": "キーを再発行",
+    "body": "新しいキーはすぐに発行されます。<code>{{sdkKey}}</code> を使い続けているアプリでは、新しいキーをデプロイするまで、すべてのフラグがフォールバック値を返し、露出とイベントも破棄されます。",
+    "done": "{{name}} の SDK キーを再発行しました",
+    "doneDescription": "新しいキーを、この環境を使うすべてのアプリにデプロイしてください。"
+  },
+  "quickstart": {
+    "title": "クイックスタート",
+    "description": "SDK をインストールし、フラグをローカルで評価して、指標用のイベントを送信します。",
+    "environmentLabel": "スニペットの環境",
+    "environment": "環境",
+    "install": "1. インストール",
+    "copyInstall": "インストールコマンドをコピー",
+    "connect": "2. {{name}} に接続",
+    "runtime": "ランタイム",
+    "browser": "ブラウザ",
+    "footer": "ユーザーが実験に割り当てられると、露出は自動で送信されます。<code>track()</code> で送ったイベントは組み込みイベントストアに保存され、すぐに指標で使えます。"
+  },
+  "codeBlock": {
+    "copy": "コードをコピー"
+  },
+  "sparkline": {
+    "label": "過去24時間のイベント{{events}}件、露出{{exposures}}件"
+  }
+}

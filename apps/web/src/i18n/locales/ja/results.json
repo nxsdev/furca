@@ -1,0 +1,167 @@
+{
+  "verdict": {
+    "winning": "優勢",
+    "losing": "劣勢",
+    "neutral": "差なし",
+    "inconclusive": "データ不足"
+  },
+  "duration": {
+    "lessThanDay": "1 日未満",
+    "days_other": "{{days}}日"
+  },
+  "users_other": "{{users}} ユーザー",
+  "view": {
+    "loading": "結果を読み込み中",
+    "refreshFailed": "結果を更新できませんでした",
+    "failedTitle": "分析に失敗しました",
+    "unknownError": "不明なエラー",
+    "failedHelp": "以前の結果は異なるデータにもとづいている可能性があるため、表示していません。原因を解決してから更新してください。",
+    "tryAgain": "再試行",
+    "metricsTitle": "指標",
+    "metricsDescription": "各バリエーションを {{control}} と比較しています。区間は共通の軸で表示します。",
+    "controlFallback": "コントロール",
+    "notAnalyzed": "未分析",
+    "updated": "最終更新: <time/>",
+    "phaseOnly": " · フェーズ {{n}} のみ",
+    "final": " · 最終結果",
+    "analyzing": "分析中…"
+  },
+  "method": {
+    "primaryAcross": "主要指標の比較 {{n}}件",
+    "secondaryComparisons": "副指標の比較 {{n}}件",
+    "bayesian": "ベイズ: 勝つ確率と確信区間",
+    "sequential": "逐次検定: 何度確認しても区間は有効",
+    "fixed": "固定ホライズン検定: 計画したサンプルサイズでのみ有効",
+    "holm": "Holm 補正（{{families}}）",
+    "cuped": "CUPED による分散削減"
+  },
+  "banner": {
+    "label": "判定",
+    "primaryMetric": "主要指標",
+    "primaryFallback": "主要指標",
+    "treatmentFallback": "テストバリエーション",
+    "controlFallback": "コントロール",
+    "untrustworthy": "結果の信頼性に問題があります",
+    "untrustworthyDetail": "{{problem}}原因を解決するまで判断しないでください。詳しくは下のヘルスチェックを確認してください。",
+    "noPrimary": "主要指標の結果なし",
+    "noPrimaryDetail": "分析に主要指標が含まれていませんでした。設定タブで主要指標が設定されているか確認してください。",
+    "notAnalyzed": "{{metric}} を分析できませんでした",
+    "ciFrequentist": "{{level}} 信頼区間 {{lo}}〜{{hi}}",
+    "ciBayesian": "{{level}} 確信区間 {{lo}}〜{{hi}}",
+    "chanceToBeat": "{{control}} に勝つ確率 {{percent}}",
+    "winningWithRegression": "{{name}} が優勢（ただしガードレール指標が悪化）",
+    "winning": "{{name}} が優勢",
+    "losing": "{{name}} が劣勢",
+    "noDifference": "有意差なし",
+    "noDifferenceYet": "現時点では有意差なし",
+    "notEnoughData": "データがまだ不足しています",
+    "notEnoughDataDetail": "実験を継続してください。各バリエーションのユーザー数が十分に集まると判定が表示されます。",
+    "progressLabel": "計画サンプルに対する進捗",
+    "progress": "計画 {{total}} 中 {{percent}}",
+    "noPlan": "サンプルサイズ未計画",
+    "guardrailRegressed": "ガードレール指標が悪化",
+    "guardrailFallback": "ガードレール指標",
+    "weigh": " · リリース前に影響を検討してください"
+  },
+  "health": {
+    "label": "データの健全性",
+    "srmGeneric": "サンプル比率の不一致（SRM）: ユーザーが設定どおりに振り分けられていません。",
+    "srmDetail": "サンプル比率の不一致（SRM）: {{name}} のユーザー数は、想定 {{expected}} に対して {{observed}} でした。",
+    "multipleShare": "ユーザーの {{percent}} が複数のバリエーションに露出しています。",
+    "variationN": "バリエーション {{n}}",
+    "sampleRatio": "サンプル比率",
+    "sampleRatioOk": "サンプル比率は正常",
+    "sampleRatioMismatch": "サンプル比率の不一致（SRM）",
+    "sampleRatioPending": "各バリエーションにユーザーが入ると確認します",
+    "multipleExposures": "多重露出",
+    "tooManyMultiple": "多重露出が多すぎます",
+    "excluded": "{{percent}} · {{users}}人を除外",
+    "details": "詳細",
+    "hideDetails": "詳細を閉じる",
+    "usersPerVariation": "バリエーションごとのユーザー数",
+    "chiSquare": "設定した配分に対するカイ二乗検定です。p = 0.001 を下回る場合は割り当てに問題があるため、判定は表示されません。",
+    "columns": {
+      "variation": "バリエーション",
+      "split": "配分",
+      "expected": "想定",
+      "observed": "実測",
+      "diff": "差"
+    },
+    "checkIfFails": "失敗した場合の確認事項",
+    "checkCauses": "考えられる原因を確認してください",
+    "causes": {
+      "crash": "特定のバリエーションでクラッシュ、リダイレクト、読み込みの遅延が起き、露出が送信されていない",
+      "codePath": "特定のバリエーションでしか通らないコードパスで露出を記録している（フラグの評価時に記録してください）",
+      "override": "実験より上位のルール、QA 用の上書き、またはキャッシュされたペイロードにより、一部のユーザーが配分の外で割り当てられている",
+      "hashAttribute": "SDK が、分析に使うユーザー ID とは異なる属性でハッシュしている（匿名 ID とログイン後の ID など）",
+      "bots": "ボットや社内トラフィックが特定のバリエーションに偏っている"
+    },
+    "multipleNote": "複数のバリエーションに露出したユーザーは、すべての指標から除外されます。1% を超えると実験に警告が表示されます。"
+  },
+  "trend": {
+    "title": "累積リフト",
+    "description": "初回露出日ごとに表示します。線が動き続ける場合は、新奇性効果や計測方法の変更が考えられます。",
+    "metric": "指標"
+  },
+  "waiting": {
+    "phaseNoExposures": "フェーズ {{n}} にはまだ露出がありません",
+    "title": "最初の露出を待っています",
+    "description": "{{environment}} で {{flag}} が評価されると、結果が表示されます。",
+    "analysisEnvironment": "分析対象の環境",
+    "codeTitle": "SDK でフラグを評価",
+    "steps": {
+      "assigned": {
+        "title": "ユーザーの割り当て",
+        "body": "各ユーザーは「{{attribute}}」のハッシュでバリエーションに振り分けられます。同じユーザーには常に同じバリエーションが割り当てられます。"
+      },
+      "arrive": {
+        "title": "露出の受信",
+        "body": "SDK が露出をまとめて furca に送信します。ボットや重複した露出は除外されます。"
+      },
+      "refresh": {
+        "title": "更新して分析",
+        "body": "最初にヘルスチェックが実行されます。各バリエーションで主要指標に必要なユーザー数が集まると、判定が表示されます。"
+      }
+    }
+  },
+  "chart": {
+    "tooFewDays": "2 日分以上のユーザーが分析されると、トレンドが表示されます。",
+    "legend": "凡例",
+    "showTable": "表で表示",
+    "firstExposure": "初回露出日",
+    "users": "ユーザー数"
+  },
+  "table": {
+    "roles": {
+      "primary": { "title": "主要指標", "hint": "実験の結論を決める指標" },
+      "secondary": { "title": "副指標", "hint": "主要指標の変動理由を探る" },
+      "guardrail": { "title": "ガードレール指標", "hint": "悪化してはいけない指標" }
+    },
+    "caption": "{{control}} と比較した、バリエーションごとの指標の結果",
+    "controlFallback": "コントロール",
+    "controlHeader": "コントロール",
+    "columns": {
+      "metric": "指標",
+      "variation": "バリエーション",
+      "value": "値",
+      "lift": "リフト",
+      "intervalPlot": "区間プロット",
+      "chanceToWin": "勝つ確率",
+      "pValue": "p値",
+      "result": "結果"
+    },
+    "deletedMetric": "削除された指標",
+    "types": {
+      "proportion": "コンバージョン率",
+      "ratio": "比率",
+      "mean": "ユーザーあたりの平均"
+    },
+    "lowerIsBetter": " · 低いほど良い",
+    "noComparisons": "この指標では比較が計算されませんでした。",
+    "unreliable": "信頼性に問題あり",
+    "plotLabel": "リフト {{lift}}、区間 {{ci}}",
+    "toWin": "勝つ確率 {{percent}}",
+    "versus": "{{variation}} vs {{control}}",
+    "usersPair": "{{base}} / {{variation}} ユーザー"
+  }
+}

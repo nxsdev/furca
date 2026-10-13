@@ -1,0 +1,169 @@
+{
+  "verdict": {
+    "winning": "Winning",
+    "losing": "Losing",
+    "neutral": "No difference",
+    "inconclusive": "Not enough data"
+  },
+  "duration": {
+    "lessThanDay": "<1 day",
+    "days_one": "{{days}} day",
+    "days_other": "{{days}} days"
+  },
+  "users_one": "{{users}} user",
+  "users_other": "{{users}} users",
+  "view": {
+    "loading": "Loading results",
+    "refreshFailed": "Could not refresh results",
+    "failedTitle": "The analysis failed",
+    "unknownError": "Unknown error",
+    "failedHelp": "Previous results are not shown because they may be from different data. Fix the cause and refresh.",
+    "tryAgain": "Try again",
+    "metricsTitle": "Metrics",
+    "metricsDescription": "Each variation compared with {{control}}. Intervals share one axis.",
+    "controlFallback": "control",
+    "notAnalyzed": "Not analyzed yet",
+    "updated": "Updated <time/>",
+    "phaseOnly": " · Phase {{n}} only",
+    "final": " · Final results",
+    "analyzing": "Analyzing…"
+  },
+  "method": {
+    "primaryAcross": "primary across {{n}} variations",
+    "secondaryComparisons": "{{n}} secondary comparisons",
+    "bayesian": "Bayesian: chance to win and credible intervals",
+    "sequential": "Sequential test: intervals stay valid however often you check",
+    "fixed": "Fixed-horizon test: valid at the planned sample only",
+    "holm": "Holm-corrected ({{families}})",
+    "cuped": "CUPED variance reduction"
+  },
+  "banner": {
+    "label": "Verdict",
+    "primaryMetric": "Primary metric",
+    "primaryFallback": "primary metric",
+    "treatmentFallback": "Treatment",
+    "controlFallback": "Control",
+    "untrustworthy": "Results are not trustworthy",
+    "untrustworthyDetail": "{{problem}} Don't make a decision until the cause is fixed; see the health check below.",
+    "noPrimary": "No result for the primary metric",
+    "noPrimaryDetail": "The analysis did not include the primary metric. Check that it is still set on the Setup tab.",
+    "notAnalyzed": "{{metric}} could not be analyzed",
+    "ciFrequentist": "{{level}} CI {{lo}} to {{hi}}",
+    "ciBayesian": "{{level}} credible interval {{lo}} to {{hi}}",
+    "chanceToBeat": "{{percent}} chance to beat {{control}}",
+    "winningWithRegression": "{{name}} is winning, but a guardrail got worse",
+    "winning": "{{name}} is winning",
+    "losing": "{{name}} is losing",
+    "noDifference": "No significant difference",
+    "noDifferenceYet": "No significant difference yet",
+    "notEnoughData": "Not enough data yet",
+    "notEnoughDataDetail": "Keep the experiment running; the verdict appears once each variation has enough users.",
+    "progressLabel": "Share of planned sample",
+    "progress": "{{percent}} of planned {{total}}",
+    "noPlan": "No sample size planned",
+    "guardrailRegressed": "Guardrail regressed",
+    "guardrailFallback": "Guardrail metric",
+    "weigh": " · weigh this before shipping"
+  },
+  "health": {
+    "label": "Data health",
+    "srmGeneric": "Sample ratio mismatch: users were not split as configured.",
+    "srmDetail": "Sample ratio mismatch: {{name}} got {{observed}} users where {{expected}} were expected.",
+    "multipleShare": "{{percent}} of users saw more than one variation.",
+    "variationN": "Variation {{n}}",
+    "sampleRatio": "Sample ratio",
+    "sampleRatioOk": "Sample ratio OK",
+    "sampleRatioMismatch": "Sample ratio mismatch",
+    "sampleRatioPending": "checked once each variation has users",
+    "multipleExposures": "Multiple exposures",
+    "tooManyMultiple": "Too many multiple exposures",
+    "excluded": "{{percent}} · {{users}} excluded",
+    "details": "Details",
+    "hideDetails": "Hide details",
+    "usersPerVariation": "Users per variation",
+    "chiSquare": "Chi-square test against the configured split. Below p = 0.001 the assignment is broken and results are hidden as a verdict.",
+    "columns": {
+      "variation": "Variation",
+      "split": "Split",
+      "expected": "Expected",
+      "observed": "Observed",
+      "diff": "Diff"
+    },
+    "checkIfFails": "If this ever fails, check",
+    "checkCauses": "Check these likely causes",
+    "causes": {
+      "crash": "A variation crashes, redirects or loads slower, so its exposure is never sent",
+      "codePath": "Exposures are logged on a code path only one variation reaches (log at flag evaluation instead)",
+      "override": "A rule above the experiment, a QA override or a cached payload assigns some users outside the split",
+      "hashAttribute": "The SDK hashes a different attribute than the user id used for analysis (anonymous vs signed-in id)",
+      "bots": "Bots or internal traffic are concentrated in one variation"
+    },
+    "multipleNote": "Users who saw more than one variation are excluded from every metric; above 1% the experiment is flagged."
+  },
+  "trend": {
+    "title": "Cumulative lift",
+    "description": "By first-exposure date. A line that keeps drifting suggests a novelty effect or a tracking change.",
+    "metric": "Metric"
+  },
+  "waiting": {
+    "phaseNoExposures": "Phase {{n}} has no exposures yet",
+    "title": "Waiting for the first exposures",
+    "description": "Results appear once users in {{environment}} evaluate {{flag}}.",
+    "analysisEnvironment": "the analysis environment",
+    "codeTitle": "Evaluate the flag with the SDK",
+    "steps": {
+      "assigned": {
+        "title": "Users get assigned",
+        "body": "Each user is hashed on \"{{attribute}}\" into a variation; the same user always gets the same one."
+      },
+      "arrive": {
+        "title": "Exposures arrive",
+        "body": "The SDK batches exposures to furca. Bots and duplicate exposures are filtered out."
+      },
+      "refresh": {
+        "title": "Refresh to analyze",
+        "body": "Health checks run first. The verdict appears once each variation has enough users for the primary metric."
+      }
+    }
+  },
+  "chart": {
+    "tooFewDays": "The trend appears after users from at least two days have been analyzed.",
+    "legend": "Legend",
+    "showTable": "Show as table",
+    "firstExposure": "First exposure",
+    "users": "Users"
+  },
+  "table": {
+    "roles": {
+      "primary": { "title": "Primary metric", "hint": "Decides the experiment" },
+      "secondary": { "title": "Secondary metrics", "hint": "Explain why the primary moved" },
+      "guardrail": { "title": "Guardrails", "hint": "Must not get worse" }
+    },
+    "caption": "Metric results by variation compared with {{control}}",
+    "controlFallback": "control",
+    "controlHeader": "Control",
+    "columns": {
+      "metric": "Metric",
+      "variation": "Variation",
+      "value": "Value",
+      "lift": "Lift",
+      "intervalPlot": "Interval plot",
+      "chanceToWin": "Chance to win",
+      "pValue": "p-value",
+      "result": "Result"
+    },
+    "deletedMetric": "Deleted metric",
+    "types": {
+      "proportion": "Conversion rate",
+      "ratio": "Ratio",
+      "mean": "Mean per user"
+    },
+    "lowerIsBetter": " · lower is better",
+    "noComparisons": "No comparisons were computed for this metric.",
+    "unreliable": "Unreliable",
+    "plotLabel": "Lift {{lift}}, interval {{ci}}",
+    "toWin": "{{percent}} to win",
+    "versus": "{{variation}} vs {{control}}",
+    "usersPair": "{{base}} / {{variation}} users"
+  }
+}

@@ -2,6 +2,7 @@ import type { Environment } from "@furca/core/environments/Environment";
 import type { Feature } from "@furca/core/features/Feature";
 import { toast } from "@heroui/react";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 const withEnabled = (feature: Feature, environmentId: string, enabled: boolean): Feature => {
@@ -25,6 +26,7 @@ export const cacheFeature = (queryClient: QueryClient, feature: Feature) => {
  * table and the flag detail page
  */
 export function useSetEnabled() {
+  const { t } = useTranslation("flags");
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (v: { feature: Feature; environment: Environment; enabled: boolean; isUndo?: boolean }) =>
@@ -37,7 +39,8 @@ export function useSetEnabled() {
     },
     onError: (error, { feature, environment, enabled }, context) => {
       for (const [key, data] of context?.snapshot ?? []) queryClient.setQueryData(key, data);
-      toast.danger(`Could not turn ${enabled ? "on" : "off"} ${feature.key} in ${environment.name}`, {
+      const vars = { key: feature.key, environment: environment.name };
+      toast.danger(enabled ? t("toggle.turnOnFailed", vars) : t("toggle.turnOffFailed", vars), {
         description: errorMessage(error),
       });
     },
@@ -46,10 +49,11 @@ export function useSetEnabled() {
       void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
       void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
       if (isUndo === true) return;
-      const id = toast(`${feature.key} is ${enabled ? "on" : "off"} in ${environment.name}`, {
-        description: enabled ? "SDKs pick it up on their next payload fetch." : "SDKs now return the fallback from your code.",
+      const vars = { key: feature.key, environment: environment.name };
+      const id = toast(enabled ? t("toggle.turnedOn", vars) : t("toggle.turnedOff", vars), {
+        description: enabled ? t("toggle.turnedOnDescription") : t("toggle.turnedOffDescription"),
         actionProps: {
-          children: "Undo",
+          children: t("toggle.undo"),
           variant: "tertiary",
           onPress: () => {
             toast.close(id);

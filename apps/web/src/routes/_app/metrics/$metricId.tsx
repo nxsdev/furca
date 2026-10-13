@@ -4,28 +4,32 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, Pencil } from "lucide-react";
 import type { ReactNode } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { AuditList } from "~/components/audit/AuditList";
 import { StatusBadge } from "~/components/experiments/parts";
+import { dataSourceName } from "~/components/datasources/name";
 import { cappingLabel, Direction, formatHours, metricTypeLabel, MetricSentence, usageByMetric } from "~/components/metrics/describe";
 import { MetricForm } from "~/components/metrics/MetricForm";
 import { Code, ListSkeleton, PageHeader, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
+import { i18n, intlLocale } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/metrics/$metricId")({
   validateSearch: (s: Record<string, unknown>): { edit?: true } => (s.edit ? { edit: true } : {}),
-  head: () => ({ meta: [{ title: "Metric · furca" }] }),
+  head: () => ({ meta: [{ title: i18n.t("metrics:detailPageTitle") }] }),
   component: Page,
 });
 
 const crumbs = (name: ReactNode) => (
   <Breadcrumbs className="mb-1 text-label">
-    <Breadcrumbs.Item href="/metrics">Metrics</Breadcrumbs.Item>
+    <Breadcrumbs.Item href="/metrics">{i18n.t("metrics:list.title")}</Breadcrumbs.Item>
     <Breadcrumbs.Item>{name}</Breadcrumbs.Item>
   </Breadcrumbs>
 );
 
 function Page() {
+  const { t } = useTranslation("metrics");
   const { metricId } = Route.useParams();
   const metric = useQuery(orpc.metrics.get.queryOptions({ input: { id: metricId } }));
 
@@ -45,14 +49,15 @@ function Page() {
   if (metric.isError)
     return (
       <>
-        <PageHeader breadcrumb={crumbs("Metric")} title="Metric" />
-        <QueryError message={`Couldn't load this metric. ${errorMessage(metric.error)}`} onRetry={() => metric.refetch()} />
+        <PageHeader breadcrumb={crumbs(t("detail.fallbackTitle"))} title={t("detail.fallbackTitle")} />
+        <QueryError message={t("detail.loadFailed", { error: errorMessage(metric.error) })} onRetry={() => metric.refetch()} />
       </>
     );
   return <MetricDetail metric={metric.data} />;
 }
 
 function MetricDetail({ metric }: { metric: Metric }) {
+  const { t } = useTranslation(["metrics", "common"]);
   const { edit } = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -67,28 +72,30 @@ function MetricDetail({ metric }: { metric: Metric }) {
       onSuccess: (m) => {
         void queryClient.invalidateQueries({ queryKey: orpc.metrics.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast(m.archived ? "Metric archived" : "Metric restored", {
-          description: m.archived ? "It's hidden from pickers. Experiments that use it keep it." : undefined,
+        toast(m.archived ? t("detail.archivedToast") : t("detail.restoredToast"), {
+          description: m.archived ? t("detail.archivedToastDescription") : undefined,
         });
       },
-      onError: (e) => toast.danger("Couldn't update the metric", { description: errorMessage(e) }),
+      onError: (e) => toast.danger(t("detail.updateFailed"), { description: errorMessage(e) }),
     }),
   );
 
   if (edit)
     return (
       <>
-        <PageHeader breadcrumb={crumbs(metric.name)} title={`Edit ${metric.name}`} />
+        <PageHeader breadcrumb={crumbs(metric.name)} title={t("detail.editTitle", { name: metric.name })} />
         {running.length > 0 && (
           <p className="mb-4 rounded-[10px] border border-health/40 bg-health/8 px-4 py-3 text-body">
-            {running.length === 1 ? "1 running experiment uses" : `${running.length} running experiments use`} this metric (
-            {running.map((x) => x.name).join(", ")}). Changes apply from their next analysis.
+            {t("detail.runningWarning", {
+              count: running.length,
+              names: new Intl.ListFormat(intlLocale(), { style: "narrow", type: "conjunction" }).format(running.map((x) => x.name)),
+            })}
           </p>
         )}
         <MetricForm
           metric={metric}
           onSaved={() => {
-            toast.success("Metric saved");
+            toast.success(t("detail.savedToast"));
             void navigate({ search: {} });
           }}
           onCancel={() => void navigate({ search: {} })}
@@ -98,45 +105,47 @@ function MetricDetail({ metric }: { metric: Metric }) {
 
   const d = metric.definition;
   const facts: Array<[string, ReactNode]> = [
-    ["Key", <Code copy>{metric.key}</Code>],
-    ["Type", metricTypeLabel[metric.type]],
+    [t("detail.facts.key"), <Code copy>{metric.key}</Code>],
+    [t("detail.facts.type"), metricTypeLabel(metric.type)],
     [
-      "Data source",
+      t("detail.facts.dataSource"),
       <Link
         to="/data-sources/$dataSourceId"
         params={{ dataSourceId: metric.dataSourceId }}
         className="rounded-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus"
       >
-        {source?.name ?? (metric.dataSourceId === "builtin" ? "Built-in events" : metric.dataSourceId)}
+        {source !== undefined ? dataSourceName(source) : metric.dataSourceId === "builtin" ? t("builtinEvents") : metric.dataSourceId}
       </Link>,
     ],
     ...(d._tag === "event"
       ? ([
           [
-            metric.type === "ratio" ? "Numerator" : "Event",
+            metric.type === "ratio" ? t("detail.facts.numerator") : t("detail.facts.event"),
             <span className="font-mono">
               {d.numerator.event}
-              {metric.type !== "proportion" && <span className="text-muted"> · {d.numerator.aggregation}</span>}
+              {metric.type !== "proportion" && <span className="text-muted"> · {t(`detail.aggregation.${d.numerator.aggregation}`)}</span>}
             </span>,
           ],
           ...(d.denominator !== null
             ? ([
                 [
-                  "Denominator",
+                  t("detail.facts.denominator"),
                   <span className="font-mono">
                     {d.denominator.event}
-                    <span className="text-muted"> · {d.denominator.aggregation}</span>
+                    <span className="text-muted"> · {t(`detail.aggregation.${d.denominator.aggregation}`)}</span>
                   </span>,
                 ],
               ] as Array<[string, ReactNode]>)
             : []),
         ] as Array<[string, ReactNode]>)
       : []),
-    ["Window", metric.windowHours === null ? "None (until analysis time)" : formatHours(metric.windowHours)],
-    ["Delay", metric.delayHours > 0 ? formatHours(metric.delayHours) : "None"],
-    ...(metric.type !== "proportion" ? ([["Capping", cappingLabel(metric.capping)]] as Array<[string, ReactNode]>) : []),
-    ["Goal", <Direction inverse={metric.inverse} />],
-    ["Updated", <RelativeTime date={metric.updatedAt} />],
+    [t("detail.facts.window"), metric.windowHours === null ? t("detail.facts.windowNone") : formatHours(metric.windowHours)],
+    [t("detail.facts.delay"), metric.delayHours > 0 ? formatHours(metric.delayHours) : t("common:states.none")],
+    ...(metric.type !== "proportion"
+      ? ([[t("detail.facts.capping"), cappingLabel(metric.capping)]] as Array<[string, ReactNode]>)
+      : []),
+    [t("detail.facts.goal"), <Direction inverse={metric.inverse} />],
+    [t("detail.facts.updated"), <RelativeTime date={metric.updatedAt} />],
   ];
 
   return (
@@ -147,7 +156,7 @@ function MetricDetail({ metric }: { metric: Metric }) {
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {metric.name}
             {metric.archived && (
-              <span className="rounded-md border border-border px-2 py-0.5 text-label font-medium text-muted">Archived</span>
+              <span className="rounded-md border border-border px-2 py-0.5 text-label font-medium text-muted">{t("archived")}</span>
             )}
           </span>
         }
@@ -161,11 +170,11 @@ function MetricDetail({ metric }: { metric: Metric }) {
               onPress={() => archive.mutate({ id: metric.id, archived: !metric.archived })}
             >
               {metric.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-              {metric.archived ? "Restore" : "Archive"}
+              {metric.archived ? t("common:actions.restore") : t("common:actions.archive")}
             </Button>
             <Link to="." search={{ edit: true }} className={buttonVariants({ size: "sm", variant: "secondary" })}>
               <Pencil className="size-4" />
-              Edit
+              {t("common:actions.edit")}
             </Link>
           </>
         }
@@ -174,7 +183,7 @@ function MetricDetail({ metric }: { metric: Metric }) {
       <div className="flex flex-col gap-6">
         <Panel>
           <div className="border-b border-border px-5 py-5">
-            <h2 className="text-meta font-medium text-muted">Definition</h2>
+            <h2 className="text-meta font-medium text-muted">{t("detail.definition")}</h2>
             <p className="mt-1.5 max-w-[70ch] text-section leading-relaxed">
               <MetricSentence metric={metric} />
             </p>
@@ -190,8 +199,8 @@ function MetricDetail({ metric }: { metric: Metric }) {
           {d._tag === "sql" && (
             <div className="flex flex-col gap-3 border-t border-border px-5 py-4">
               {[
-                [metric.type === "ratio" ? "Numerator SQL" : "SQL", d.numeratorSql] as const,
-                ...(d.denominatorSql !== null ? ([["Denominator SQL", d.denominatorSql]] as const) : []),
+                [metric.type === "ratio" ? t("detail.sql.numerator") : t("detail.sql.single"), d.numeratorSql] as const,
+                ...(d.denominatorSql !== null ? ([[t("detail.sql.denominator"), d.denominatorSql]] as const) : []),
               ].map(([label, sql]) => (
                 <div key={label}>
                   <h3 className="mb-1.5 text-label text-muted">{label}</h3>
@@ -205,29 +214,39 @@ function MetricDetail({ metric }: { metric: Metric }) {
         </Panel>
 
         <Panel>
-          <PanelHeader title="Used by" description="Experiments that read this metric. Results update at their next analysis." />
+          <PanelHeader title={t("detail.usedBy.title")} description={t("detail.usedBy.description")} />
           {experiments.isPending ? (
             <ListSkeleton rows={2} />
           ) : experiments.isError ? (
             <div className="p-4">
-              <QueryError message={`Couldn't load experiments. ${errorMessage(experiments.error)}`} onRetry={() => experiments.refetch()} />
+              <QueryError
+                message={t("detail.usedBy.loadFailed", { error: errorMessage(experiments.error) })}
+                onRetry={() => experiments.refetch()}
+              />
             </div>
           ) : usedBy.length === 0 ? (
             <p className="px-5 py-6 text-body text-muted">
-              No experiment uses this metric yet. Choose it as the primary metric when you{" "}
-              <Link to="/experiments/new" className="rounded-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus">
-                create an experiment
-              </Link>
-              .
+              <Trans
+                t={t}
+                i18nKey="detail.usedBy.empty"
+                components={{
+                  link: (
+                    <Link
+                      to="/experiments/new"
+                      className="rounded-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus"
+                    />
+                  ),
+                }}
+              />
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className={tbl.table}>
                 <thead>
                   <tr>
-                    <th className={tbl.th}>Experiment</th>
-                    <th className={tbl.th}>Status</th>
-                    <th className={`${tbl.th} text-right`}>Role</th>
+                    <th className={tbl.th}>{t("detail.usedBy.columns.experiment")}</th>
+                    <th className={tbl.th}>{t("detail.usedBy.columns.status")}</th>
+                    <th className={`${tbl.th} text-right`}>{t("detail.usedBy.columns.role")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -243,10 +262,10 @@ function MetricDetail({ metric }: { metric: Metric }) {
                       </td>
                       <td className={`${tbl.td} text-right text-muted`}>
                         {x.primaryMetricId === metric.id
-                          ? "Primary"
+                          ? t("detail.usedBy.roles.primary")
                           : x.guardrailMetricIds.includes(metric.id)
-                            ? "Guardrail"
-                            : "Secondary"}
+                            ? t("detail.usedBy.roles.guardrail")
+                            : t("detail.usedBy.roles.secondary")}
                       </td>
                     </tr>
                   ))}
@@ -257,13 +276,13 @@ function MetricDetail({ metric }: { metric: Metric }) {
         </Panel>
 
         <Panel>
-          <PanelHeader title="History" description="Every change to this metric's definition." />
+          <PanelHeader title={t("detail.history.title")} description={t("detail.history.description")} />
           <AuditList
             entityType="metric"
             entityId={metric.id}
             limit={20}
             showEntity={false}
-            emptyDescription="Edits to this metric will appear here with a diff of what changed."
+            emptyDescription={t("detail.history.empty")}
           />
         </Panel>
       </div>

@@ -1,0 +1,81 @@
+{
+  "pageTitle": "Overview · furca",
+  "page": {
+    "title": "Overview",
+    "description": "Running experiments, recent changes and SDK traffic.",
+    "descriptionIn": "Running experiments, recent changes and SDK traffic in {{name}}.",
+    "loadFailed": "Couldn't load the overview. {{message}}"
+  },
+  "onboarding": {
+    "title": "Get started",
+    "description": "Ship a change behind a flag, measure it, and let an experiment tell you whether to keep it.",
+    "progress": "{{done}} of {{total}} done",
+    "done": "Done"
+  },
+  "steps": {
+    "flag": {
+      "title": "Create a flag",
+      "doneDescription_one": "{{count}} flag so far.",
+      "doneDescription_other": "{{count}} flags so far.",
+      "description": "A flag wraps the code you want to change. Start with an on/off flag around one new behavior.",
+      "action": "Create flag"
+    },
+    "sdk": {
+      "title": "Install the SDK",
+      "doneDescription": "{{name}} is receiving SDK traffic.",
+      "description": "Add @furca/sdk to your app with the {{name}} key. It downloads one payload and evaluates flags locally, with no request per check.",
+      "copyInstall": "Copy install command",
+      "otherRuntimes": "Cloudflare Workers, Node and other environments"
+    },
+    "metric": {
+      "title": "Send events and define a metric",
+      "doneDescription_one": "{{count}} metric defined.",
+      "doneDescription_other": "{{count}} metrics defined.",
+      "description": "Call <code>{{call}}</code> where the outcome happens, then turn that event into a metric like \"share of users who purchased\".",
+      "descriptionWithEvents": "Call <code>{{call}}</code> where the outcome happens, then turn that event into a metric like \"share of users who purchased\". Received so far: {{names}}.",
+      "action": "Define a metric"
+    },
+    "experiment": {
+      "title": "Start an experiment",
+      "description": "Pick the flag, a primary metric and the traffic split. furca assigns users deterministically and tells you when the result is real.",
+      "action": "Create experiment"
+    }
+  },
+  "traffic": {
+    "title": "SDK traffic",
+    "description": "Exposures and tracked events per hour in {{name}}, last 24 hours.",
+    "eventStore": "Event store",
+    "loading": "Loading traffic",
+    "loadFailed": "Couldn't load SDK traffic. {{message}}",
+    "emptyTitle": "No SDK traffic in {{name}} in the last 24 hours",
+    "emptyDescription": "Exposures arrive when a user is bucketed into a running experiment; events when your app calls <code>track()</code>.",
+    "totals": "Totals, last 24 hours",
+    "tableCaption": "Hourly SDK traffic in {{name}}, last 24 hours",
+    "hour": "Hour",
+    "series": {
+      "exposures": "Exposures",
+      "events": "Events"
+    }
+  },
+  "recentChanges": {
+    "title": "Recent changes",
+    "auditLog": "Audit log"
+  },
+  "running": {
+    "title": "Running experiments",
+    "description": "Live verdict on each primary metric, from the latest analysis.",
+    "all": "All experiments",
+    "empty": "Nothing is running. <action>Create an experiment</action> to test a change on real users; its verdict will show up here.",
+    "experiment": "Experiment",
+    "runningFor": "Running for",
+    "users": "Users",
+    "primaryMetric": "Primary metric",
+    "phase": "Phase {{number}}",
+    "notAnalyzed": "Not analyzed yet",
+    "analysisFailed": "Analysis failed",
+    "srm": "Sample ratio mismatch",
+    "multipleExposures": "Multiple exposures",
+    "noPrimaryResult": "No primary result",
+    "guardrailRegressed": "Guardrail regressed"
+  }
+}

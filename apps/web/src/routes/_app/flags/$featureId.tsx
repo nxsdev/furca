@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { Archive, ArchiveRestore, CornerDownRight, Ellipsis, Flag, Info, Pencil, Trash2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { FlagSwitch } from "~/components/flags/FlagSwitch";
 import { HistoryPanel } from "~/components/flags/HistoryPanel";
 import { ImplementationPanel } from "~/components/flags/ImplementationPanel";
@@ -18,6 +19,7 @@ import { ValueInput, ValuePreview } from "~/components/flags/ValueInput";
 import { environmentHue } from "~/components/shell/Sidebar";
 import { TagInput } from "~/components/targeting/ConditionBuilder";
 import { CopyButton, EmptyState, ListSkeleton, Panel, PanelHeader, QueryError } from "~/components/ui/primitives";
+import { i18n, intlLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
@@ -26,7 +28,7 @@ type Tab = "targeting" | "implementation" | "history";
 export const Route = createFileRoute("/_app/flags/$featureId")({
   validateSearch: (search: Record<string, unknown>): { tab?: Exclude<Tab, "targeting"> } =>
     search.tab === "implementation" || search.tab === "history" ? { tab: search.tab } : {},
-  head: () => ({ meta: [{ title: "Flag · furca" }] }),
+  head: () => ({ meta: [{ title: i18n.t("flags:page.detailTitle") }] }),
   component: FlagPage,
 });
 
@@ -35,6 +37,7 @@ const savedRulesOf = (feature: Feature | undefined, envId: string | undefined): 
   feature?.environments.find((e) => e.environmentId === envId)?.rules ?? noRules;
 
 function FlagPage() {
+  const { t } = useTranslation("flags");
   const { featureId } = Route.useParams();
   const feature = useQuery(orpc.features.get.queryOptions({ input: { id: featureId } }));
 
@@ -44,26 +47,27 @@ function FlagPage() {
         <div className="pt-8">
           <EmptyState
             icon={<Flag />}
-            title="Flag not found"
-            description="It may have been deleted. Flags are listed on the Flags page."
+            title={t("detail.notFoundTitle")}
+            description={t("detail.notFoundDescription")}
             action={
               <Link to="/flags" className="button button--sm button--outline">
-                Back to flags
+                {t("detail.backToFlags")}
               </Link>
             }
           />
         </div>
       );
     }
-    return <QueryError message={`Could not load this flag. ${errorMessage(feature.error)}`} onRetry={() => feature.refetch()} />;
+    return <QueryError message={t("detail.loadError", { error: errorMessage(feature.error) })} onRetry={() => feature.refetch()} />;
   }
   if (feature.isPending) return <FlagSkeleton />;
   return <FlagDetail feature={feature.data} />;
 }
 
 function FlagSkeleton() {
+  const { t } = useTranslation("flags");
   return (
-    <div aria-busy="true" aria-label="Loading flag">
+    <div aria-busy="true" aria-label={t("detail.loading")}>
       <Skeleton className="mb-4 h-4 w-16 rounded-md" />
       <Skeleton className="h-7 w-64 rounded-md" />
       <Skeleton className="mt-2 mb-8 h-4 w-96 max-w-full rounded-md" />
@@ -75,6 +79,7 @@ function FlagSkeleton() {
 }
 
 function FlagDetail({ feature }: { feature: Feature }) {
+  const { t } = useTranslation(["flags", "common"]);
   const { tab = "targeting" } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
@@ -112,9 +117,9 @@ function FlagDetail({ feature }: { feature: Feature }) {
     },
     onSuccess: () => {
       setEditingId(null);
-      toast.success("Rules saved", { description: "SDKs pick them up on their next payload fetch." });
+      toast.success(t("detail.rulesSaved"), { description: t("detail.rulesSavedDescription") });
     },
-    onError: (error) => toast.danger("Could not save rules", { description: errorMessage(error), timeout: 0 }),
+    onError: (error) => toast.danger(t("detail.saveRulesFailed"), { description: errorMessage(error), timeout: 0 }),
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
       void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
@@ -167,17 +172,17 @@ function FlagDetail({ feature }: { feature: Feature }) {
         onSelectionChange={(k) => void navigate({ search: k === "targeting" ? {} : { tab: k as Exclude<Tab, "targeting"> }, replace: true })}
       >
         <Tabs.ListContainer className="mb-6">
-          <Tabs.List aria-label="Flag sections" className="min-w-0 gap-1">
+          <Tabs.List aria-label={t("detail.sections")} className="min-w-0 gap-1">
             <Tabs.Tab id="targeting" className="w-auto px-2.5 text-label">
-              Targeting
+              {t("detail.tabs.targeting")}
               <Tabs.Indicator />
             </Tabs.Tab>
             <Tabs.Tab id="implementation" className="w-auto px-2.5 text-label">
-              Implementation
+              {t("detail.tabs.implementation")}
               <Tabs.Indicator />
             </Tabs.Tab>
             <Tabs.Tab id="history" className="w-auto px-2.5 text-label">
-              History
+              {t("detail.tabs.history")}
               <Tabs.Indicator />
             </Tabs.Tab>
           </Tabs.List>
@@ -193,13 +198,13 @@ function FlagDetail({ feature }: { feature: Feature }) {
                 <EnvironmentsPanel feature={feature} environments={environments} />
                 <Panel>
                   <PanelHeader
-                    title="Rules"
-                    description="Evaluated top to bottom. The first rule that matches serves its value."
+                    title={t("detail.rulesTitle")}
+                    description={t("detail.rulesDescription")}
                     actions={
                       environments.length > 1 && (
                         <Segmented
                           className="shrink-0"
-                          aria-label="Environment for rules"
+                          aria-label={t("detail.rulesEnvironment")}
                           value={ruleEnv.id}
                           onChange={(id) => {
                             setEnvId(id);
@@ -211,7 +216,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                             label: (
                               <span className="inline-flex items-center gap-1.5">
                                 {e.name}
-                                {dirtyIds.includes(e.id) && <span className="size-1.5 rounded-full bg-focus" aria-label="unsaved" />}
+                                {dirtyIds.includes(e.id) && <span className="size-1.5 rounded-full bg-focus" aria-label={t("detail.unsaved")} />}
                               </span>
                             ),
                           }))}
@@ -241,7 +246,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                       }}
                     />
                     <span className="hidden text-meta text-muted sm:inline">
-                      Experiment rules are added from the experiment.
+                      {t("detail.experimentRulesHint")}
                     </span>
                   </div>
                 </Panel>
@@ -270,18 +275,17 @@ function FlagDetail({ feature }: { feature: Feature }) {
         <div className="pointer-events-none sticky bottom-4 z-(--z-sticky) mt-6 flex justify-center">
           <div
             role="region"
-            aria-label="Unsaved changes"
+            aria-label={t("detail.unsavedRegion")}
             className="pointer-events-auto flex w-full max-w-xl flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-overlay py-2 pr-2 pl-4 shadow-overlay"
           >
             <span className="size-2 shrink-0 rounded-full bg-focus" aria-hidden="true" />
             <p className="min-w-0 flex-1 text-label">
-              Unsaved changes to {environments.filter((e) => dirtyIds.includes(e.id)).map((e) => e.name).join(" and ")} rules
-              {invalidCount > 0 && (
-                <span className="text-danger">
-                  {" "}
-                  · fix {invalidCount} {invalidCount === 1 ? "rule" : "rules"} first
-                </span>
-              )}
+              {t("detail.unsavedChanges", {
+                environments: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(
+                  environments.filter((e) => dirtyIds.includes(e.id)).map((e) => e.name),
+                ),
+              })}
+              {invalidCount > 0 && <span className="text-danger"> · {t("detail.fixFirst", { count: invalidCount })}</span>}
               {save.error !== null && <span className="block text-meta text-danger">{errorMessage(save.error)}</span>}
             </p>
             <div className="flex shrink-0 gap-2">
@@ -295,10 +299,10 @@ function FlagDetail({ feature }: { feature: Feature }) {
                   save.reset();
                 }}
               >
-                Discard
+                {t("common:actions.discard")}
               </Button>
               <Button size="sm" isPending={save.isPending} isDisabled={invalidCount > 0} onPress={() => save.mutate()}>
-                Save
+                {t("common:actions.save")}
               </Button>
             </div>
           </div>
@@ -310,17 +314,17 @@ function FlagDetail({ feature }: { feature: Feature }) {
           <AlertDialog.Dialog>
             <AlertDialog.Header>
               <AlertDialog.Icon status="warning" />
-              <AlertDialog.Heading>Discard unsaved rule changes?</AlertDialog.Heading>
+              <AlertDialog.Heading>{t("detail.leaveTitle")}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p className="text-body text-muted">Your edits to the rules haven't been saved. Leaving this page discards them.</p>
+              <p className="text-body text-muted">{t("detail.leaveDescription")}</p>
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button size="sm" variant="tertiary" onPress={() => blocker.reset?.()}>
-                Keep editing
+                {t("detail.keepEditing")}
               </Button>
               <Button size="sm" variant="danger" onPress={() => blocker.proceed?.()}>
-                Discard and leave
+                {t("detail.discardAndLeave")}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -331,6 +335,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
 }
 
 function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedExperiments: ReadonlyArray<Experiment> }) {
+  const { t } = useTranslation(["flags", "common"]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
@@ -344,18 +349,18 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
       cacheFeature(queryClient, saved);
       setEditing(false);
     },
-    onError: (error) => toast.danger("Could not save details", { description: errorMessage(error) }),
+    onError: (error) => toast.danger(t("header.saveDetailsFailed"), { description: errorMessage(error) }),
   });
   const archive = useMutation({
     mutationFn: (archived: boolean) => client.features.archive({ id: feature.id, archived }),
     onSuccess: (saved) => {
       cacheFeature(queryClient, saved);
       void queryClient.invalidateQueries({ queryKey: orpc.features.list.key() });
-      toast(saved.archived ? `Archived ${saved.key}` : `Restored ${saved.key}`, {
-        description: saved.archived ? "Hidden from the flags list. Its environment switches and rules still apply." : undefined,
+      toast(saved.archived ? t("header.archivedToast", { key: saved.key }) : t("header.restoredToast", { key: saved.key }), {
+        description: saved.archived ? t("header.archivedDescription") : undefined,
       });
     },
-    onError: (error) => toast.danger("Could not update the flag", { description: errorMessage(error) }),
+    onError: (error) => toast.danger(t("header.updateFailed"), { description: errorMessage(error) }),
   });
   const remove = useMutation({
     mutationFn: () => client.features.delete({ id: feature.id }),
@@ -363,7 +368,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
       setConfirmDelete(false);
       queryClient.removeQueries({ queryKey: orpc.features.get.queryKey({ input: { id: feature.id } }) });
       await queryClient.invalidateQueries({ queryKey: orpc.features.list.key() });
-      toast(`Deleted ${feature.key}`);
+      toast(t("header.deletedToast", { key: feature.key }));
       await navigate({ to: "/flags" });
     },
   });
@@ -376,9 +381,9 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
 
   return (
     <header className="pb-5">
-      <nav aria-label="Breadcrumb" className="mb-2 text-label">
+      <nav aria-label={t("header.breadcrumb")} className="mb-2 text-label">
         <Link to="/flags" className="rounded-sm text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus">
-          Flags
+          {t("shared.flags")}
         </Link>
         <span className="mx-1.5 text-muted" aria-hidden="true">
           /
@@ -388,9 +393,9 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <h1 className="min-w-0 truncate font-mono text-title font-semibold tracking-tight">{feature.key}</h1>
-            <CopyButton value={feature.key} label="Copy key" />
+            <CopyButton value={feature.key} label={t("shared.copyKey")} />
             <span className="rounded-[4px] border border-border px-1.5 font-mono text-meta leading-[18px] text-muted">{feature.valueType}</span>
-            {feature.archived && <span className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px] text-muted">Archived</span>}
+            {feature.archived && <span className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px] text-muted">{t("shared.archived")}</span>}
           </div>
           {editing ? (
             <form
@@ -401,37 +406,37 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
               }}
             >
               <TextField value={description} onChange={setDescription} autoFocus>
-                <Label>Description</Label>
-                <Input className="text-base sm:text-label" placeholder="What does this flag control?" />
+                <Label>{t("shared.description")}</Label>
+                <Input className="text-base sm:text-label" placeholder={t("shared.descriptionPlaceholder")} />
               </TextField>
               <div className="flex flex-col gap-1.5">
-                <Label>Tags</Label>
-                <TagInput aria-label="Tags" values={tags} onChange={setTags} placeholder="checkout, growth" />
+                <Label>{t("shared.tags")}</Label>
+                <TagInput aria-label={t("shared.tags")} values={tags} onChange={setTags} placeholder="checkout, growth" />
               </div>
               <div className="flex gap-2">
                 <Button size="sm" type="submit" isPending={update.isPending}>
-                  Save
+                  {t("common:actions.save")}
                 </Button>
                 <Button size="sm" variant="tertiary" onPress={() => setEditing(false)}>
-                  Cancel
+                  {t("common:actions.cancel")}
                 </Button>
               </div>
             </form>
           ) : (
             <div className="group mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <p className={`max-w-[70ch] text-body ${feature.description === "" ? "text-muted" : "text-muted"}`}>
-                {feature.description === "" ? "No description" : feature.description}
+                {feature.description === "" ? t("header.noDescription") : feature.description}
               </p>
-              {feature.tags.map((t) => (
-                <span key={t} className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px]">
-                  {t}
+              {feature.tags.map((tag) => (
+                <span key={tag} className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px]">
+                  {tag}
                 </span>
               ))}
               <Button
                 isIconOnly
                 size="sm"
                 variant="ghost"
-                aria-label="Edit description and tags"
+                aria-label={t("header.editDetails")}
                 className="size-7 min-w-7 text-muted hover:text-foreground"
                 onPress={startEditing}
               >
@@ -441,30 +446,28 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
           )}
         </div>
         <Dropdown>
-          <Button isIconOnly size="sm" variant="outline" aria-label="Flag actions" className="shrink-0">
+          <Button isIconOnly size="sm" variant="outline" aria-label={t("header.actions")} className="shrink-0">
             <Ellipsis className="size-4" />
           </Button>
           <Dropdown.Popover placement="bottom end" className="min-w-56">
             <Dropdown.Menu
-              aria-label="Flag actions"
+              aria-label={t("header.actions")}
               disabledKeys={linkedExperiments.length > 0 ? ["delete"] : []}
               onAction={(key) => {
                 if (key === "archive") archive.mutate(!feature.archived);
                 else if (key === "delete") setConfirmDelete(true);
               }}
             >
-              <Dropdown.Item id="archive" textValue={feature.archived ? "Restore" : "Archive"}>
+              <Dropdown.Item id="archive" textValue={feature.archived ? t("header.restore") : t("common:actions.archive")}>
                 {feature.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-                <Label>{feature.archived ? "Restore" : "Archive"}</Label>
+                <Label>{feature.archived ? t("header.restore") : t("common:actions.archive")}</Label>
               </Dropdown.Item>
-              <Dropdown.Item id="delete" textValue="Delete flag" variant="danger">
+              <Dropdown.Item id="delete" textValue={t("header.deleteFlag")} variant="danger">
                 <Trash2 className="size-4" />
                 <div className="flex flex-col">
-                  <Label>Delete flag</Label>
+                  <Label>{t("header.deleteFlag")}</Label>
                   {linkedExperiments.length > 0 && (
-                    <span className="text-meta text-muted">
-                      Used by {linkedExperiments.length} {linkedExperiments.length === 1 ? "experiment" : "experiments"}
-                    </span>
+                    <span className="text-meta text-muted">{t("header.usedBy", { count: linkedExperiments.length })}</span>
                   )}
                 </div>
               </Dropdown.Item>
@@ -478,21 +481,18 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
           <AlertDialog.Dialog>
             <AlertDialog.Header>
               <AlertDialog.Icon status="danger" />
-              <AlertDialog.Heading>Delete {feature.key}?</AlertDialog.Heading>
+              <AlertDialog.Heading>{t("header.deleteTitle", { key: feature.key })}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p className="text-body text-muted">
-                It disappears from every environment's payload right away, so SDKs return the fallback in your code. This can't be
-                undone.
-              </p>
+              <p className="text-body text-muted">{t("header.deleteDescription")}</p>
               {remove.error !== null && <p className="mt-3 text-label text-danger">{errorMessage(remove.error)}</p>}
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button size="sm" variant="tertiary" onPress={() => setConfirmDelete(false)}>
-                Cancel
+                {t("common:actions.cancel")}
               </Button>
               <Button size="sm" variant="danger" isPending={remove.isPending} onPress={() => remove.mutate()}>
-                Delete flag
+                {t("header.deleteFlag")}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -503,12 +503,13 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
 }
 
 function EnvironmentsPanel({ feature, environments }: { feature: Feature; environments: ReadonlyArray<Environment> }) {
+  const { t } = useTranslation("flags");
   const setEnabled = useSetEnabled();
   return (
     <Panel>
       <PanelHeader
-        title="Environments"
-        description="When a flag is off, it's left out of that environment's payload and SDKs return the fallback you pass in code."
+        title={t("environments.title")}
+        description={t("environments.description")}
       />
       <ul>
         {environments.map((env) => {
@@ -521,13 +522,13 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
               <div className="min-w-0 flex-1">
                 <div className="truncate text-label font-medium">{env.name}</div>
                 <div className="text-meta text-muted">
-                  {count === 0 ? "No rules" : `${count} ${count === 1 ? "rule" : "rules"}`}
+                  {count === 0 ? t("environments.noRules") : t("environments.ruleCount", { count })}
                 </div>
               </div>
-              <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? "On" : "Off"}</span>
+              <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? t("shared.on") : t("shared.off")}</span>
               <FlagSwitch
                 size="md"
-                aria-label={`${feature.key} in ${env.name}`}
+                aria-label={t("shared.switchLabel", { key: feature.key, environment: env.name })}
                 isSelected={enabled}
                 isDisabled={feature.archived}
                 onChange={(next) => setEnabled.mutate({ feature, environment: env, enabled: next })}
@@ -542,6 +543,7 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
 
 /** Last row of the rules list: what everyone else gets (shared by all environments) */
 function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: boolean }) {
+  const { t } = useTranslation(["flags", "common"]);
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(feature.defaultValue);
@@ -552,7 +554,7 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
       cacheFeature(queryClient, saved);
       void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
       setEditing(false);
-      toast.success("Default value saved");
+      toast.success(t("defaultRow.saved"));
     },
   });
 
@@ -565,21 +567,24 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">Default</span>
-            <span className="text-label">Everyone else</span>
-            <span className="hidden text-meta text-muted sm:inline">· same in every environment</span>
-            {isMatched && <span className="text-meta font-medium text-focus">Matches test user</span>}
+            <span className="rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">{t("defaultRow.badge")}</span>
+            <span className="text-label">{t("defaultRow.everyoneElse")}</span>
+            <span className="hidden text-meta text-muted sm:inline">{t("defaultRow.sameEverywhere")}</span>
+            {isMatched && <span className="text-meta font-medium text-focus">{t("shared.matchesTestUser")}</span>}
           </div>
           <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-meta text-muted">
-            <span>serve</span>
-            <ValuePreview valueType={feature.valueType} value={feature.defaultValue} className="min-w-0" />
+            <Trans
+              t={t}
+              i18nKey="shared.serve"
+              components={{ value: <ValuePreview valueType={feature.valueType} value={feature.defaultValue} className="min-w-0" /> }}
+            />
           </div>
         </div>
         <Button
           isIconOnly
           size="sm"
           variant={editing ? "tertiary" : "ghost"}
-          aria-label={editing ? "Close default value" : "Edit default value"}
+          aria-label={editing ? t("defaultRow.close") : t("defaultRow.edit")}
           aria-expanded={editing}
           className="size-8 min-w-8 text-muted hover:text-foreground"
           onPress={() => {
@@ -598,16 +603,16 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
             if (error === null) update.mutate();
           }}
         >
-          <ValueInput valueType={feature.valueType} value={value} onChange={setValue} label="Default value" />
+          <ValueInput valueType={feature.valueType} value={value} onChange={setValue} label={t("shared.defaultValue")} />
           {update.error !== null && <p className="text-meta text-danger">{errorMessage(update.error)}</p>}
           <div className="flex items-center justify-between gap-3">
-            <p className="text-meta text-muted">Saved on its own, for every environment.</p>
+            <p className="text-meta text-muted">{t("defaultRow.help")}</p>
             <div className="flex gap-2">
               <Button size="sm" variant="tertiary" onPress={() => setEditing(false)}>
-                Cancel
+                {t("common:actions.cancel")}
               </Button>
               <Button size="sm" type="submit" isPending={update.isPending} isDisabled={error !== null || value === feature.defaultValue}>
-                Save default
+                {t("defaultRow.save")}
               </Button>
             </div>
           </div>
@@ -629,6 +634,7 @@ function EnvironmentOffNote({
   rules: ReadonlyArray<Rule>;
   experimentsById: ReadonlyMap<string, Experiment>;
 }) {
+  const { t } = useTranslation("flags");
   if (rules.length === 0 || feature.environments.find((e) => e.environmentId === environment.id)?.enabled === true) return null;
   const running = rules
     .map((r) => (r._tag === "experiment" && r.enabled ? experimentsById.get(r.experimentId) : undefined))
@@ -642,8 +648,8 @@ function EnvironmentOffNote({
       )}
       <span className={running ? "" : "text-muted"}>
         {running
-          ? `${feature.key} is off in ${environment.name}, so ${running.name} gets no traffic. Turn the flag on to run it.`
-          : `${feature.key} is off in ${environment.name}. These rules take effect when you turn it on.`}
+          ? t("offNote.experimentStarved", { key: feature.key, environment: environment.name, experiment: running.name })
+          : t("offNote.rulesInactive", { key: feature.key, environment: environment.name })}
       </span>
     </p>
   );

@@ -1,6 +1,7 @@
 import { Skeleton } from "@heroui/react";
 import type { VolumeBucket } from "@furca/api/contract";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { formatCount } from "~/components/results/format";
 import { orpc } from "~/lib/rpc";
 
@@ -30,6 +31,7 @@ export const hourlySeries = (buckets: ReadonlyArray<VolumeBucket>, now = Date.no
 
 /** 24 hourly bars of SDK traffic (events + exposures) with the total beside it */
 export function TrafficSparkline({ environmentId }: { environmentId: string }) {
+  const { t } = useTranslation("environments");
   const volume = useQuery(orpc.events.volume.queryOptions({ input: { environmentId } }));
   if (volume.isPending) return <Skeleton className="h-5 w-32 rounded-md" />;
   if (volume.isError) return <span className="text-muted">—</span>;
@@ -37,13 +39,16 @@ export function TrafficSparkline({ environmentId }: { environmentId: string }) {
   const totals = series.map((s) => s.events + s.exposures);
   const total = totals.reduce((a, b) => a + b, 0);
   const max = Math.max(...totals, 1);
-  const label = `${formatCount(series.reduce((a, s) => a + s.events, 0))} events and ${formatCount(series.reduce((a, s) => a + s.exposures, 0))} exposures in the last 24 hours`;
+  const label = t("sparkline.label", {
+    events: formatCount(series.reduce((a, s) => a + s.events, 0)),
+    exposures: formatCount(series.reduce((a, s) => a + s.exposures, 0)),
+  });
   return (
     <span className="inline-flex items-center gap-3">
       <svg width="96" height="20" viewBox="0 0 96 20" role="img" aria-label={label} className="shrink-0">
         <title>{label}</title>
-        {totals.map((t, i) => {
-          const h = t === 0 ? 1 : Math.max(2, (t / max) * 20);
+        {totals.map((n, i) => {
+          const h = n === 0 ? 1 : Math.max(2, (n / max) * 20);
           return (
             <rect
               key={i}
@@ -51,8 +56,8 @@ export function TrafficSparkline({ environmentId }: { environmentId: string }) {
               y={20 - h}
               width="3"
               height={h}
-              rx={t === 0 ? 0 : 1}
-              className={t === 0 ? "fill-border" : "fill-muted"}
+              rx={n === 0 ? 0 : 1}
+              className={n === 0 ? "fill-border" : "fill-muted"}
             />
           );
         })}

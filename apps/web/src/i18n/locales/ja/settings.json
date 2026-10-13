@@ -1,0 +1,56 @@
+{
+  "pageTitle": "設定 · furca",
+  "page": {
+    "title": "設定",
+    "description": "この furca インスタンスにアクセスできるメンバーと、データの保存先を確認できます。",
+    "loadFailed": "メンバーを読み込めませんでした。{{message}}"
+  },
+  "invite": {
+    "label": "メールアドレスで招待",
+    "submit": "招待リンクを作成",
+    "help": "メールは送信されません。共有用の1回限りのサインアップリンクが発行され、7日間有効です。",
+    "createdFor": "<strong>{{email}}</strong> 宛ての招待リンクです。本人に直接送ってください。使えるのは1回だけです。",
+    "copyLink": "招待リンクをコピー",
+    "createdExpires": "<relative/>に期限切れになります。",
+    "done": "完了"
+  },
+  "members": {
+    "title": "メンバー",
+    "descriptionOwner": "メンバー全員がフラグ、実験、指標を編集できます。メンバーを削除できるのは、オーナーであるあなただけです。",
+    "description": "メンバー全員がフラグ、実験、指標を編集できます。メンバーを削除できるのはオーナーだけです。",
+    "name": "名前",
+    "email": "メールアドレス",
+    "joined": "参加日",
+    "actions": "操作",
+    "owner": "オーナー",
+    "you": "あなた",
+    "remove": "削除",
+    "removed": "{{name}} をメンバーから削除しました",
+    "removeTitle": "{{name}} をメンバーから削除しますか？",
+    "removeConfirm": "メンバーを削除",
+    "removeBody": "<strong>{{email}}</strong> はすぐにアクセスできなくなります。過去の変更は監査ログに残ります。再び参加してもらうには、新しい招待を送ってください。"
+  },
+  "invitations": {
+    "title": "招待",
+    "description": "furca は招待制です。ここで作成した招待リンクから参加できます。",
+    "empty": "保留中の招待はありません。",
+    "pending": "保留中",
+    "expires": "有効期限",
+    "actions": "操作",
+    "expiresAt": "<relative/>に期限切れ",
+    "expiredAt": "<relative/>に期限切れ",
+    "revoke": "取り消し",
+    "revoked": "招待を取り消しました",
+    "revokedDescription": "このリンクは使用できなくなりました。",
+    "revokeFailed": "招待を取り消せませんでした"
+  },
+  "about": {
+    "title": "このインスタンスについて",
+    "dataLocation": "データはお使いの Cloudflare アカウント内に保存されます。フラグ、実験、露出、イベントはこのデプロイの D1 データベースと KV 名前空間に保存され、BigQuery のキーは <code>ENCRYPTION_KEY</code> で暗号化して保存されます。",
+    "sdkHost": "SDK ホスト",
+    "copySdkHost": "SDK ホストをコピー",
+    "docs": "ドキュメント",
+    "sdkReference": "SDK リファレンス",
+    "reportIssue": "問題を報告"
+  }
+}

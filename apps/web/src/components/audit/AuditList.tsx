@@ -4,22 +4,25 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChartLine, ChevronRight, Database, Flag, FlaskConical, History, KeyRound, UserRound } from "lucide-react";
 import { type ComponentType, Fragment, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { formatDateTime } from "~/components/results/format";
 import { ListSkeleton, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
+import { i18n } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
 import { diffLines, foldUnchanged, prettyLines } from "./diff";
 
+/** Plural labels live under `audit:entityTypes.<type>` */
 export const entityTypes: ReadonlyArray<{
   readonly type: AuditEntityType;
-  readonly label: string;
   readonly icon: ComponentType<{ className?: string }>;
 }> = [
-  { type: "feature", label: "Flag", icon: Flag },
-  { type: "experiment", label: "Experiment", icon: FlaskConical },
-  { type: "metric", label: "Metric", icon: ChartLine },
-  { type: "datasource", label: "Data source", icon: Database },
-  { type: "environment", label: "Environment", icon: KeyRound },
-  { type: "member", label: "Member", icon: UserRound },
+  { type: "feature", icon: Flag },
+  { type: "experiment", icon: FlaskConical },
+  { type: "metric", icon: ChartLine },
+  { type: "datasource", icon: Database },
+  { type: "environment", icon: KeyRound },
+  { type: "member", icon: UserRound },
 ];
 
 const snapshot = (json: string | null): Record<string, unknown> | null => {
@@ -39,22 +42,38 @@ const entityName = (entry: AuditLog): string => {
   return (entry.entityType === "feature" ? pick("key") : null) ?? pick("name") ?? pick("key") ?? pick("email") ?? entry.entityId;
 };
 
-const actionLabels: Record<string, string> = {
-  unarchived: "restored",
-  "phase.started": "started a new phase",
-  "sdkKey.rotated": "rotated SDK key",
-  "credentials.updated": "replaced credentials",
-};
+/** Every action the server writes; each has a label under `audit:actions` */
+const KNOWN_ACTIONS = [
+  "created",
+  "updated",
+  "enabled",
+  "disabled",
+  "archived",
+  "unarchived",
+  "deleted",
+  "started",
+  "stopped",
+  "invited",
+  "removed",
+  "rules.updated",
+  "phase.started",
+  "traffic.updated",
+  "sdkKey.rotated",
+  "credentials.updated",
+  "invitation.revoked",
+] as const;
+const isKnownAction = (a: string): a is (typeof KNOWN_ACTIONS)[number] => (KNOWN_ACTIONS as ReadonlyArray<string>).includes(a);
 
-/** Known verbs read naturally; others are derived: "rules.updated" -> "updated rules" */
+/** Known verbs are translated; unknown ones are derived in English: "rules.updated" -> "updated rules" */
 const actionLabel = (action: string): string =>
-  actionLabels[action] ??
-  action
-    .split(".")
-    .reverse()
-    .join(" ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .toLowerCase();
+  isKnownAction(action)
+    ? i18n.t(`audit:actions.${action}`)
+    : action
+        .split(".")
+        .reverse()
+        .join(" ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .toLowerCase();
 
 function EntityLink({ entry }: { entry: AuditLog }) {
   const meta = entityTypes.find((t) => t.type === entry.entityType);
@@ -110,6 +129,7 @@ function EntityLink({ entry }: { entry: AuditLog }) {
 
 /** Readable before/after: unchanged lines folded, additions and removals tinted subtly */
 export function JsonDiff({ before, after, caption }: { before: string | null; after: string | null; caption?: string }) {
+  const { t } = useTranslation("audit");
   const a = prettyLines(before);
   const b = prettyLines(after);
   const onlyOne = a.length === 0 || b.length === 0;
@@ -122,11 +142,11 @@ export function JsonDiff({ before, after, caption }: { before: string | null; af
       <p className="text-meta text-muted">
         {onlyOne
           ? a.length === 0
-            ? "Created with"
-            : "State before this change"
+            ? t("diff.createdWith")
+            : t("diff.stateBefore")
           : changes === 0
-            ? "No field changed"
-            : `${changes} changed ${changes === 1 ? "line" : "lines"}`}
+            ? t("diff.noFieldChanged")
+            : t("diff.changedLines", { count: changes })}
         {caption !== undefined && ` · ${caption}`}
       </p>
       <div className="max-h-[420px] overflow-auto rounded-md border border-border bg-background">
@@ -134,7 +154,7 @@ export function JsonDiff({ before, after, caption }: { before: string | null; af
           {rows.map((r, i) =>
             r.kind === "skip" ? (
               <div key={i} className="px-3 py-0.5 text-muted select-none">
-                ⋯ {r.count} unchanged {r.count === 1 ? "line" : "lines"}
+                ⋯ {t("diff.unchangedLines", { count: r.count })}
               </div>
             ) : (
               <div
@@ -147,7 +167,7 @@ export function JsonDiff({ before, after, caption }: { before: string | null; af
                 >
                   {r.kind === "add" ? "+" : r.kind === "del" ? "−" : ""}
                 </span>
-                <span className="sr-only">{r.kind === "add" ? "Added: " : r.kind === "del" ? "Removed: " : ""}</span>
+                <span className="sr-only">{r.kind === "add" ? t("diff.added") : r.kind === "del" ? t("diff.removed") : ""}</span>
                 <span className="whitespace-pre pr-4">{r.text}</span>
               </div>
             ),
@@ -168,7 +188,7 @@ export function AuditList({
   limit = 50,
   paginate = true,
   showEntity = true,
-  emptyDescription = "Changes to flags, experiments, metrics, data sources, environments and members appear here as they happen.",
+  emptyDescription,
 }: {
   entityType?: AuditEntityType | null;
   entityId?: string | null;
@@ -177,6 +197,7 @@ export function AuditList({
   showEntity?: boolean;
   emptyDescription?: string;
 }) {
+  const { t } = useTranslation(["audit", "common"]);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const query = useInfiniteQuery(
     orpc.audit.list.infiniteOptions({
@@ -190,7 +211,7 @@ export function AuditList({
   if (query.data === undefined)
     return (
       <div className="p-4">
-        <QueryError message={`Couldn't load the audit log. ${errorMessage(query.error)}`} onRetry={() => query.refetch()} />
+        <QueryError message={t("list.loadFailed", { message: errorMessage(query.error) })} onRetry={() => query.refetch()} />
       </div>
     );
 
@@ -199,8 +220,8 @@ export function AuditList({
     return (
       <div className="flex flex-col items-center gap-1 px-6 py-12 text-center">
         <History className="mb-2 size-5 text-muted" aria-hidden="true" />
-        <p className="text-body font-medium">No changes yet</p>
-        <p className="max-w-[52ch] text-label text-muted">{emptyDescription}</p>
+        <p className="text-body font-medium">{t("list.emptyTitle")}</p>
+        <p className="max-w-[52ch] text-label text-muted">{emptyDescription ?? t("list.emptyDescription")}</p>
       </div>
     );
 
@@ -219,12 +240,12 @@ export function AuditList({
           <thead>
             <tr>
               <th className={`${tbl.th} w-8 pr-0`}>
-                <span className="sr-only">Expand</span>
+                <span className="sr-only">{t("list.expand")}</span>
               </th>
-              {showEntity && <th className={tbl.th}>Entity</th>}
-              <th className={tbl.th}>Change</th>
-              <th className={`${tbl.th} hidden md:table-cell`}>By</th>
-              <th className={`${tbl.th} hidden text-right sm:table-cell`}>When</th>
+              {showEntity && <th className={tbl.th}>{t("list.entity")}</th>}
+              <th className={tbl.th}>{t("list.change")}</th>
+              <th className={`${tbl.th} hidden md:table-cell`}>{t("list.by")}</th>
+              <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t("list.when")}</th>
             </tr>
           </thead>
           <tbody>
@@ -240,7 +261,7 @@ export function AuditList({
                           type="button"
                           onClick={() => toggle(entry.id)}
                           aria-expanded={isOpen}
-                          aria-label={isOpen ? "Hide change details" : "Show change details"}
+                          aria-label={isOpen ? t("list.hideDetails") : t("list.showDetails")}
                           className="flex size-6 items-center justify-center rounded-md text-muted outline-none transition-colors after:absolute after:inset-0 after:content-[''] hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
                         >
                           <ChevronRight
@@ -271,7 +292,10 @@ export function AuditList({
                         <JsonDiff
                           before={entry.before}
                           after={entry.after}
-                          caption={`by ${entry.actorEmail} · ${new Date(entry.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`}
+                          caption={t("list.caption", {
+                            email: entry.actorEmail,
+                            date: formatDateTime(new Date(entry.createdAt)),
+                          })}
                         />
                       </td>
                     </tr>
@@ -285,7 +309,7 @@ export function AuditList({
       {paginate && query.hasNextPage && (
         <div className="flex justify-center border-t border-border p-3">
           <Button size="sm" variant="ghost" onPress={() => query.fetchNextPage()} isPending={query.isFetchingNextPage}>
-            Load older
+            {t("common:actions.loadOlder")}
           </Button>
         </div>
       )}
