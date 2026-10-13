@@ -36,7 +36,7 @@ jobs:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - name: Check Cloudflare credentials
-        run: bun alchemy provider check-env --provider Cloudflare
+        run: bun alchemy provider check-env --provider Cloudflare -c packages/infra/alchemy.run.ts
       - name: Deploy
         run: bun alchemy deploy packages/infra/alchemy.run.ts --stage prod --yes
         env:
