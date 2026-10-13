@@ -1,0 +1,10 @@
+{
+  "name": "@kuji/persistence",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { "./*": "./src/*.ts" },
+  "scripts": { "typecheck": "tsc --noEmit -p ." },
+  "dependencies": { "@kuji/core": "workspace:*", "@kuji/database": "workspace:*", "@kuji/integrations": "workspace:*", "@kuji/sdk": "workspace:*", "@kuji/stats": "workspace:*", "drizzle-orm": "catalog:", "effect": "catalog:" },
+  "devDependencies": { "miniflare": "catalog:" }
+}

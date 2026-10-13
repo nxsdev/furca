@@ -1,0 +1,12 @@
+node_modules
+dist
+.output
+.vinxi
+.tanstack
+.alchemy
+.wrangler
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store

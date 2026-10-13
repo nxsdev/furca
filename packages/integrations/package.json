@@ -1,0 +1,10 @@
+{
+  "name": "@kuji/integrations",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { "./*": "./src/*.ts" },
+  "scripts": { "typecheck": "tsc --noEmit -p ." },
+  "dependencies": { "@kuji/core": "workspace:*", "effect": "catalog:", "jose": "catalog:" },
+  "devDependencies": {  }
+}

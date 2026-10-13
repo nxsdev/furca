@@ -1,0 +1,28 @@
+{
+  "name": "@kuji/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "catalog:",
+    "@kuji/core": "workspace:*",
+    "@kuji/database": "workspace:*",
+    "@kuji/persistence": "workspace:*",
+    "@orpc/contract": "catalog:",
+    "@orpc/experimental-effect": "catalog:",
+    "@orpc/server": "catalog:",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "isbot": "catalog:"
+  },
+  "devDependencies": {
+    "miniflare": "catalog:"
+  }
+}

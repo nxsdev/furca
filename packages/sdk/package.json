@@ -1,0 +1,10 @@
+{
+  "name": "@kuji/sdk",
+  "version": "0.1.0",
+  "description": "kuji feature flag & A/B testing SDK with local evaluation",
+  "license": "MIT",
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
+  "sideEffects": false,
+  "scripts": { "typecheck": "tsc --noEmit -p ." }
+}
