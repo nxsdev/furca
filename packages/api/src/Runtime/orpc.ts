@@ -47,12 +47,25 @@ export const toORPCError = (error: unknown): ORPCError<string, unknown> => {
   return new ORPCError("INTERNAL_SERVER_ERROR", { message: "Something went wrong. Try again." });
 };
 
+/**
+ * Copies Schema.Class instances into plain objects. oRPC's serializer only walks plain objects and
+ * arrays, so a Date inside a class instance would reach the browser as an untyped ISO string
+ */
+export const toPlain = (value: unknown): unknown => {
+  if (value === null || typeof value !== "object" || value instanceof Date) return value;
+  if (Array.isArray(value)) return value.map(toPlain);
+  const plain: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(value)) plain[key] = toPlain(v);
+  return plain;
+};
+
 /** Procedures that need no session (setup status, invitation lookup) */
 export const pub = implement(contract)
   .$context<RequestContext>()
   .use(async ({ next }) => {
     try {
-      return await next();
+      const result = await next();
+      return { ...result, output: toPlain(result.output) as typeof result.output };
     } catch (error) {
       throw toORPCError(error);
     }

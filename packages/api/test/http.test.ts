@@ -51,6 +51,19 @@ const productionSdkKey = async () =>
 
 const owner = await signUp("owner@example.com");
 
+describe("rpc wire format", () => {
+  it("serializes Dates inside domain entities so clients receive Date objects", async () => {
+    const res = await request("/api/rpc/features/create", {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: owner.cookie },
+      body: JSON.stringify({ json: { key: "wire-dates", description: "", valueType: "boolean", defaultValue: "false", tags: [] } }),
+    });
+    const body = (await res.json()) as { meta?: ReadonlyArray<ReadonlyArray<string | number>> };
+    const datePaths = (body.meta ?? []).filter((m) => m[0] === "date").map((m) => m.slice(1).join("."));
+    expect(datePaths).toEqual(expect.arrayContaining(["createdAt", "updatedAt"]));
+  });
+});
+
 describe("members", () => {
   it("only the owner removes members, and never themselves", async () => {
     const invite = await rpc(owner.cookie, "members/invite", { email: "  Member@Example.com " });
