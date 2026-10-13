@@ -10,6 +10,9 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import "~/i18n";
+import { intlLocale } from "~/i18n";
 import appCss from "../styles/app.css?url";
 
 declare module "react-aria-components" {
@@ -44,12 +47,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function NotFound() {
+  const { t } = useTranslation("shell");
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-4 text-center">
       <p className="font-mono text-label text-muted">404</p>
-      <h1 className="text-title font-semibold tracking-tight">This page doesn't exist</h1>
+      <h1 className="text-title font-semibold tracking-tight">{t("notFound.title")}</h1>
       <a href="/overview" className="text-body text-link underline-offset-4 hover:underline">
-        Back to overview
+        {t("notFound.back")}
       </a>
     </div>
   );
@@ -74,13 +78,15 @@ function RootDocument({ children }: { children: ReactNode }) {
 function RootComponent() {
   const router = useRouter();
   const { queryClient } = Route.useRouteContext();
+  // Re-renders the tree (and React Aria's number/date formatting) when the language changes
+  useTranslation();
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider
         navigate={(to, options) => router.navigate({ ...options, to })}
         useHref={(to) => router.buildLocation({ to }).href}
       >
-        <I18nProvider locale="en-US">
+        <I18nProvider locale={intlLocale()}>
           <Outlet />
           <Toast.Provider placement="bottom end" />
         </I18nProvider>

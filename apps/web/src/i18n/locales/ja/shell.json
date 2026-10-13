@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "main": "メイン",
+    "overview": "概要",
+    "flags": "フラグ",
+    "experiments": "実験",
+    "metrics": "指標",
+    "dataSources": "データソース",
+    "environments": "SDK と環境",
+    "audit": "監査ログ",
+    "settings": "設定",
+    "home": "furca ホーム",
+    "openNavigation": "ナビゲーションを開く",
+    "navigation": "ナビゲーション"
+  },
+  "environment": {
+    "label": "環境"
+  },
+  "search": {
+    "button": "検索",
+    "label": "検索",
+    "placeholder": "フラグ、実験、ページを検索…",
+    "palette": "コマンドパレット",
+    "results": "検索結果",
+    "noMatches": "一致する項目はありません",
+    "goTo": "移動",
+    "flag": "フラグ",
+    "experiment": "実験",
+    "metric": "指標",
+    "createFlag": "フラグを作成",
+    "createExperiment": "実験を作成",
+    "createMetric": "指標を作成"
+  },
+  "account": {
+    "menu": "アカウント",
+    "owner": "オーナー",
+    "member": "メンバー",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム設定",
+    "lightTheme": "ライトテーマ",
+    "darkTheme": "ダークテーマ",
+    "systemTheme": "システム設定のテーマ",
+    "language": "言語",
+    "signOut": "サインアウト"
+  },
+  "session": {
+    "loadFailed": "セッションを読み込めませんでした。"
+  },
+  "notFound": {
+    "title": "このページは存在しません",
+    "back": "概要に戻る"
+  },
+  "auth": {
+    "fields": {
+      "name": "名前",
+      "email": "メールアドレス",
+      "password": "パスワード"
+    },
+    "setup": {
+      "pageTitle": "セットアップ · furca",
+      "title": "furca をセットアップ",
+      "description": "オーナーのアカウントを作成します。ほかのメンバーは招待で参加します。",
+      "submit": "オーナーアカウントを作成"
+    },
+    "signIn": {
+      "pageTitle": "サインイン · furca",
+      "title": "furca にサインイン",
+      "description": "信頼できるフィーチャーフラグと実験を。",
+      "submit": "サインイン",
+      "footer": "アカウントがない場合は、チームのメンバーに招待リンクを依頼してください。"
+    },
+    "invite": {
+      "pageTitle": "参加 · furca",
+      "title": "furca に参加",
+      "description": "{{email}} として招待されています。",
+      "submit": "アカウントを作成",
+      "unavailable": "この招待は使用できません",
+      "unavailableBody": "{{reason}}。新しいリンクを依頼してください。",
+      "goToSignIn": "サインイン画面へ"
+    },
+    "errors": {
+      "createFailed": "アカウントを作成できませんでした",
+      "invalidCredentials": "メールアドレスまたはパスワードが正しくありません",
+      "inviteOnly": "サインアップは招待制です。メンバーに招待リンクを依頼してください。",
+      "passwordTooShort": "パスワードは10文字以上にしてください",
+      "userExists": "このメールアドレスのアカウントはすでに存在します"
+    }
+  }
+}

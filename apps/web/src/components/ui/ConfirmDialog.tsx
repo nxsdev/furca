@@ -1,5 +1,6 @@
 import { AlertDialog, Button } from "@heroui/react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * Destructive confirmation. Stays open while the action runs and shows the server's message
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   isPending?: boolean;
   error?: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <AlertDialog.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
       <AlertDialog.Container size="sm">
@@ -42,7 +44,7 @@ export function ConfirmDialog({
           </AlertDialog.Body>
           <AlertDialog.Footer>
             <Button slot="close" variant="tertiary" size="sm" isDisabled={isPending}>
-              Cancel
+              {t("actions.cancel")}
             </Button>
             <Button variant="danger" size="sm" isPending={isPending} onPress={onConfirm}>
               {confirmLabel}

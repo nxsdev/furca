@@ -1,6 +1,8 @@
 import { Button, Skeleton, Tooltip } from "@heroui/react";
 import { Check, Copy } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { intlLocale } from "~/i18n";
 
 /** Page title row: title + one-line description on the left, primary actions on the right */
 export function PageHeader({
@@ -66,15 +68,17 @@ export function Code({ children, copy = false, className = "" }: { children: str
   );
 }
 
-export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+export function CopyButton({ value, label }: { value: string; label?: string }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const name = label ?? t("actions.copy");
   return (
     <Tooltip delay={300}>
       <Button
         isIconOnly
         size="sm"
         variant="ghost"
-        aria-label={label}
+        aria-label={name}
         className="size-7 min-w-7 text-muted"
         onPress={async () => {
           await navigator.clipboard.writeText(value);
@@ -84,7 +88,7 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
       >
         {copied ? <Check className="size-3.5 text-win" /> : <Copy className="size-3.5" />}
       </Button>
-      <Tooltip.Content>{copied ? "Copied" : label}</Tooltip.Content>
+      <Tooltip.Content>{copied ? t("actions.copied") : name}</Tooltip.Content>
     </Tooltip>
   );
 }
@@ -108,8 +112,9 @@ export function PanelHeader({ title, description, actions }: { title: ReactNode;
 
 /** Skeleton rows for tables and lists while loading */
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
+  const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label="Loading">
+    <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t("states.loading")}>
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-5 rounded-md" style={{ width: `${85 - ((i * 13) % 40)}%` }} />
       ))}
@@ -119,19 +124,19 @@ export function ListSkeleton({ rows = 5 }: { rows?: number }) {
 
 /** Inline error with retry, for failed queries */
 export function QueryError({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useTranslation();
   return (
     <div role="alert" className="flex items-center justify-between gap-4 rounded-[10px] border border-danger/30 bg-danger/5 px-4 py-3 text-body">
       <span>{message}</span>
       {onRetry !== undefined && (
         <Button size="sm" variant="outline" onPress={onRetry}>
-          Retry
+          {t("actions.retry")}
         </Button>
       )}
     </div>
   );
 }
 
-const relativeFormat = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
   ["year", 31536000],
   ["month", 2592000],
@@ -143,12 +148,14 @@ const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
 
 /** "3 hours ago" with the exact timestamp in a tooltip */
 export function RelativeTime({ date }: { date: Date | string }) {
+  const { t } = useTranslation();
   const d = typeof date === "string" ? new Date(date) : date;
+  const relativeFormat = new Intl.RelativeTimeFormat(intlLocale(), { numeric: "auto" });
   const seconds = (d.getTime() - Date.now()) / 1000;
   const [unit, size] = units.find(([, s]) => Math.abs(seconds) >= s) ?? ["second", 1];
-  const text = Math.abs(seconds) < 45 ? "just now" : relativeFormat.format(Math.round(seconds / size), unit);
+  const text = Math.abs(seconds) < 45 ? t("states.justNow") : relativeFormat.format(Math.round(seconds / size), unit);
   return (
-    <time dateTime={d.toISOString()} title={d.toLocaleString()} className="whitespace-nowrap">
+    <time dateTime={d.toISOString()} title={d.toLocaleString(intlLocale())} className="whitespace-nowrap">
       {text}
     </time>
   );

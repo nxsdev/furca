@@ -1,0 +1,33 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "retry": "Retry",
+    "copy": "Copy",
+    "copied": "Copied",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "discard": "Discard",
+    "back": "Back",
+    "refresh": "Refresh",
+    "archive": "Archive",
+    "restore": "Restore",
+    "learnMore": "Learn more",
+    "showMore": "Show more",
+    "loadOlder": "Load older"
+  },
+  "states": {
+    "loading": "Loading",
+    "saving": "Saving…",
+    "justNow": "just now",
+    "none": "None",
+    "unknown": "Unknown"
+  },
+  "errors": {
+    "network": "Could not reach the server. Check your connection and try again.",
+    "generic": "Something went wrong. Try again.",
+    "requestFailed": "Request failed"
+  }
+}

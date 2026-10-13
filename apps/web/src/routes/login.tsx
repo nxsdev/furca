@@ -2,16 +2,19 @@ import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AuthCard } from "~/components/shell/AuthCard";
-import { authClient } from "~/lib/auth-client";
+import { useTranslation } from "react-i18next";
+import { i18n } from "~/i18n";
+import { authClient, authErrorMessage } from "~/lib/auth-client";
 import { orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Sign in · furca" }] }),
+  head: () => ({ meta: [{ title: i18n.t("shell:auth.signIn.pageTitle") }] }),
   component: LoginPage,
 });
 
 function LoginPage() {
+  const { t } = useTranslation("shell");
   const navigate = useNavigate();
   const status = useQuery(orpc.public.setupStatus.queryOptions());
   const done = async () => {
@@ -30,17 +33,17 @@ function LoginPage() {
   if (status.data?.needsSetup === true) {
     return (
       <AuthCard
-        title="Set up furca"
-        description="Create the owner account. Everyone else joins by invitation."
-        submitLabel="Create owner account"
+        title={t("auth.setup.title")}
+        description={t("auth.setup.description")}
+        submitLabel={t("auth.setup.submit")}
         fields={[
-          { name: "name", label: "Name", autoComplete: "name" },
-          { name: "email", label: "Email", type: "email", autoComplete: "email" },
-          { name: "password", label: "Password", type: "password", autoComplete: "new-password", minLength: 10 },
+          { name: "name", label: t("auth.fields.name"), autoComplete: "name" },
+          { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email" },
+          { name: "password", label: t("auth.fields.password"), type: "password", autoComplete: "new-password", minLength: 10 },
         ]}
         onSubmit={async ({ name, email, password }) => {
           const { error } = await authClient.signUp.email({ name, email, password });
-          return error ? (error.message ?? "Could not create the account") : done();
+          return error ? authErrorMessage(error, "createFailed") : done();
         }}
       />
     );
@@ -48,18 +51,18 @@ function LoginPage() {
 
   return (
     <AuthCard
-      title="Sign in to furca"
-      description="Feature flags and experiments you can trust."
-      submitLabel="Sign in"
+      title={t("auth.signIn.title")}
+      description={t("auth.signIn.description")}
+      submitLabel={t("auth.signIn.submit")}
       fields={[
-        { name: "email", label: "Email", type: "email", autoComplete: "email" },
-        { name: "password", label: "Password", type: "password", autoComplete: "current-password" },
+        { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email" },
+        { name: "password", label: t("auth.fields.password"), type: "password", autoComplete: "current-password" },
       ]}
       onSubmit={async ({ email, password }) => {
         const { error } = await authClient.signIn.email({ email, password });
-        return error ? (error.message ?? "Email or password is incorrect") : done();
+        return error ? authErrorMessage(error, "invalidCredentials") : done();
       }}
-      footer="No account? Ask a teammate for an invitation link."
+      footer={t("auth.signIn.footer")}
     />
   );
 }

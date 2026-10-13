@@ -1,0 +1,90 @@
+{
+  "nav": {
+    "main": "Main",
+    "overview": "Overview",
+    "flags": "Flags",
+    "experiments": "Experiments",
+    "metrics": "Metrics",
+    "dataSources": "Data sources",
+    "environments": "SDK & environments",
+    "audit": "Audit log",
+    "settings": "Settings",
+    "home": "furca home",
+    "openNavigation": "Open navigation",
+    "navigation": "Navigation"
+  },
+  "environment": {
+    "label": "Environment"
+  },
+  "search": {
+    "button": "Search",
+    "label": "Search",
+    "placeholder": "Search flags, experiments, pages…",
+    "palette": "Command palette",
+    "results": "Results",
+    "noMatches": "No matches",
+    "goTo": "Go to",
+    "flag": "Flag",
+    "experiment": "Experiment",
+    "metric": "Metric",
+    "createFlag": "Create flag",
+    "createExperiment": "Create experiment",
+    "createMetric": "Create metric"
+  },
+  "account": {
+    "menu": "Account",
+    "owner": "Owner",
+    "member": "Member",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "lightTheme": "Light theme",
+    "darkTheme": "Dark theme",
+    "systemTheme": "System theme",
+    "language": "Language",
+    "signOut": "Sign out"
+  },
+  "session": {
+    "loadFailed": "furca could not load your session."
+  },
+  "notFound": {
+    "title": "This page doesn't exist",
+    "back": "Back to overview"
+  },
+  "auth": {
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "password": "Password"
+    },
+    "setup": {
+      "pageTitle": "Set up · furca",
+      "title": "Set up furca",
+      "description": "Create the owner account. Everyone else joins by invitation.",
+      "submit": "Create owner account"
+    },
+    "signIn": {
+      "pageTitle": "Sign in · furca",
+      "title": "Sign in to furca",
+      "description": "Feature flags and experiments you can trust.",
+      "submit": "Sign in",
+      "footer": "No account? Ask a teammate for an invitation link."
+    },
+    "invite": {
+      "pageTitle": "Join · furca",
+      "title": "Join furca",
+      "description": "You were invited as {{email}}.",
+      "submit": "Create account",
+      "unavailable": "Invitation unavailable",
+      "unavailableBody": "{{reason}}. Ask for a new link.",
+      "goToSignIn": "Go to sign in"
+    },
+    "errors": {
+      "createFailed": "Could not create the account",
+      "invalidCredentials": "Email or password is incorrect",
+      "inviteOnly": "Sign-up is invite-only. Ask a member for an invitation link.",
+      "passwordTooShort": "Use at least 10 characters for the password",
+      "userExists": "An account with this email already exists"
+    }
+  }
+}

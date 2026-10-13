@@ -1,0 +1,33 @@
+{
+  "actions": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "retry": "再試行",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "edit": "編集",
+    "create": "作成",
+    "close": "閉じる",
+    "discard": "破棄",
+    "back": "戻る",
+    "refresh": "更新",
+    "archive": "アーカイブ",
+    "restore": "元に戻す",
+    "learnMore": "詳しく見る",
+    "showMore": "もっと見る",
+    "loadOlder": "さらに読み込む"
+  },
+  "states": {
+    "loading": "読み込み中",
+    "saving": "保存中…",
+    "justNow": "たった今",
+    "none": "なし",
+    "unknown": "不明"
+  },
+  "errors": {
+    "network": "サーバーに接続できませんでした。接続を確認して、もう一度お試しください。",
+    "generic": "問題が発生しました。もう一度お試しください。",
+    "requestFailed": "リクエストに失敗しました"
+  }
+}

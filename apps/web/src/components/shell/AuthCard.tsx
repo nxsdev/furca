@@ -1,5 +1,7 @@
 import { Button, FieldError, Form, Input, Label, TextField } from "@heroui/react";
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { currentLocale, setLocale } from "~/i18n";
 import { LogoMark } from "./Logo";
 
 export interface AuthField {
@@ -74,7 +76,32 @@ export function AuthCard({
           </Button>
         </Form>
         {footer !== undefined && <div className="mt-6 text-label text-muted">{footer}</div>}
+        <LanguageToggle />
       </div>
+    </div>
+  );
+}
+
+/** Language choice before sign-in (inside the app it lives in the account menu) */
+function LanguageToggle() {
+  useTranslation();
+  const locale = currentLocale();
+  const option = (value: "en" | "ja", label: string) => (
+    <button
+      type="button"
+      lang={value}
+      aria-pressed={locale === value}
+      onClick={() => setLocale(value)}
+      className={`rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-focus ${locale === value ? "text-foreground" : "hover:text-foreground"}`}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="mt-10 flex gap-3 text-meta text-muted">
+      {option("en", "English")}
+      <span aria-hidden="true">·</span>
+      {option("ja", "日本語")}
     </div>
   );
 }

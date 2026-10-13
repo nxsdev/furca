@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Navigate, Outlet, useNavigate } from "@tanstack/react-router";
 import { Menu as MenuIcon } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CommandPalette } from "~/components/shell/CommandPalette";
 import { Logo } from "~/components/shell/Logo";
 import { Sidebar } from "~/components/shell/Sidebar";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
+  const { t } = useTranslation(["shell", "common"]);
   const me = useQuery({ ...orpc.session.me.queryOptions(), retry: false, staleTime: 60_000 });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -34,9 +36,9 @@ function AppLayout() {
     if (isUnauthorized(me.error)) return <Navigate to="/login" />;
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-3 text-body">
-        <p>furca could not load your session.</p>
+        <p>{t("session.loadFailed")}</p>
         <Button size="sm" variant="outline" onPress={() => me.refetch()}>
-          Retry
+          {t("common:actions.retry")}
         </Button>
       </div>
     );
@@ -57,7 +59,7 @@ function AppLayout() {
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-(--z-sticky) flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
-            <Button isIconOnly variant="ghost" size="sm" aria-label="Open navigation" onPress={() => setDrawerOpen(true)}>
+            <Button isIconOnly variant="ghost" size="sm" aria-label={t("nav.openNavigation")} onPress={() => setDrawerOpen(true)}>
               <MenuIcon className="size-4" />
             </Button>
             <Logo />
@@ -69,7 +71,7 @@ function AppLayout() {
       </div>
       <Drawer.Backdrop isOpen={drawerOpen} onOpenChange={setDrawerOpen}>
         <Drawer.Content placement="left" className="w-72 p-0">
-          <Drawer.Dialog aria-label="Navigation" className="h-full p-0">
+          <Drawer.Dialog aria-label={t("nav.navigation")} className="h-full p-0">
             <Sidebar {...sidebarProps} onNavigate={() => setDrawerOpen(false)} />
           </Drawer.Dialog>
         </Drawer.Content>
