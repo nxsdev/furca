@@ -7,6 +7,10 @@ Cloudflare Worker with D1 and KV. No Docker, no MongoDB, no Python stats service
 locally, results use sequential testing by default, and broken data (sample ratio mismatch, multiple
 exposures) blocks a decision instead of decorating it.
 
+![Experiment results: decision first, health-gated, guardrails surfaced](docs/images/results-dark.png)
+
+![Flag targeting with a live "test a user" simulator](docs/images/flag-light.png)
+
 ## Why another one
 
 | | kuji | GrowthBook (self-hosted) |
@@ -86,6 +90,7 @@ namespace and applies D1 migrations on every deploy.
 bun install
 cp .env.example .env    # any random values work locally
 bun run dev             # http://localhost:5173 with local D1 / KV (no Cloudflare account needed)
+bun scripts/seed-demo.ts http://localhost:5173   # demo flags, metrics, a running experiment and traffic
 bun run check           # typecheck + tests (tests run against a real local D1 via Miniflare)
 ```
 

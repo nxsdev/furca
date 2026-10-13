@@ -29,8 +29,10 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 - Tests: `bun test packages/<name>` (from repo root)
 - New migration after editing `packages/database/src/schema/*`: `cd packages/database && bunx drizzle-kit generate --name <what>`. Never edit an applied migration
 - Route tree after adding routes: `cd apps/web && npx -y @tanstack/router-cli@1.167.5 generate`
-- Dev server: `bun run dev` (Alchemy local D1/KV, http://localhost:5173). A parallel agent must use its own stage and port:
-  `ALCHEMY_LOCAL_STATE=1 ALCHEMY_STAGE=dev_<you> KUJI_DEV_PORT=<port> node_modules/.bin/alchemy dev packages/infra/alchemy.run.ts --no-input`
+- Dev server: `bun run dev` (Alchemy local D1/KV, http://localhost:5173). Demo data: `bun scripts/seed-demo.ts http://localhost:5173`.
+  A parallel agent must use its own stage, port AND hostname (cookies ignore ports, so sessions collide on plain localhost):
+  `ALCHEMY_LOCAL_STATE=1 ALCHEMY_STAGE=dev_<you> KUJI_DEV_PORT=<port> node_modules/.bin/alchemy dev packages/infra/alchemy.run.ts --no-input`,
+  then open `http://<you>.localhost:<port>`. Stop only your own process (never `pkill -f` a shared command line)
 
 ## Effect 4 (stable 4.0.3)
 
@@ -48,6 +50,7 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 - Handlers: `authed.<domain>.<proc>.effect(function* ({ context }, input) { ... })` in `packages/api/src/Handlers/<domain>.ts`.
   `context.user` is the signed-in user. Effect services come from `effect/context` (built per request from
   `makeAppLayer` in `Runtime/Services.ts`), so `yield* FeatureService` just works
+- Outputs are converted to plain objects in `Runtime/orpc.ts` so Dates inside Schema.Class instances survive the wire
 - Throw/fail with core domain errors (NotFoundError → NOT_FOUND, ValidationError → BAD_REQUEST, WarehouseError →
   BAD_GATEWAY); they are converted centrally in `Runtime/orpc.ts`. Use `new ORPCError("CONFLICT" | "FORBIDDEN", { message })`
   for API-only cases. Messages must be safe to show users
@@ -61,6 +64,8 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 - Map rows with `packages/persistence/src/mappers.ts` (do not re-implement JSON column decoding)
 - Aggregates: Feature (+ feature_environments rows), Experiment (phases/variations as JSON). Repositories return entities,
   not workflow results; orchestration lives in `*ServiceLive.ts`
+- Statistics: Holm correction runs per family (primary metric across treatments; secondary metrics x treatments);
+  guardrails are uncorrected. A significant guardrail regression must be surfaced wherever a "winning" verdict is shown
 - Every mutation of flags / experiments / metrics / data sources / environments / members writes an audit log row
 - Any change that affects what SDKs receive (features, experiments, environments) republishes the payload to KV
 
