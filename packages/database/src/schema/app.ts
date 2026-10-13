@@ -123,8 +123,9 @@ export const dataSources = sqliteTable("data_sources", {
 });
 
 /**
- * Built-in exposure log: one row per (unit, experiment, variation) keeping the first time seen.
- * A unit with rows for 2+ variations is a multiple exposure and is excluded from analysis
+ * Built-in exposure log: one row per (unit, experiment, phase, variation) keeping the first time seen
+ * in that phase. A unit with rows for 2+ variations in one phase is a multiple exposure and is
+ * excluded from that phase's analysis
  */
 export const exposures = sqliteTable(
   "exposures",
@@ -135,10 +136,12 @@ export const exposures = sqliteTable(
     userId: text("user_id").notNull(),
     /** epoch ms */
     firstSeenAt: integer("first_seen_at").notNull(),
+    /** Experiment phase index the SDK evaluated (a new phase re-randomizes) */
+    phase: integer("phase").notNull().default(0),
   },
   (t) => [
-    primaryKey({ columns: [t.environmentId, t.experimentKey, t.userId, t.variationKey] }),
-    index("exposures_experiment_time_idx").on(t.environmentId, t.experimentKey, t.firstSeenAt),
+    primaryKey({ columns: [t.environmentId, t.experimentKey, t.phase, t.userId, t.variationKey] }),
+    index("exposures_time_idx").on(t.environmentId, t.firstSeenAt),
   ],
 );
 

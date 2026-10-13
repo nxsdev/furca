@@ -1,12 +1,11 @@
-import { ORPCError } from "@orpc/server";
+import { ExperimentAnalysisService } from "@kuji/core/analysis/Analysis";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers (`authed.results.<proc>.effect(function* (opts, input) { ... })`)
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const resultsRouter = {
-  latest: authed.results.latest.handler(notImplemented),
-  refresh: authed.results.refresh.handler(notImplemented),
+  latest: authed.results.latest.effect(function* (_opts, { experimentId }) {
+    return yield* (yield* ExperimentAnalysisService).latest(experimentId);
+  }),
+  refresh: authed.results.refresh.effect(function* (_opts, { experimentId }) {
+    return yield* (yield* ExperimentAnalysisService).refresh(experimentId);
+  }),
 };

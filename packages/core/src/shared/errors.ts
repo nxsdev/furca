@@ -21,3 +21,8 @@ export class PersistenceError extends Schema.TaggedError<PersistenceError>()("Pe
 export class WarehouseError extends Schema.TaggedError<WarehouseError>()("WarehouseError", {
   message: Schema.String,
 }) {}
+
+/** The change conflicts with existing data (entity still in use, last of its kind). message is safe to show */
+export class ConflictError extends Schema.TaggedError<ConflictError>()("ConflictError", {
+  message: Schema.String,
+}) {}

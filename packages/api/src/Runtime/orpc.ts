@@ -26,6 +26,7 @@ const errorStatus = {
   NotFoundError: "NOT_FOUND",
   ValidationError: "BAD_REQUEST",
   WarehouseError: "BAD_GATEWAY",
+  ConflictError: "CONFLICT",
 } as const;
 
 /**

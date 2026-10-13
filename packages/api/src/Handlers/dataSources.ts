@@ -1,16 +1,26 @@
-import { ORPCError } from "@orpc/server";
+import { DataSourceService } from "@kuji/core/datasources/DataSourceService";
+import { WarehouseTester } from "@kuji/core/datasources/WarehouseTester";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers (`authed.dataSources.<proc>.effect(function* (opts, input) { ... })`)
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const dataSourcesRouter = {
-  list: authed.dataSources.list.handler(notImplemented),
-  get: authed.dataSources.get.handler(notImplemented),
-  createBigQuery: authed.dataSources.createBigQuery.handler(notImplemented),
-  update: authed.dataSources.update.handler(notImplemented),
-  delete: authed.dataSources.delete.handler(notImplemented),
-  test: authed.dataSources.test.handler(notImplemented),
+  list: authed.dataSources.list.effect(function* () {
+    return yield* (yield* DataSourceService).list;
+  }),
+  get: authed.dataSources.get.effect(function* (_opts, { id }) {
+    return yield* (yield* DataSourceService).get(id);
+  }),
+  createBigQuery: authed.dataSources.createBigQuery.effect(function* ({ context }, input) {
+    return yield* (yield* DataSourceService).createBigQuery(input, context.user);
+  }),
+  update: authed.dataSources.update.effect(function* ({ context }, input) {
+    return yield* (yield* DataSourceService).update(input, context.user);
+  }),
+  delete: authed.dataSources.delete.effect(function* ({ context }, { id }) {
+    yield* (yield* DataSourceService)
+      .delete(id, context.user);
+  }),
+  test: authed.dataSources.test.effect(function* (_opts, { id }) {
+    const source = yield* (yield* DataSourceService).get(id);
+    return yield* (yield* WarehouseTester).test(source);
+  }),
 };

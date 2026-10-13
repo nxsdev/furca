@@ -1,16 +1,24 @@
-import { ORPCError } from "@orpc/server";
+import { EnvironmentService } from "@kuji/core/environments/EnvironmentService";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers (`authed.environments.<proc>.effect(function* (opts, input) { ... })`)
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const environmentsRouter = {
-  list: authed.environments.list.handler(notImplemented),
-  create: authed.environments.create.handler(notImplemented),
-  update: authed.environments.update.handler(notImplemented),
-  rotateSdkKey: authed.environments.rotateSdkKey.handler(notImplemented),
-  delete: authed.environments.delete.handler(notImplemented),
-  payload: authed.environments.payload.handler(notImplemented),
+  list: authed.environments.list.effect(function* () {
+    return yield* (yield* EnvironmentService).list;
+  }),
+  create: authed.environments.create.effect(function* ({ context }, input) {
+    return yield* (yield* EnvironmentService).create(input, context.user);
+  }),
+  update: authed.environments.update.effect(function* ({ context }, input) {
+    return yield* (yield* EnvironmentService).update(input, context.user);
+  }),
+  rotateSdkKey: authed.environments.rotateSdkKey.effect(function* ({ context }, { id }) {
+    return yield* (yield* EnvironmentService).rotateSdkKey(id, context.user);
+  }),
+  delete: authed.environments.delete.effect(function* ({ context }, { id }) {
+    yield* (yield* EnvironmentService)
+      .delete(id, context.user);
+  }),
+  payload: authed.environments.payload.effect(function* (_opts, { id }) {
+    return yield* (yield* EnvironmentService).payload(id);
+  }),
 };

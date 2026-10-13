@@ -23,3 +23,9 @@ export class AuditLog extends Schema.Class<AuditLog>("AuditLog")({
   after: Schema.NullOr(Schema.String),
   createdAt: Schema.Date,
 }) {}
+
+/** Who made a change (the signed-in user) */
+export interface Actor {
+  readonly id: string;
+  readonly email: string;
+}

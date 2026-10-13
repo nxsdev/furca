@@ -24,7 +24,8 @@ const decode = <S extends Schema.Top & { readonly DecodingServices: never }>(s: 
 const strings = decode(Schema.Array(Schema.String));
 const numbers = decode(Schema.Array(Schema.Finite));
 const conditions = decode(Schema.Array(Condition));
-const rules = decode(Schema.Array(FeatureRule));
+/** feature_environments.rules JSON -> FeatureRule[] */
+export const toRules = decode(Schema.Array(FeatureRule));
 
 export const toEnvironment = (row: Row<typeof schema.environments>): Environment =>
   Environment.make({ id: row.id, key: row.key, name: row.name, sdkKey: row.sdkKey, sortOrder: row.sortOrder, createdAt: row.createdAt });
@@ -43,7 +44,7 @@ export const toFeature = (
     archived: row.archivedAt !== null,
     environments: environmentRows
       .filter((e) => e.featureId === row.id)
-      .map((e) => FeatureEnvironmentConfig.make({ environmentId: e.environmentId, enabled: e.enabled, rules: rules(e.rules) })),
+      .map((e) => FeatureEnvironmentConfig.make({ environmentId: e.environmentId, enabled: e.enabled, rules: toRules(e.rules) })),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

@@ -55,7 +55,7 @@ export interface ExperimentPayloadRule {
   readonly coverage: number;
   readonly hashAttribute: string;
   readonly seed: string;
-  /** Current phase index, for debugging only */
+  /** Current phase index, sent with exposures (a new phase re-randomizes and re-counts users) */
   readonly phase: number;
   /** Index 0 is the control */
   readonly variations: ReadonlyArray<{ readonly key: string; readonly value: unknown }>;
@@ -104,6 +104,8 @@ export interface EventsBody {
   readonly exposures?: ReadonlyArray<{
     readonly experimentKey: string;
     readonly variationKey: string;
+    /** Experiment phase index from the payload rule. Defaults to 0 */
+    readonly phase?: number;
     /** Value of the experiment's hash attribute */
     readonly userId: string;
     /** epoch ms */

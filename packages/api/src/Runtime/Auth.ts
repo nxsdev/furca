@@ -19,7 +19,6 @@ export const createAuth = (env: KujiEnv, origin: string) => {
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, { provider: "sqlite", schema: { user, session, account, verification } }),
     emailAndPassword: { enabled: true, minPasswordLength: 10 },
-    session: { cookieCache: { enabled: true, maxAge: 300 } },
     databaseHooks: {
       user: {
         create: {

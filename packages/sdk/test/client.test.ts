@@ -106,7 +106,22 @@ describe("client", () => {
     await c.flush();
     expect(s.posts).toHaveLength(1);
     expect(s.posts[0]!.exposures!.map((e) => e.userId)).toEqual(["user-1", "user-2"]);
+    expect(s.posts[0]!.exposures![0]).toMatchObject({ experimentKey: "exp-key", phase: 0 });
     expect(s.calls.at(-1)).toBe("POST https://kuji.test/api/sdk/v1/events/sdk-key");
+  });
+
+  test("a new experiment phase re-sends the exposure of an already exposed user", async () => {
+    const s = fakeServer();
+    const c = make({ fetch: s.fetch, payload: payload() });
+    c.evaluate("exp");
+    s.current = payload("2026-01-02T00:00:00Z");
+    const rule = s.current.features.exp!.rules[0] as { phase: number };
+    rule.phase = 1;
+    await c.refresh();
+    c.evaluate("exp");
+    c.evaluate("exp");
+    await c.flush();
+    expect(s.posts[0]!.exposures!.map((e) => e.phase)).toEqual([0, 1]);
   });
 
   test("trackExposures: false still calls onExposure but sends nothing", async () => {

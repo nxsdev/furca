@@ -1,12 +1,11 @@
-import { ORPCError } from "@orpc/server";
+import { EventStatsService } from "@kuji/core/analysis/Analysis";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers (`authed.events.<proc>.effect(function* (opts, input) { ... })`)
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const eventsRouter = {
-  names: authed.events.names.handler(notImplemented),
-  volume: authed.events.volume.handler(notImplemented),
+  names: authed.events.names.effect(function* (_opts, { environmentId }) {
+    return yield* (yield* EventStatsService).names(environmentId);
+  }),
+  volume: authed.events.volume.effect(function* (_opts, { environmentId }) {
+    return yield* (yield* EventStatsService).volume(environmentId);
+  }),
 };

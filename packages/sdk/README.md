@@ -100,7 +100,7 @@ function BuyButton() {
 
 ## Sending exposures to GA4 / Segment
 
-`onExposure` is called once per experiment, variation and user per client, when the user is first evaluated into an experiment. It runs even with `trackExposures: false`.
+`onExposure` is called once per experiment phase, variation and user per client, when the user is first evaluated into an experiment. It runs even with `trackExposures: false`.
 
 ```ts
 const kuji = createClient({

@@ -1,11 +1,8 @@
-import { ORPCError } from "@orpc/server";
+import { AuditService } from "@kuji/core/audit/AuditService";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers (`authed.audit.<proc>.effect(function* (opts, input) { ... })`)
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const auditRouter = {
-  list: authed.audit.list.handler(notImplemented),
+  list: authed.audit.list.effect(function* (_opts, input) {
+    return yield* (yield* AuditService).list(input);
+  }),
 };

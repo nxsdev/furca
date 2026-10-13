@@ -241,7 +241,7 @@ export interface ClientOptions {
   maxBatchSize?: number;
   /** Send exposures to kuji. Default true. `onExposure` is called either way */
   trackExposures?: boolean;
-  /** Called once per (experiment, variation, user) per client, e.g. to forward to GA4/Segment */
+  /** Called once per (experiment, phase, variation, user) per client, e.g. to forward to GA4/Segment */
   onExposure?: (exposure: Exposure) => void;
   /** Custom fetch (tests, service bindings). Called unbound */
   fetch?: FetchFn;
@@ -363,7 +363,7 @@ export function createClient(options: ClientOptions): KujiClient {
     const rule = ev.experiment ? payload!.features[key]!.rules[ev.ruleIndex] : undefined;
     if (ev.experiment && rule?.type === "experiment") {
       const userId = String(getAttr(attributes, rule.hashAttribute));
-      const dedupeKey = `${ev.experiment.key}\0${ev.experiment.variationKey}\0${userId}`;
+      const dedupeKey = `${ev.experiment.key}\0${rule.phase}\0${ev.experiment.variationKey}\0${userId}`;
       if (!seen.has(dedupeKey)) {
         // ponytail: bounded memory for long-lived server clients; may re-send a few duplicate exposures after a clear
         if (seen.size >= 10_000) seen.clear();
@@ -371,6 +371,7 @@ export function createClient(options: ClientOptions): KujiClient {
         const exposure: Exposure = {
           experimentKey: ev.experiment.key,
           variationKey: ev.experiment.variationKey,
+          phase: rule.phase,
           userId,
           ts: Date.now(),
         };
