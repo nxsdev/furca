@@ -14,6 +14,7 @@
     "payload": "ペイロード",
     "flagsOn": "有効なフラグ",
     "last24h": "過去24時間",
+    "review": "レビュー",
     "actions": "操作"
   },
   "row": {
@@ -66,5 +67,14 @@
   },
   "sparkline": {
     "label": "過去24時間のイベント{{events}}件、露出{{exposures}}件"
+  },
+  "review": {
+    "help": "レビュー必須：その環境でのフラグのオン/オフとルールの変更は、別の管理者が承認するまで「レビュー」で待機します。",
+    "switchLabel": "{{name}} でレビューを必須にする",
+    "required": "必須",
+    "notRequired": "オフ",
+    "turnedOn": "{{name}} をレビュー必須にしました",
+    "turnedOff": "{{name}} のレビュー必須を解除しました",
+    "failed": "レビューの設定を変更できませんでした"
   }
 }

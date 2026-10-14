@@ -1,12 +1,11 @@
 import "@orpc/experimental-effect/extensions/effect";
-import { user } from "@furca/database/schema/index";
-import { makeDrizzle } from "@furca/database/Database";
+import { hasRole, Role } from "@furca/core/members/Member";
 import type { ApiKeyRole } from "@furca/core/platform/ApiKey";
 import { ApiKeyService } from "@furca/core/platform/ApiKeyService";
 import { runPromise, type WithEffectContext } from "@orpc/experimental-effect";
 import { implement, ORPCError } from "@orpc/server";
-import { Effect } from "effect";
-import { contract } from "../contract";
+import { Effect, Schema } from "effect";
+import { contract, type FurcaContract } from "../contract";
 import type { Auth } from "./Auth";
 import type { FurcaEnv } from "./Env";
 import type { AppServices } from "./Services";
@@ -22,8 +21,8 @@ export interface RequestContext extends WithEffectContext<AppServices> {
 export interface CurrentUser {
   readonly id: string;
   readonly email: string;
-  /** The first account ever created */
-  readonly isOwner: boolean;
+  /** API keys: admin keys act as admin, readonly keys as viewer */
+  readonly role: Role;
 }
 
 /** The API key a request authenticated with */
@@ -37,6 +36,7 @@ const errorStatus = {
   ValidationError: "BAD_REQUEST",
   WarehouseError: "BAD_GATEWAY",
   ConflictError: "CONFLICT",
+  ForbiddenError: "FORBIDDEN",
 } as const;
 
 /**
@@ -81,34 +81,108 @@ export const pub = implement(contract)
     }
   });
 
-/** What a readonly API key may call: the last path segment of the procedure */
-const READ_PROCEDURES = new Set(["list", "get", "latest", "names", "volume", "properties", "dimension", "payload", "me"]);
+/** read: every member and readonly API keys; editor: editors and up; admin: admins and the owner */
+export type Access = "read" | "editor" | "admin";
+
+/**
+ * Who may call each procedure. Every contract procedure (except `public`) must be listed: the type
+ * requires it and a test checks it; anything unlisted at runtime is admin-only
+ */
+export const procedureAccess: {
+  readonly [D in Exclude<keyof FurcaContract, "public">]: { readonly [P in keyof FurcaContract[D]]: Access };
+} = {
+  session: { me: "read" },
+  environments: {
+    list: "read",
+    payload: "read",
+    create: "admin",
+    update: "admin",
+    rotateSdkKey: "admin",
+    setRequireApproval: "admin",
+    delete: "admin",
+  },
+  features: {
+    list: "read",
+    get: "read",
+    create: "editor",
+    update: "editor",
+    setEnabled: "editor",
+    saveRules: "editor",
+    archive: "editor",
+    delete: "editor",
+  },
+  experiments: {
+    list: "read",
+    get: "read",
+    create: "editor",
+    update: "editor",
+    start: "editor",
+    updateTraffic: "editor",
+    stop: "editor",
+    archive: "editor",
+    delete: "editor",
+  },
+  metrics: { list: "read", get: "read", create: "editor", update: "editor", archive: "editor" },
+  dataSources: { list: "read", get: "read", create: "admin", update: "admin", delete: "admin", test: "admin" },
+  results: { latest: "read", dimension: "read", refresh: "editor" },
+  events: { names: "read", properties: "read", volume: "read" },
+  audit: { list: "read" },
+  savedGroups: { list: "read", get: "read", create: "editor", update: "editor", delete: "editor" },
+  namespaces: { list: "read", create: "editor", update: "editor", delete: "editor" },
+  apiKeys: { list: "admin", create: "admin", revoke: "admin" },
+  webhooks: { list: "admin", create: "admin", update: "admin", delete: "admin", test: "admin" },
+  members: { list: "read", invite: "admin", revokeInvitation: "admin", setRole: "admin", remove: "admin" },
+  // cancel: editors only cancel their own requests (checked in the handler)
+  changeRequests: { list: "read", get: "read", create: "editor", approve: "admin", reject: "admin", cancel: "editor" },
+};
+
+export const accessOf = (path: ReadonlyArray<string>): Access =>
+  (procedureAccess as Partial<Record<string, Partial<Record<string, Access>>>>)[path[0] ?? ""]?.[path[1] ?? ""] ?? "admin";
+
+const requiredRole = { read: "viewer", editor: "editor", admin: "admin" } as const satisfies Record<Access, Role>;
+
+const adminOnly: Partial<Record<string, string>> = {
+  environments: "Only admins can manage environments",
+  dataSources: "Only admins can manage data sources",
+  apiKeys: "Only admins can manage API keys",
+  webhooks: "Only admins can manage webhooks",
+  members: "Only admins can manage members",
+  changeRequests: "Only admins can approve or reject reviews",
+};
 
 const authenticate = async (
   context: RequestContext,
-  path: ReadonlyArray<string>,
 ): Promise<{ readonly user: CurrentUser; readonly apiKey: RequestApiKey | null }> => {
   const bearer = /^Bearer\s+(\S+)$/i.exec(context.headers.get("authorization") ?? "")?.[1];
   if (bearer !== undefined) {
     const key = await runPromise(ApiKeyService.use((s) => s.authenticate(bearer)).pipe(Effect.provide(context["effect/context"])));
     if (key === null) throw new ORPCError("UNAUTHORIZED", { message: "Invalid or revoked API key" });
-    if (key.role === "readonly" && !READ_PROCEDURES.has(path.at(-1) ?? "")) {
-      throw new ORPCError("FORBIDDEN", { message: "This API key is read-only" });
-    }
-    return { user: { id: `apikey:${key.id}`, email: `api-key:${key.name}`, isOwner: false }, apiKey: { id: key.id, role: key.role } };
+    const role = key.role === "admin" ? "admin" : "viewer";
+    return { user: { id: `apikey:${key.id}`, email: `api-key:${key.name}`, role }, apiKey: { id: key.id, role: key.role } };
   }
   const session = await context.auth.api.getSession({ headers: context.headers });
   if (session === null) throw new ORPCError("UNAUTHORIZED", { message: "Sign in required" });
-  const [first] = await makeDrizzle(context.env.DB).select({ id: user.id }).from(user).orderBy(user.createdAt).limit(1);
-  return { user: { id: session.user.id, email: session.user.email, isOwner: first?.id === session.user.id }, apiKey: null };
+  const role = Schema.is(Role)(session.user.role) ? session.user.role : "viewer";
+  return { user: { id: session.user.id, email: session.user.email, role }, apiKey: null };
 };
 
 /**
  * Procedures that require a signed-in member: a Better Auth session cookie, or
  * `Authorization: Bearer furca_…` (an API key acts as `apikey:<id>` / `api-key:<name>` in audit logs).
- * Adds `context.user` and `context.apiKey` (null for sessions)
+ * Checks the caller's role against `procedureAccess` and adds `context.user` and `context.apiKey`
+ * (null for sessions)
  */
 export const authed = pub.use(async ({ context, next, path }) => {
-  const { user, apiKey } = await authenticate(context, path);
+  const { user, apiKey } = await authenticate(context);
+  const access = accessOf(path);
+  if (!hasRole(user.role, requiredRole[access])) {
+    const message =
+      apiKey?.role === "readonly"
+        ? "This API key is read-only"
+        : access === "admin"
+          ? (adminOnly[path[0] ?? ""] ?? "Only admins can do this")
+          : "Viewers can't make changes. Ask an admin for editor access";
+    throw new ORPCError("FORBIDDEN", { message });
+  }
   return next({ context: { user, apiKey } });
 });

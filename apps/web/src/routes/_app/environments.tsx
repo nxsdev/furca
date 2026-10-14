@@ -4,11 +4,12 @@ import type { Environment } from "@furca/core/environments/Environment";
 import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { FileJson, KeyRound, MoreHorizontal, Plus, RotateCw, TriangleAlert } from "lucide-react";
+import { FileJson, KeyRound, MoreHorizontal, Plus, RotateCw, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CodeBlock, Quickstart } from "~/components/environments/Quickstart";
 import { formatBytes, TrafficSparkline } from "~/components/environments/Sparkline";
+import { FlagSwitch } from "~/components/flags/FlagSwitch";
 import { errorText, matches, setServerError, submitHandler, useAppForm, useFieldContext, useRequired } from "~/components/form/form";
 import { slugify } from "~/components/metrics/slugify";
 import { environmentHue } from "~/components/shell/Sidebar";
@@ -16,6 +17,7 @@ import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { CopyButton, EmptyState, ListSkeleton, PageHeader, Panel, QueryError } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/environments")({
@@ -180,6 +182,32 @@ function PayloadDrawer({ env, onClose }: { env: Environment | null; onClose: () 
   );
 }
 
+/** Admins switch it; everyone else sees whether changes here wait for a review */
+function RequireReviewSwitch({ env }: { env: Environment }) {
+  const { t } = useTranslation("environments");
+  const queryClient = useQueryClient();
+  const { isAdmin } = usePermissions();
+  const update = useMutation(
+    orpc.environments.setRequireApproval.mutationOptions({
+      onSuccess: (saved) => {
+        void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+        toast(saved.requireApproval ? t("review.turnedOn", { name: saved.name }) : t("review.turnedOff", { name: saved.name }));
+      },
+      onError: (e) => toast.danger(t("review.failed"), { description: errorMessage(e) }),
+    }),
+  );
+  if (!isAdmin) return <span className={env.requireApproval ? "" : "text-muted"}>{env.requireApproval ? t("review.required") : t("review.notRequired")}</span>;
+  return (
+    <FlagSwitch
+      aria-label={t("review.switchLabel", { name: env.name })}
+      isSelected={update.isPending ? update.variables.requireApproval : env.requireApproval}
+      isDisabled={update.isPending}
+      onChange={(requireApproval) => update.mutate({ id: env.id, requireApproval })}
+    />
+  );
+}
+
 function EnvironmentRow({
   item,
   onPayload,
@@ -190,6 +218,7 @@ function EnvironmentRow({
   onRotate: () => void;
 }) {
   const { t } = useTranslation("environments");
+  const { isAdmin } = usePermissions();
   const env = item.environment;
   return (
     <tr className={tbl.tr}>
@@ -216,8 +245,12 @@ function EnvironmentRow({
         <PayloadSize bytes={item.payloadBytes} />
       </td>
       <td className={`${tbl.td} hidden text-right font-mono tabular md:table-cell`}>{item.featureCount}</td>
-      <td className={`${tbl.td} hidden lg:table-cell`}>
+      {/* The Review column needs the room below 1400px */}
+      <td className={`${tbl.td} hidden min-[1400px]:table-cell`}>
         <TrafficSparkline environmentId={env.id} />
+      </td>
+      <td className={`${tbl.td} w-px whitespace-nowrap`}>
+        <RequireReviewSwitch env={env} />
       </td>
       <td className={`${tbl.td} w-px whitespace-nowrap text-right`}>
         <span className="inline-flex items-center gap-1">
@@ -225,7 +258,7 @@ function EnvironmentRow({
             <FileJson className="size-4" />
             <span className="hidden sm:inline">{t("row.payload")}</span>
           </Button>
-          <Dropdown>
+          {isAdmin && <Dropdown>
             <Button isIconOnly size="sm" variant="ghost" aria-label={t("row.moreActions", { name: env.name })} className="size-8 min-w-8">
               <MoreHorizontal className="size-4" />
             </Button>
@@ -237,7 +270,7 @@ function EnvironmentRow({
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
-          </Dropdown>
+          </Dropdown>}
         </span>
       </td>
     </tr>
@@ -247,6 +280,7 @@ function EnvironmentRow({
 function Page() {
   const { t } = useTranslation("environments");
   const queryClient = useQueryClient();
+  const { isAdmin } = usePermissions();
   const list = useQuery(orpc.environments.list.queryOptions());
   const [creating, setCreating] = useState(false);
   const [payloadEnv, setPayloadEnv] = useState<Environment | null>(null);
@@ -270,10 +304,12 @@ function Page() {
         title={t("page.title")}
         description={t("page.description")}
         actions={
-          <Button size="sm" onPress={() => setCreating(true)} isDisabled={creating}>
-            <Plus className="size-4" />
-            {t("page.newEnvironment")}
-          </Button>
+          isAdmin && (
+            <Button size="sm" onPress={() => setCreating(true)} isDisabled={creating}>
+              <Plus className="size-4" />
+              {t("page.newEnvironment")}
+            </Button>
+          )
         }
       />
       <div className="flex flex-col gap-6">
@@ -289,9 +325,11 @@ function Page() {
             title={t("page.emptyTitle")}
             description={t("page.emptyDescription")}
             action={
-              <Button size="sm" onPress={() => setCreating(true)}>
-                {t("page.newEnvironment")}
-              </Button>
+              isAdmin && (
+                <Button size="sm" onPress={() => setCreating(true)}>
+                  {t("page.newEnvironment")}
+                </Button>
+              )
             }
           />
         ) : (
@@ -305,7 +343,8 @@ function Page() {
                     <th className={`${tbl.th} hidden sm:table-cell`}>{t("table.sdkKey")}</th>
                     <th className={`${tbl.th} hidden sm:table-cell`}>{t("table.payload")}</th>
                     <th className={`${tbl.th} hidden text-right md:table-cell`}>{t("table.flagsOn")}</th>
-                    <th className={`${tbl.th} hidden lg:table-cell`}>{t("table.last24h")}</th>
+                    <th className={`${tbl.th} hidden min-[1400px]:table-cell`}>{t("table.last24h")}</th>
+                    <th className={tbl.th}>{t("table.review")}</th>
                     <th className={tbl.th}>
                       <span className="sr-only">{t("table.actions")}</span>
                     </th>
@@ -327,6 +366,10 @@ function Page() {
                 </tbody>
               </table>
             </div>
+            <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-meta text-muted">
+              <ShieldCheck className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+              {t("review.help")}
+            </p>
           </Panel>
         )}
         <Quickstart />

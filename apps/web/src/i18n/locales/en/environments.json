@@ -14,6 +14,7 @@
     "payload": "Payload",
     "flagsOn": "Flags on",
     "last24h": "Last 24h",
+    "review": "Review",
     "actions": "Actions"
   },
   "row": {
@@ -66,5 +67,14 @@
   },
   "sparkline": {
     "label": "{{events}} events and {{exposures}} exposures in the last 24 hours"
+  },
+  "review": {
+    "help": "Require review: flag on/off and rule changes in that environment wait in Reviews until another admin approves them.",
+    "switchLabel": "Require review in {{name}}",
+    "required": "Required",
+    "notRequired": "Off",
+    "turnedOn": "{{name}} now requires review",
+    "turnedOff": "{{name}} no longer requires review",
+    "failed": "Couldn't change review settings"
   }
 }

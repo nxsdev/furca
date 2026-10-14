@@ -36,7 +36,7 @@ What is deliberately **not** built (visual editor, bandits, holdouts, quantile m
   method, sequential confidence sequences (default), Bayesian chance to win, CUPED, Holm correction,
   SRM χ² check, multiple-exposure exclusion, percentile / absolute capping, cumulative timeseries
 - **Metrics**: conversion, mean (count / sum), ratio; conversion windows and delays; lower-is-better
-- **Data sources**: built-in event store (D1) or BigQuery with your own SQL (GA4 / Segment templates)
+- **Data sources**: built-in event store (D1), or BigQuery, Snowflake, ClickHouse and Postgres with your own SQL (GA4 / Segment templates)
 - **SDK**: zero-dependency TypeScript SDK with local evaluation for browsers, Workers, Node, Bun, Deno;
   React bindings and OpenFeature providers
 - **Team**: email + password, first account is the owner, invitations, full audit log
@@ -53,7 +53,7 @@ furca Worker (one deploy)
 ├── /api/auth  Better Auth
 ├── D1         flags, experiments, metrics, exposures, events, result snapshots, audit log
 ├── KV         SDK payload per environment
-└── cron       hourly results refresh (built-in D1 or BigQuery)
+└── cron       hourly results refresh (built-in D1 or your warehouse)
 ```
 
 Monorepo: `apps/web` (UI + Worker entry), `packages/{core,database,persistence,api,integrations,stats,sdk,react,openfeature,infra}`.

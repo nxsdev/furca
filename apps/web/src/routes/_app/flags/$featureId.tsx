@@ -6,7 +6,7 @@ import { ORPCError } from "@orpc/client";
 import { useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
-import { Archive, ArchiveRestore, CornerDownRight, Ellipsis, Flag, Info, Pencil, Trash2, TriangleAlert } from "lucide-react";
+import { Archive, ArchiveRestore, CornerDownRight, Ellipsis, Flag, Info, Pencil, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { FlagSwitch } from "~/components/flags/FlagSwitch";
@@ -18,11 +18,13 @@ import { TestUserPanel, useTestUser } from "~/components/flags/TestUserPanel";
 import { cacheFeature, useSetEnabled } from "~/components/flags/useSetEnabled";
 import { ValueInput, ValuePreview, valueIssue } from "~/components/flags/ValueInput";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
+import { ChangeRequestItem } from "~/components/reviews/ChangeRequestItem";
 import { environmentHue } from "~/components/shell/Sidebar";
 import { TagInput } from "~/components/targeting/ConditionBuilder";
 import { CopyButton, EmptyState, ListSkeleton, Panel, PanelHeader, QueryError } from "~/components/ui/primitives";
 import { i18n, intlLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
+import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 type Tab = "targeting" | "implementation" | "history";
@@ -40,6 +42,7 @@ const savedRulesOf = (feature: Feature | undefined, envId: string | undefined): 
 const sameRules = (a: ReadonlyArray<Rule>, b: ReadonlyArray<Rule>) => JSON.stringify(a) === JSON.stringify(b);
 const draftOf = (feature: Feature, environments: ReadonlyArray<Environment>): RulesDraft => ({
   envs: environments.map((e) => ({ environmentId: e.id, rules: [...savedRulesOf(feature, e.id)] })),
+  comment: "",
 });
 
 function FlagPage() {
@@ -85,11 +88,12 @@ function FlagSkeleton() {
 }
 
 function FlagDetail({ feature }: { feature: Feature }) {
-  const { t } = useTranslation(["flags", "common"]);
+  const { t } = useTranslation(["flags", "common", "reviews"]);
   const { tab = "targeting" } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const queryClient = useQueryClient();
   const { environments, current } = useEnvironment();
+  const { canEdit } = usePermissions();
   const experiments = useQuery({ ...orpc.experiments.list.queryOptions({ input: { includeArchived: true } }), retry: false });
   const experimentsById = useMemo(() => new Map((experiments.data ?? []).map((x) => [x.id, x])), [experiments.data]);
   const linkedExperiments = (experiments.data ?? []).filter((x) => x.featureId === feature.id);
@@ -104,22 +108,36 @@ function FlagDetail({ feature }: { feature: Feature }) {
     onSubmit: async ({ value, formApi }) => {
       try {
         let saved = feature;
+        let requested = false;
         for (const [i, env] of value.envs.entries()) {
           if (sameRules(env.rules, savedRulesOf(saved, env.environmentId))) continue;
-          saved = await client.features.saveRules({ id: feature.id, environmentId: env.environmentId, rules: env.rules });
-          cacheFeature(queryClient, saved);
+          if (environments.find((e) => e.id === env.environmentId)?.requireApproval === true) {
+            // The request holds the change until an admin approves it; the editor shows the live rules again
+            await client.changeRequests.create({
+              featureId: feature.id,
+              environmentId: env.environmentId,
+              change: { type: "rules", rules: env.rules },
+              comment: value.comment.trim(),
+            });
+            requested = true;
+          } else {
+            saved = await client.features.saveRules({ id: feature.id, environmentId: env.environmentId, rules: env.rules });
+            cacheFeature(queryClient, saved);
+          }
           // Saved environments stop counting as unsaved even if a later one fails
           formApi.setFieldValue(`envs[${i}].rules`, [...savedRulesOf(saved, env.environmentId)]);
         }
         formApi.reset(draftOf(saved, environments));
         setEditingId(null);
-        toast.success(t("detail.rulesSaved"), { description: t("detail.rulesSavedDescription") });
+        if (requested) toast.success(t("reviews:request.requested"), { description: t("reviews:request.requestedDescription") });
+        else toast.success(t("detail.rulesSaved"), { description: t("detail.rulesSavedDescription") });
       } catch (error) {
         setServerError(formApi, error);
         toast.danger(t("detail.saveRulesFailed"), { description: errorMessage(error), timeout: 0 });
       } finally {
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
       }
     },
   });
@@ -128,6 +146,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
   const saveError = useStore(form.store, (s) => errorText(s.errors));
   const dirtyIds = envs.filter((e) => !sameRules(e.rules, savedRulesOf(feature, e.environmentId))).map((e) => e.environmentId);
   const dirty = dirtyIds.length > 0;
+  const reviewIds = environments.filter((e) => e.requireApproval && dirtyIds.includes(e.id)).map((e) => e.id);
   const envIndex = envs.findIndex((e) => e.environmentId === ruleEnv?.id);
   const rules = envs[envIndex]?.rules ?? savedRulesOf(feature, ruleEnv?.id);
   const invalidCount = envs
@@ -231,6 +250,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
           ) : (
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="flex min-w-0 flex-col gap-6">
+                <OpenReviews feature={feature} environments={environments} />
                 <EnvironmentsPanel feature={feature} environments={environments} />
                 <Panel>
                   <PanelHeader
@@ -273,8 +293,9 @@ function FlagDetail({ feature }: { feature: Feature }) {
                     matchedRuleId={matchedRuleId}
                     attributeSuggestions={attributeSuggestions}
                     footer={<DefaultValueRow feature={feature} isMatched={defaultMatched} />}
+                    readOnly={!canEdit}
                   />
-                  <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                  {canEdit && <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
                     <AddRuleButton
                       onAdd={(kind) => {
                         const rule = newRule(kind, feature.valueType, feature.defaultValue);
@@ -285,7 +306,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                     <span className="hidden text-meta text-muted sm:inline">
                       {t("detail.experimentRulesHint")}
                     </span>
-                  </div>
+                  </div>}
                 </Panel>
               </div>
               <div className="lg:sticky lg:top-6">
@@ -330,9 +351,32 @@ function FlagDetail({ feature }: { feature: Feature }) {
                 {t("common:actions.discard")}
               </Button>
               <Button size="sm" isPending={saving} isDisabled={invalidCount > 0} onPress={() => void form.handleSubmit()}>
-                {t("common:actions.save")}
+                {reviewIds.length === 0
+                  ? t("common:actions.save")
+                  : reviewIds.length === dirtyIds.length
+                    ? t("reviews:request.submit")
+                    : t("reviews:request.saveAndRequest")}
               </Button>
             </div>
+            {reviewIds.length > 0 && (
+              <div className="flex w-full flex-col gap-1 pr-2 pb-1">
+                <p className="flex items-center gap-1.5 text-meta text-muted">
+                  <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
+                  {t("reviews:request.explain", {
+                    environment: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(
+                      environments.filter((e) => reviewIds.includes(e.id)).map((e) => e.name),
+                    ),
+                  })}
+                </p>
+                <form.AppField name="comment">
+                  {(field) => (
+                    <TextField aria-label={t("reviews:request.commentLabel")} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Input className="h-8 py-1 text-base sm:text-label" placeholder={t("reviews:request.commentPlaceholder")} />
+                    </TextField>
+                  )}
+                </form.AppField>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -366,6 +410,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
   const { t } = useTranslation(["flags", "common"]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { canEdit } = usePermissions();
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -469,20 +514,22 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
                   {tag}
                 </span>
               ))}
-              <Button
-                isIconOnly
-                size="sm"
-                variant="ghost"
-                aria-label={t("header.editDetails")}
-                className="size-7 min-w-7 text-muted hover:text-foreground"
-                onPress={startEditing}
-              >
-                <Pencil className="size-3.5" />
-              </Button>
+              {canEdit && (
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="ghost"
+                  aria-label={t("header.editDetails")}
+                  className="size-7 min-w-7 text-muted hover:text-foreground"
+                  onPress={startEditing}
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+              )}
             </div>
           )}
         </div>
-        <Dropdown>
+        {canEdit && <Dropdown>
           <Button isIconOnly size="sm" variant="outline" aria-label={t("header.actions")} className="shrink-0">
             <Ellipsis className="size-4" />
           </Button>
@@ -510,7 +557,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown.Popover>
-        </Dropdown>
+        </Dropdown>}
       </div>
 
       <AlertDialog.Backdrop isOpen={confirmDelete} onOpenChange={setConfirmDelete}>
@@ -540,8 +587,11 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
 }
 
 function EnvironmentsPanel({ feature, environments }: { feature: Feature; environments: ReadonlyArray<Environment> }) {
-  const { t } = useTranslation("flags");
+  const { t } = useTranslation(["flags", "reviews"]);
   const setEnabled = useSetEnabled();
+  const { canEdit } = usePermissions();
+  // Protected environments: flipping the switch opens a review request instead of saving
+  const [requesting, setRequesting] = useState<{ environment: Environment; enabled: boolean } | null>(null);
   return (
     <Panel>
       <PanelHeader
@@ -554,22 +604,37 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
           const enabled = config?.enabled ?? false;
           const count = config?.rules.length ?? 0;
           return (
-            <li key={env.id} className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-0 sm:px-5">
-              <span className={`size-2 shrink-0 rounded-full ${environmentHue(env.key)}`} aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-label font-medium">{env.name}</div>
-                <div className="text-meta text-muted">
-                  {count === 0 ? t("environments.noRules") : t("environments.ruleCount", { count })}
+            <li key={env.id} className="border-b border-border last:border-0">
+              <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                <span className={`size-2 shrink-0 rounded-full ${environmentHue(env.key)}`} aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 truncate text-label font-medium">
+                    {env.name}
+                    {env.requireApproval && (
+                      <span className="inline-flex items-center gap-1 text-meta font-normal text-muted">
+                        <ShieldCheck className="size-3.5" aria-hidden="true" />
+                        {t("reviews:request.badge")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-meta text-muted">
+                    {count === 0 ? t("environments.noRules") : t("environments.ruleCount", { count })}
+                  </div>
                 </div>
+                <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? t("shared.on") : t("shared.off")}</span>
+                <FlagSwitch
+                  size="md"
+                  aria-label={t("shared.switchLabel", { key: feature.key, environment: env.name })}
+                  isSelected={enabled}
+                  isDisabled={feature.archived || !canEdit}
+                  onChange={(next) =>
+                    env.requireApproval ? setRequesting({ environment: env, enabled: next }) : setEnabled.mutate({ feature, environment: env, enabled: next })
+                  }
+                />
               </div>
-              <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? t("shared.on") : t("shared.off")}</span>
-              <FlagSwitch
-                size="md"
-                aria-label={t("shared.switchLabel", { key: feature.key, environment: env.name })}
-                isSelected={enabled}
-                isDisabled={feature.archived}
-                onChange={(next) => setEnabled.mutate({ feature, environment: env, enabled: next })}
-              />
+              {requesting?.environment.id === env.id && (
+                <ToggleRequestForm feature={feature} environment={env} enabled={requesting.enabled} onDone={() => setRequesting(null)} />
+              )}
             </li>
           );
         })}
@@ -578,10 +643,93 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
   );
 }
 
+/** Inline "request review" for turning a flag on / off in an environment that requires review */
+function ToggleRequestForm({
+  feature,
+  environment,
+  enabled,
+  onDone,
+}: {
+  feature: Feature;
+  environment: Environment;
+  enabled: boolean;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation(["reviews", "common"]);
+  const queryClient = useQueryClient();
+  const form = useAppForm({
+    defaultValues: { comment: "" },
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        await client.changeRequests.create({
+          featureId: feature.id,
+          environmentId: environment.id,
+          change: { type: "toggle", enabled },
+          comment: value.comment.trim(),
+        });
+        void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+        toast.success(t("request.requested"), { description: t("request.requestedDescription") });
+        onDone();
+      } catch (error) {
+        setServerError(formApi, error);
+      }
+    },
+  });
+  const vars = { key: feature.key, environment: environment.name };
+  return (
+    <form noValidate onSubmit={submitHandler(form)} className="flex flex-col gap-3 border-t border-border bg-surface-secondary/60 px-4 py-4 sm:px-5 sm:pl-9">
+      <div>
+        <p className="text-label font-medium">{enabled ? t("request.toggleOn", vars) : t("request.toggleOff", vars)}</p>
+        <p className="mt-0.5 text-meta text-muted">{t("request.explain", { environment: environment.name })}</p>
+      </div>
+      <form.AppField name="comment">
+        {(field) => (
+          <field.TextAreaField label={t("request.commentLabel")} placeholder={t("request.commentPlaceholder")} rows={2} className="max-w-lg" />
+        )}
+      </form.AppField>
+      <form.AppForm>
+        <form.FormError />
+      </form.AppForm>
+      <div className="flex gap-2">
+        <form.AppForm>
+          <form.SubmitButton size="sm" label={t("request.submit")} />
+        </form.AppForm>
+        <Button size="sm" variant="tertiary" onPress={onDone}>
+          {t("common:actions.cancel")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Open review requests for this flag, in every environment, with what approving would change */
+function OpenReviews({ feature, environments }: { feature: Feature; environments: ReadonlyArray<Environment> }) {
+  const { t } = useTranslation("reviews");
+  const open = useQuery(orpc.changeRequests.list.queryOptions({ input: { status: "open", featureId: feature.id } }));
+  if (open.data === undefined || open.data.length === 0) return null;
+  return (
+    <section aria-label={t("banner.title", { count: open.data.length })} className="rounded-[10px] border border-focus/40 bg-focus/[0.04]">
+      <h2 className="flex items-center gap-2 border-b border-focus/20 px-4 py-3 text-label font-medium sm:px-5">
+        <ShieldCheck className="size-4 text-focus" aria-hidden="true" />
+        {t("banner.title", { count: open.data.length })}
+      </h2>
+      <ul className="divide-y divide-focus/15">
+        {open.data.map((request) => (
+          <li key={request.id}>
+            <ChangeRequestItem request={request} environment={environments.find((e) => e.id === request.environmentId)} valueType={feature.valueType} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Last row of the rules list: what everyone else gets (shared by all environments) */
 function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: boolean }) {
   const { t } = useTranslation(["flags", "common"]);
   const queryClient = useQueryClient();
+  const { canEdit } = usePermissions();
   const [editing, setEditing] = useState(false);
   const form = useAppForm({
     defaultValues: { value: feature.defaultValue },
@@ -625,20 +773,22 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
             />
           </div>
         </div>
-        <Button
-          isIconOnly
-          size="sm"
-          variant={editing ? "tertiary" : "ghost"}
-          aria-label={editing ? t("defaultRow.close") : t("defaultRow.edit")}
-          aria-expanded={editing}
-          className="size-8 min-w-8 text-muted hover:text-foreground"
-          onPress={() => {
-            form.reset({ value: feature.defaultValue });
-            setEditing(!editing);
-          }}
-        >
-          <Pencil className="size-3.5" />
-        </Button>
+        {canEdit && (
+          <Button
+            isIconOnly
+            size="sm"
+            variant={editing ? "tertiary" : "ghost"}
+            aria-label={editing ? t("defaultRow.close") : t("defaultRow.edit")}
+            aria-expanded={editing}
+            className="size-8 min-w-8 text-muted hover:text-foreground"
+            onPress={() => {
+              form.reset({ value: feature.defaultValue });
+              setEditing(!editing);
+            }}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+        )}
       </div>
       {editing && (
         <form

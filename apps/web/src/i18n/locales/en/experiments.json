@@ -280,7 +280,7 @@
       "placeholder": "country, plan, platform",
       "suggested": "Used in targeting:",
       "description": "Attributes to split results by. The SDK sends their values with each exposure, so only users exposed after the experiment starts are covered. Choose them now: they lock once it starts.",
-      "warehouse": "With BigQuery, the exposure SQL needs a column with the same name instead."
+      "warehouse": "With a warehouse data source, the exposure SQL needs a column with the same name instead."
     }
   },
   "traffic": {

@@ -13,6 +13,7 @@ import { MetricForm } from "~/components/metrics/MetricForm";
 import { Code, ListSkeleton, PageHeader, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n, intlLocale } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/metrics/$metricId")({
@@ -59,6 +60,7 @@ function Page() {
 function MetricDetail({ metric }: { metric: Metric }) {
   const { t } = useTranslation(["metrics", "common"]);
   const { edit } = Route.useSearch();
+  const { canEdit } = usePermissions();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const experiments = useQuery(orpc.experiments.list.queryOptions({ input: { includeArchived: false } }));
@@ -80,7 +82,7 @@ function MetricDetail({ metric }: { metric: Metric }) {
     }),
   );
 
-  if (edit)
+  if (edit && canEdit)
     return (
       <>
         <PageHeader breadcrumb={crumbs(metric.name)} title={t("detail.editTitle", { name: metric.name })} />
@@ -162,7 +164,7 @@ function MetricDetail({ metric }: { metric: Metric }) {
         }
         description={metric.description || undefined}
         actions={
-          <>
+          canEdit && <>
             <Button
               size="sm"
               variant="tertiary"

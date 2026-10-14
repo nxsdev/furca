@@ -48,3 +48,36 @@ describe("exposure_phase migration", () => {
     await mf.dispose();
   });
 });
+
+describe("roles_approvals migration", () => {
+  it("makes the first existing account the owner and everyone else (and pending invitations) admin", async () => {
+    const mf = new Miniflare({ modules: true, script: "export default { fetch: () => new Response('') }", d1Databases: { DB: "roles" } });
+    const d1 = (await mf.getD1Database("DB")) as unknown as D1Database;
+    const dir = join(import.meta.dirname, "../migrations");
+    const apply = (name: string) =>
+      d1.batch(
+        readFileSync(join(dir, name, "migration.sql"), "utf8")
+          .split("--> statement-breakpoint")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+          .map((s) => d1.prepare(s)),
+      );
+    const all = readdirSync(dir).sort();
+    const target = all.findIndex((d) => d.endsWith("_roles_approvals"));
+    for (const name of all.slice(0, target)) await apply(name);
+    await d1
+      .prepare("INSERT INTO user (id, name, email, created_at, updated_at) VALUES ('b', 'B', 'b@x.com', 2000, 2000), ('a', 'A', 'a@x.com', 1000, 1000)")
+      .run();
+    await d1.prepare("INSERT INTO invitations (id, email, token, invited_by, expires_at) VALUES ('i', 'c@x.com', 't', 'a', 9999999999999)").run();
+    for (const name of all.slice(target)) await apply(name);
+
+    const { results } = await d1.prepare("SELECT id, role FROM user ORDER BY id").all();
+    expect(results).toEqual([
+      { id: "a", role: "owner" },
+      { id: "b", role: "admin" },
+    ]);
+    expect(await d1.prepare("SELECT role FROM invitations").first()).toEqual({ role: "admin" });
+    expect(await d1.prepare("SELECT require_approval FROM environments WHERE id = 'env_production'").first()).toEqual({ require_approval: 0 });
+    await mf.dispose();
+  });
+});

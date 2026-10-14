@@ -7,6 +7,7 @@
   },
   "invite": {
     "label": "Invite by email",
+    "role": "Role",
     "submit": "Create invite link",
     "help": "No email is sent. You get a one-time sign-up link to share; it works for 7 days.",
     "createdFor": "Invite link for <strong>{{email}}</strong>. Send it to them directly; it can be used once.",
@@ -16,19 +17,22 @@
   },
   "members": {
     "title": "Members",
-    "descriptionOwner": "Everyone here can edit flags, experiments and metrics. Only you, the owner, can remove members.",
-    "description": "Everyone here can edit flags, experiments and metrics. Only the owner can remove members.",
+    "descriptionAdmin": "Admins change roles and remove members. The owner can't be removed or demoted.",
+    "description": "What each member can do depends on their role. Ask an admin to change it.",
     "name": "Name",
     "email": "Email",
+    "role": "Role",
     "joined": "Joined",
     "actions": "Actions",
-    "owner": "Owner",
     "you": "You",
     "remove": "Remove",
     "removed": "{{name}} removed",
     "removeTitle": "Remove {{name}}?",
     "removeConfirm": "Remove member",
-    "removeBody": "<strong>{{email}}</strong> loses access immediately. Their past changes stay in the audit log. To bring them back, send a new invitation."
+    "removeBody": "<strong>{{email}}</strong> loses access immediately. Their past changes stay in the audit log. To bring them back, send a new invitation.",
+    "roleOf": "Role of {{name}}",
+    "roleUpdated": "{{name}} is now {{role}}",
+    "roleFailed": "Couldn't change the role"
   },
   "invitations": {
     "title": "Invitations",
@@ -46,11 +50,21 @@
   },
   "about": {
     "title": "About this instance",
-    "dataLocation": "Your data stays in your Cloudflare account. Flags, experiments, exposures and events live in this deployment's D1 database and KV namespace; BigQuery keys are encrypted at rest with its <code>ENCRYPTION_KEY</code>.",
+    "dataLocation": "Your data stays in your Cloudflare account. Flags, experiments, exposures and events live in this deployment's D1 database and KV namespace; warehouse credentials are encrypted at rest with its <code>ENCRYPTION_KEY</code>.",
     "sdkHost": "SDK host",
     "copySdkHost": "Copy SDK host",
     "docs": "Documentation",
     "sdkReference": "SDK reference",
     "reportIssue": "Report an issue"
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "ownerHelp": "Created this instance. Everything an admin can do; can't be removed or demoted.",
+    "adminHelp": "Everything, including environments, data sources, API keys, webhooks, members and approving reviews.",
+    "editorHelp": "Creates and edits flags, experiments, metrics, saved groups and namespaces; requests reviews.",
+    "viewerHelp": "Sees everything, changes nothing."
   }
 }

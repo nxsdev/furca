@@ -9,8 +9,8 @@ export const dataSourcesRouter = {
   get: authed.dataSources.get.effect(function* (_opts, { id }) {
     return yield* (yield* DataSourceService).get(id);
   }),
-  createBigQuery: authed.dataSources.createBigQuery.effect(function* ({ context }, input) {
-    return yield* (yield* DataSourceService).createBigQuery(input, context.user);
+  create: authed.dataSources.create.effect(function* ({ context }, input) {
+    return yield* (yield* DataSourceService).create(input, context.user);
   }),
   update: authed.dataSources.update.effect(function* ({ context }, input) {
     return yield* (yield* DataSourceService).update(input, context.user);

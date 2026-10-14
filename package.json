@@ -27,6 +27,7 @@
   },
   "packageManager": "bun@1.4.3",
   "catalog": {
+    "@clickhouse/client-web": "1.24.0",
     "@better-auth/drizzle-adapter": "1.7.7",
     "@cloudflare/workers-types": "5.20261012.1",
     "@effect/platform-bun": "4.0.3",
@@ -73,6 +74,7 @@
     "i18next": "26.4.4",
     "isbot": "5.2.2",
     "jose": "6.2.12",
+    "postgres": "3.4.9",
     "lucide-react": "1.55.0",
     "miniflare": "4.20260730.0",
     "react": "19.3.0",

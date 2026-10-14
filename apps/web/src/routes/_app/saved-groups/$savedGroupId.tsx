@@ -12,6 +12,7 @@ import { groupUsage } from "~/components/savedGroups/usage";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { ListSkeleton, PageHeader, Panel, PanelHeader, QueryError } from "~/components/ui/primitives";
 import { i18n } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/saved-groups/$savedGroupId")({
@@ -57,6 +58,7 @@ function Detail({ group }: { group: SavedGroup }) {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { canEdit } = usePermissions();
   const features = useQuery(orpc.features.list.queryOptions({ input: { includeArchived: false } }));
   const experiments = useQuery(orpc.experiments.list.queryOptions({ input: { includeArchived: false } }));
   const used = groupUsage(features.data ?? [], experiments.data ?? []).get(group.id) ?? { flags: [], experiments: [] };
@@ -82,7 +84,7 @@ function Detail({ group }: { group: SavedGroup }) {
         title={group.name}
         description={group.description === "" ? undefined : group.description}
         actions={
-          <Button
+          canEdit && <Button
             size="sm"
             variant="ghost"
             onPress={() => {
@@ -97,13 +99,16 @@ function Detail({ group }: { group: SavedGroup }) {
         }
       />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <SavedGroupForm
-          group={group}
-          onSaved={() => {
-            void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
-            toast.success(t("detail.saved"), { description: t("detail.savedDescription") });
-          }}
-        />
+        {/* Viewers see the group read-only: a disabled fieldset disables every control inside */}
+        <fieldset disabled={!canEdit} className="contents">
+          <SavedGroupForm
+            group={group}
+            onSaved={() => {
+              void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
+              toast.success(t("detail.saved"), { description: t("detail.savedDescription") });
+            }}
+          />
+        </fieldset>
         <aside className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-5">
           <h2 className="text-meta font-medium text-muted">{t("detail.usedBy")}</h2>
           {features.isPending || experiments.isPending ? (

@@ -2,7 +2,8 @@
  * D1 row -> domain entity mapping, shared by every repository and the analysis pipeline.
  * JSON columns are decoded with the core Schemas so a malformed row fails loudly
  */
-import { DataSource, BigQueryConfig } from "@furca/core/datasources/DataSource";
+import { ChangeRequest, ChangeRequestStatus, FlagChange, FlagState } from "@furca/core/approvals/ChangeRequest";
+import { DataSource, DataSourceType, WarehouseConfig } from "@furca/core/datasources/DataSource";
 import { Environment } from "@furca/core/environments/Environment";
 import {
   Experiment,
@@ -32,7 +33,15 @@ const conditions = decode(Schema.Array(Condition));
 export const toRules = decode(Schema.Array(FeatureRule));
 
 export const toEnvironment = (row: Row<typeof schema.environments>): Environment =>
-  Environment.make({ id: row.id, key: row.key, name: row.name, sdkKey: row.sdkKey, sortOrder: row.sortOrder, createdAt: row.createdAt });
+  Environment.make({
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    sdkKey: row.sdkKey,
+    sortOrder: row.sortOrder,
+    requireApproval: row.requireApproval,
+    createdAt: row.createdAt,
+  });
 
 export const toFeature = (
   row: Row<typeof schema.features>,
@@ -103,12 +112,15 @@ export const toMetric = (row: Row<typeof schema.metrics>): Metric =>
     updatedAt: row.updatedAt,
   });
 
+const warehouseConfig = decode(WarehouseConfig);
+
 export const toDataSource = (row: Row<typeof schema.dataSources>): DataSource =>
   DataSource.make({
     id: row.id,
     name: row.name,
-    type: decode(Schema.Literals(["builtin", "bigquery"]))(row.type),
-    bigquery: row.config === null ? null : decode(BigQueryConfig)(row.config),
+    type: decode(DataSourceType)(row.type),
+    // BigQuery rows written before configs were tagged have no _tag: the type column says which it is
+    config: row.type === "builtin" || row.config === null ? null : warehouseConfig({ ...(row.config as object), _tag: row.type }),
     hasCredentials: row.credentials !== null,
     exposureSql: row.exposureSql,
     createdAt: row.createdAt,
@@ -167,6 +179,25 @@ export const toWebhook = (row: Row<typeof schema.webhooks>): Webhook =>
     lastError: row.lastError,
   });
 
+export const toChangeRequest = (row: Row<typeof schema.changeRequests>): ChangeRequest =>
+  ChangeRequest.make({
+    id: row.id,
+    featureId: row.featureId,
+    featureKey: row.featureKey,
+    environmentId: row.environmentId,
+    change: decode(FlagChange)(row.change),
+    base: decode(FlagState)(row.base),
+    comment: row.comment,
+    status: decode(ChangeRequestStatus)(row.status),
+    authorId: row.authorId,
+    authorEmail: row.authorEmail,
+    reviewerId: row.reviewerId,
+    reviewerEmail: row.reviewerEmail,
+    reviewComment: row.reviewComment,
+    createdAt: row.createdAt,
+    reviewedAt: row.reviewedAt,
+  });
+
 /**
  * Domain -> JSON column values. Dates inside JSON columns are stored as ISO strings and
  * revived on read
@@ -188,6 +219,10 @@ export const experimentJsonColumns = (e: Experiment) => ({
 
 /** FeatureRule[] -> plain JSON (keeps the `_tag` discriminator) */
 export const rulesJson = (value: ReadonlyArray<FeatureRule>) => Schema.encodeSync(Schema.Array(FeatureRule))(value);
+
+/** FlagChange / FlagState -> plain JSON */
+export const flagChangeJson = Schema.encodeSync(FlagChange);
+export const flagStateJson = Schema.encodeSync(FlagState);
 
 const reviveDates = (value: unknown, keys: ReadonlyArray<string>): unknown => {
   if (typeof value !== "object" || value === null) return value;

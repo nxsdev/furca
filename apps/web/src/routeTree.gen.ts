@@ -16,6 +16,7 @@ import { Route as AppAuditRouteImport } from './routes/_app/audit'
 import { Route as AppEnvironmentsRouteImport } from './routes/_app/environments'
 import { Route as AppNamespacesRouteImport } from './routes/_app/namespaces'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
+import { Route as AppReviewsRouteImport } from './routes/_app/reviews'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AppDataSourcesIndexRouteImport } from './routes/_app/data-sources/index'
@@ -62,6 +63,11 @@ const AppNamespacesRoute = AppNamespacesRouteImport.update({
 const AppOverviewRoute = AppOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReviewsRoute = AppReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/environments': typeof AppEnvironmentsRoute
   '/namespaces': typeof AppNamespacesRoute
   '/overview': typeof AppOverviewRoute
+  '/reviews': typeof AppReviewsRoute
   '/settings': typeof AppSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/data-sources/$dataSourceId': typeof AppDataSourcesDataSourceIdRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/environments': typeof AppEnvironmentsRoute
   '/namespaces': typeof AppNamespacesRoute
   '/overview': typeof AppOverviewRoute
+  '/reviews': typeof AppReviewsRoute
   '/settings': typeof AppSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/data-sources/$dataSourceId': typeof AppDataSourcesDataSourceIdRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/_app/environments': typeof AppEnvironmentsRoute
   '/_app/namespaces': typeof AppNamespacesRoute
   '/_app/overview': typeof AppOverviewRoute
+  '/_app/reviews': typeof AppReviewsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
   '/_app/data-sources/$dataSourceId': typeof AppDataSourcesDataSourceIdRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/environments'
     | '/namespaces'
     | '/overview'
+    | '/reviews'
     | '/settings'
     | '/invite/$token'
     | '/data-sources/$dataSourceId'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/environments'
     | '/namespaces'
     | '/overview'
+    | '/reviews'
     | '/settings'
     | '/invite/$token'
     | '/data-sources/$dataSourceId'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/_app/environments'
     | '/_app/namespaces'
     | '/_app/overview'
+    | '/_app/reviews'
     | '/_app/settings'
     | '/invite/$token'
     | '/_app/data-sources/$dataSourceId'
@@ -321,6 +333,13 @@ declare module '@tanstack/react-router' {
       path: '/overview'
       fullPath: '/overview'
       preLoaderRoute: typeof AppOverviewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reviews': {
+      id: '/_app/reviews'
+      path: '/reviews'
+      fullPath: '/reviews'
+      preLoaderRoute: typeof AppReviewsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/settings': {
@@ -422,6 +441,7 @@ interface AppRouteChildren {
   AppEnvironmentsRoute: typeof AppEnvironmentsRoute
   AppNamespacesRoute: typeof AppNamespacesRoute
   AppOverviewRoute: typeof AppOverviewRoute
+  AppReviewsRoute: typeof AppReviewsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppDataSourcesDataSourceIdRoute: typeof AppDataSourcesDataSourceIdRoute
   AppExperimentsExperimentIdRoute: typeof AppExperimentsExperimentIdRoute
@@ -441,6 +461,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEnvironmentsRoute: AppEnvironmentsRoute,
   AppNamespacesRoute: AppNamespacesRoute,
   AppOverviewRoute: AppOverviewRoute,
+  AppReviewsRoute: AppReviewsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppDataSourcesDataSourceIdRoute: AppDataSourcesDataSourceIdRoute,
   AppExperimentsExperimentIdRoute: AppExperimentsExperimentIdRoute,

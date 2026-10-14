@@ -11,6 +11,7 @@ import { useConditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { EmptyState, ListSkeleton, PageHeader, Panel, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/saved-groups/")({
@@ -22,8 +23,9 @@ export const Route = createFileRoute("/_app/saved-groups/")({
 function Page() {
   const { t } = useTranslation("savedGroups");
   const { new: isNew } = Route.useSearch();
+  const { canEdit } = usePermissions();
   const navigate = Route.useNavigate();
-  if (isNew)
+  if (isNew && canEdit)
     return (
       <>
         <PageHeader
@@ -65,7 +67,8 @@ function GroupList() {
       summary(g.conditions)
     );
 
-  const newButton = (
+  const { canEdit } = usePermissions();
+  const newButton = canEdit && (
     <Link to="/saved-groups" search={{ new: true }} className={buttonVariants({ size: "sm" })}>
       <Plus className="size-4" />
       {t("list.new")}

@@ -71,6 +71,7 @@ export const EnvironmentServiceLive = Layer.effect(
           name: input.name.trim(),
           sdkKey: newSdkKey(),
           sortOrder: (last?.sortOrder ?? -1) + 1,
+          requireApproval: false,
           createdAt: new Date(),
         });
         yield* database.run("environments.create", (db) =>
@@ -103,6 +104,27 @@ export const EnvironmentServiceLive = Layer.effect(
           batch(db, [
             db.update(environments).set({ name: after.name }).where(eq(environments.id, after.id)),
             auditInsert(db, { entityType: "environment", entityId: after.id, action: "updated", actor, before, after }),
+          ]),
+        );
+        return after;
+      }),
+
+      // SDK payloads do not change: no republish
+      setRequireApproval: Effect.fn("EnvironmentService.setRequireApproval")(function* (input, actor) {
+        const before = yield* load(input.id);
+        if (before.requireApproval === input.requireApproval) return before;
+        const after = Environment.make({ ...before, requireApproval: input.requireApproval });
+        yield* database.run("environments.setRequireApproval", (db) =>
+          batch(db, [
+            db.update(environments).set({ requireApproval: after.requireApproval }).where(eq(environments.id, after.id)),
+            auditInsert(db, {
+              entityType: "environment",
+              entityId: after.id,
+              action: after.requireApproval ? "review.required" : "review.notRequired",
+              actor,
+              before,
+              after,
+            }),
           ]),
         );
         return after;

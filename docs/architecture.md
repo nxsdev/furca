@@ -31,6 +31,9 @@ furca Worker
 | UI | TanStack Start + HeroUI v3 | React Aria ベースでアクセシビリティが担保される。テーマは OKLCH トークンで上書き |
 | 統計 | 自前の `@furca/stats`（GrowthBook gbstats の移植） | Python 不要。GrowthBook の数値ベクトルで検証済み |
 | BigQuery | `jose` + REST | 公式 `@google-cloud/bigquery` は Workers で動かない（Node 依存・巨大）。保守されている `jose` で JWT を作る |
+| Snowflake | `jose` + SQL API v2 | キーペア認証の JWT をリクエストごとに署名。Node ドライバは Workers で動かない |
+| ClickHouse | `@clickhouse/client-web` | 公式の fetch ベースクライアント。セッション設定を送らないので readonly ユーザーでも動く |
+| Postgres | `postgres`（porsager） | `workerd` 条件で `cloudflare:sockets` を使う。リクエストごとに接続して必ず閉じる（Workers はソケットを共有できない） |
 
 ## レイヤー（zcareer に準拠）
 
@@ -38,7 +41,7 @@ furca Worker
 apps/web ─► packages/api ─► packages/persistence ─► packages/database
                     │                  │
                     └──────────────────┴─► packages/core（ドメインモデル・サービス契約・エラー）
-packages/integrations（BigQuery）◄─ persistence の分析サービス
+packages/integrations（BigQuery / Snowflake / ClickHouse / Postgres）◄─ persistence の分析サービス
 packages/stats / packages/sdk は依存なしの純粋パッケージ（ブラウザでも使う）
 ```
 
@@ -57,7 +60,7 @@ zcareer との意図的な差分:
 - **割当**: GrowthBook 互換 FNV-1a v2 ハッシュ。同じ seed + ユーザーなら常に同じ variation
 - **フェーズ**: 比率変更・ターゲティング変更・カバレッジ縮小は新フェーズ + 新 seed を強制（`trafficChangeNeedsNewPhase`）
 - **分析単位**: 露出は (ユーザー, 実験, variation) ごとに最初の時刻だけ保存。2つ以上の variation を見たユーザーは除外して件数を表示
-- **集計**: D1 / BigQuery どちらも「variation × 初回露出日」ごとの十分統計量（n, Σy, Σy², ratio と CUPED の積和）を返す。加算可能なので累積推移も同じデータから計算できる
+- **集計**: D1 と各ウェアハウス（SQL は `AnalysisSql.ts` の1つのビルダーを方言ごとに切り替え）のどれも「variation × 初回露出日」ごとの十分統計量（n, Σy, Σy², ratio と CUPED の積和）を返す。加算可能なので累積推移も同じデータから計算できる
 - **検定**: 既定は逐次検定（覗き見しても誤り率が保たれる）。SRM（p < 0.001）や多重露出 1% 以上は結論の表示をブロックする
 - **多重比較**: Holm 補正は「主要指標 × treatment」と「副指標 × treatment」を別ファミリーとして行う。副指標を増やしても意思決定に使う主要指標の検出力は落ちない（Optimizely / Eppo と同じ考え方）。ガードレールは見逃しの方が高コストなので補正しない
 

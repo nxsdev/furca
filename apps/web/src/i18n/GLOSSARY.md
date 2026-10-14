@@ -45,3 +45,6 @@ lowercase. Don't translate variation / flag / metric names the user typed.
 | power / MDE / sample size | 検出力 / 最小検出効果（MDE） / サンプルサイズ | |
 | capping / winsorization | キャッピング（外れ値の上限処理） | |
 | conversion window / delay | 計測期間 / 計測開始の遅延 | |
+| role / admin / editor / viewer | ロール / 管理者 / 編集者 / 閲覧者 | owner stays オーナー |
+| review / change request | レビュー / 変更リクエスト | |
+| approve / reject / require review | 承認 / 却下 / レビュー必須 | |

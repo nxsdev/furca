@@ -5,6 +5,7 @@
     "flags": "フラグ",
     "experiments": "実験",
     "metrics": "指標",
+    "reviews": "レビュー",
     "dataSources": "データソース",
     "environments": "SDK と環境",
     "audit": "監査ログ",
@@ -13,7 +14,8 @@
     "openNavigation": "ナビゲーションを開く",
     "navigation": "ナビゲーション",
     "savedGroups": "保存済みグループ",
-    "namespaces": "ネームスペース"
+    "namespaces": "ネームスペース",
+    "openReviews_other": "レビュー待ち {{count}} 件"
   },
   "environment": {
     "label": "環境"
@@ -35,8 +37,12 @@
   },
   "account": {
     "menu": "アカウント",
-    "owner": "オーナー",
-    "member": "メンバー",
+    "roles": {
+      "owner": "オーナー",
+      "admin": "管理者",
+      "editor": "編集者",
+      "viewer": "閲覧者"
+    },
     "light": "ライト",
     "dark": "ダーク",
     "system": "システム設定",

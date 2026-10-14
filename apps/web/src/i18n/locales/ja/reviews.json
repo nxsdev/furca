@@ -1,0 +1,62 @@
+{
+  "pageTitle": "レビュー · furca",
+  "page": {
+    "title": "レビュー",
+    "description": "レビュー必須の環境で、管理者の承認を待っているフラグの変更です。新しい順に表示します。",
+    "loadFailed": "レビューを読み込めませんでした。{{message}}",
+    "emptyTitle": "レビュー待ちの変更はありません",
+    "emptyDescription": "本番などの環境で「レビュー必須」をオンにすると、その環境でのフラグの変更は、別の管理者が承認するまでここで待機します。",
+    "emptyAction": "SDK と環境を開く"
+  },
+  "banner": {
+    "title_other": "レビュー待ちの変更が {{count}} 件あります"
+  },
+  "item": {
+    "requestedBy": "{{email}} が<relative/>にリクエスト"
+  },
+  "change": {
+    "turnOn": "オンにする",
+    "turnOff": "オフにする",
+    "rules": "ルールを変更",
+    "on": "オン",
+    "off": "オフ",
+    "becomes": "変更後",
+    "was": "変更前",
+    "allRulesRemoved": "すべてのルールを削除します。全員にデフォルト値が返ります。",
+    "unchanged_other": "変更のないルール {{count}} 件",
+    "kinds": {
+      "added": "追加",
+      "changed": "変更",
+      "moved": "移動",
+      "removed": "削除"
+    }
+  },
+  "actions": {
+    "approve": "承認",
+    "reject": "却下",
+    "cancel": "リクエストを取り消す",
+    "confirmApprove": "承認して適用",
+    "confirmReject": "リクエストを却下",
+    "commentLabel": "コメント（任意）",
+    "commentPlaceholder": "フラグの履歴でリクエストした人に表示されます",
+    "approved": "{{key}} の変更を承認しました",
+    "approvedDescription": "すぐに適用されました。SDK は次回のペイロード取得時に反映します。",
+    "rejected": "{{key}} の変更を却下しました",
+    "cancelled": "リクエストを取り消しました",
+    "failed": "リクエストを更新できませんでした",
+    "waitingForAdmin": "自分のリクエストは別の管理者が承認します。"
+  },
+  "request": {
+    "badge": "レビュー必須",
+    "tableHint": "{{environment}} はレビュー必須です。変更をリクエストするにはフラグを開いてください",
+    "toggleOn": "{{environment}} で {{key}} をオンにするリクエスト",
+    "toggleOff": "{{environment}} で {{key}} をオフにするリクエスト",
+    "explain": "{{environment}} はレビュー必須です。別の管理者が承認すると変更が適用されます。",
+    "commentLabel": "レビュアーへのメモ（任意）",
+    "commentPlaceholder": "変更の理由と確認方法",
+    "submit": "レビューをリクエスト",
+    "saveAndRequest": "保存してレビューをリクエスト",
+    "requested": "レビューをリクエストしました",
+    "requestedDescription": "管理者はこのフラグのページか「レビュー」から承認できます。"
+  }
+}

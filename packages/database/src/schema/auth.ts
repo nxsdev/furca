@@ -14,7 +14,10 @@ export const user = sqliteTable("user", {
   emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
   image: text("image"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).default(nowMs).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).default(nowMs).$onUpdate(() => new Date()).notNull()
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).default(nowMs).$onUpdate(() => new Date()).notNull(),
+  // furca: owner | admin | editor | viewer (Better Auth `user.additionalFields.role`, input: false).
+  // Set on sign-up from the invitation; the first account is the owner
+  role: text("role").default("viewer").notNull()
 })
 
 export const session = sqliteTable("session", {

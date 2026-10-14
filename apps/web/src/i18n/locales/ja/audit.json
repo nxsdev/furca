@@ -49,6 +49,17 @@
     },
     "invitation": {
       "revoked": "招待を取り消し"
+    },
+    "role": {
+      "updated": "ロールを変更"
+    },
+    "review": {
+      "requested": "レビューをリクエスト",
+      "approved": "レビューを承認",
+      "rejected": "レビューを却下",
+      "cancelled": "レビューを取り消し",
+      "required": "レビュー必須をオン",
+      "notRequired": "レビュー必須をオフ"
     }
   },
   "list": {

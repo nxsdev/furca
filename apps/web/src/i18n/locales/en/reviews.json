@@ -1,0 +1,64 @@
+{
+  "pageTitle": "Reviews · furca",
+  "page": {
+    "title": "Reviews",
+    "description": "Flag changes waiting for an admin's approval in environments that require review. Newest first.",
+    "loadFailed": "Couldn't load reviews. {{message}}",
+    "emptyTitle": "Nothing waiting for review",
+    "emptyDescription": "Turn on Require review for an environment, such as production. Flag changes there then wait here until another admin approves them.",
+    "emptyAction": "Open SDK & environments"
+  },
+  "banner": {
+    "title_one": "{{count}} change waiting for review",
+    "title_other": "{{count}} changes waiting for review"
+  },
+  "item": {
+    "requestedBy": "Requested by {{email}} <relative/>"
+  },
+  "change": {
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "rules": "Change rules",
+    "on": "On",
+    "off": "Off",
+    "becomes": "becomes",
+    "was": "Was",
+    "allRulesRemoved": "Removes every rule: everyone gets the default value.",
+    "unchanged_one": "{{count}} rule unchanged",
+    "unchanged_other": "{{count}} rules unchanged",
+    "kinds": {
+      "added": "New",
+      "changed": "Changed",
+      "moved": "Moved",
+      "removed": "Removed"
+    }
+  },
+  "actions": {
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel request",
+    "confirmApprove": "Approve and apply",
+    "confirmReject": "Reject request",
+    "commentLabel": "Comment (optional)",
+    "commentPlaceholder": "Shown to the author in the flag's history",
+    "approved": "{{key}} change approved",
+    "approvedDescription": "Applied now. SDKs pick it up on their next payload fetch.",
+    "rejected": "{{key}} change rejected",
+    "cancelled": "Request cancelled",
+    "failed": "Couldn't update the request",
+    "waitingForAdmin": "Another admin approves your requests."
+  },
+  "request": {
+    "badge": "Review required",
+    "tableHint": "{{environment}} requires review: open a flag to request a change",
+    "toggleOn": "Request to turn on {{key}} in {{environment}}",
+    "toggleOff": "Request to turn off {{key}} in {{environment}}",
+    "explain": "{{environment}} requires review: the change applies once another admin approves it.",
+    "commentLabel": "Note for the reviewer (optional)",
+    "commentPlaceholder": "Why this change, and how to check it",
+    "submit": "Request review",
+    "saveAndRequest": "Save and request review",
+    "requested": "Review requested",
+    "requestedDescription": "An admin can approve it on this flag's page or under Reviews."
+  }
+}

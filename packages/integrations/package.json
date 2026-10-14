@@ -5,6 +5,6 @@
   "type": "module",
   "exports": { "./*": "./src/*.ts" },
   "scripts": { "typecheck": "tsc --noEmit -p ." },
-  "dependencies": { "@furca/core": "workspace:*", "effect": "catalog:", "jose": "catalog:" },
+  "dependencies": { "@clickhouse/client-web": "catalog:", "@furca/core": "workspace:*", "effect": "catalog:", "jose": "catalog:", "postgres": "catalog:" },
   "devDependencies": {  }
 }

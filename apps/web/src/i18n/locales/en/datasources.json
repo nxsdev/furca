@@ -5,12 +5,12 @@
   "builtinName": "Built-in event store",
   "list": {
     "title": "Data sources",
-    "description": "Where exposures and metric events are read from. The built-in store works out of the box; add BigQuery to use your warehouse.",
-    "connect": "Connect BigQuery",
+    "description": "Where exposures and metric events are read from. The built-in store works out of the box; connect BigQuery, Snowflake, ClickHouse or Postgres to use your warehouse.",
+    "connect": "Connect a warehouse",
     "loadFailed": "Couldn't load data sources. {{error}}",
     "builtinType": "Built-in (D1)",
     "builtinLocation": "This deployment's D1",
-    "warehouseHint": "Already send events to GA4 or Segment with a BigQuery export? Connect it and furca reads exposures and metrics straight from your tables with SQL you control. Templates for both are included.",
+    "warehouseHint": "Already have events in a warehouse, like a GA4 or Segment export? Connect it and furca reads exposures and metrics straight from your tables with SQL you control. Templates are included.",
     "columns": {
       "name": "Name",
       "type": "Type",
@@ -20,11 +20,12 @@
     }
   },
   "new": {
-    "breadcrumb": "New BigQuery source",
-    "title": "Connect BigQuery",
-    "description": "Analyze experiments with exposures and events already in your warehouse, like a GA4 or Segment export.",
+    "breadcrumb": "New data source",
+    "title": "Connect a warehouse",
+    "description": "Analyze experiments with exposures and events already in your warehouse. Pick where they live.",
     "createdToast": "{{name}} created",
-    "createdToastDescription": "Test the connection to check access and the exposure query."
+    "createdToastDescription": "Test the connection to check access and the exposure query.",
+    "connect": "Connect {{warehouse}}"
   },
   "detail": {
     "fallbackTitle": "Data source",
@@ -61,12 +62,18 @@
       "title": "Connection test",
       "description": "Authenticates with the stored key and dry-runs the exposure query. Dry runs are free and read no data.",
       "button": "Test connection",
-      "pending": "Contacting BigQuery…",
+      "pending": "Contacting {{warehouse}}…",
       "notTested": "Not tested since this page opened.",
-      "noKey": "Add a service account key below, then test.",
       "connected": "Connected",
       "scan": "The exposure query would scan <bytes>{{bytes}}</bytes> per analysis.",
-      "failed": "Connection failed"
+      "failed": "Connection failed",
+      "descriptionLimit0": "Authenticates with the stored credentials and runs the exposure query with LIMIT 0, which compiles it without reading rows.",
+      "noSecret": {
+        "bigquery": "Add a service account key below, then test.",
+        "snowflake": "Add the user's private key below, then test.",
+        "clickhouse": "Add the password below, then test.",
+        "postgres": "Add the password below, then test."
+      }
     },
     "deletedToast": "{{name}} deleted",
     "settings": "Settings",
@@ -75,14 +82,14 @@
     "delete": {
       "title": "Delete {{name}}?",
       "confirm": "Delete data source",
-      "body": "The stored service account key is erased. This can't be undone.",
+      "body": "The stored credentials are erased. This can't be undone.",
       "inUse_one": "{{count}} metric reads from this source (archived ones included). Point it at another source first; a source in use can't be deleted.",
       "inUse_other": "{{count}} metrics read from this source (archived ones included). Point them at another source first; a source in use can't be deleted."
     }
   },
   "form": {
     "warehouse": {
-      "title": "Warehouse",
+      "title": "Connection",
       "name": "Name",
       "namePlaceholder": "Analytics warehouse",
       "projectId": "Project id",
@@ -93,14 +100,10 @@
     },
     "key": {
       "title": "Service account key",
-      "description": "Stored encrypted with this deployment's <c>ENCRYPTION_KEY</c> and never shown again. furca only runs read queries.",
-      "stored": "A key is stored for this data source.",
-      "replace": "Replace key",
       "dropLabel": "Drop a service account JSON key",
       "fieldLabel": "Service account JSON key",
       "placeholder": "Paste the JSON key, or drop the .json file here",
       "chooseFile": "Choose .json file",
-      "keep": "Keep current key",
       "needsRoles": "The service account needs <b>BigQuery Job User</b> and <b>BigQuery Data Viewer</b> on the project. Paste the key to get the exact commands.",
       "notServiceAccount": "This isn't a service account key. In Google Cloud, open IAM → Service accounts → Keys → Add key → JSON.",
       "invalidJson": "This isn't valid JSON. Paste the whole key file, including the braces."
@@ -120,10 +123,11 @@
       "startFrom": "Start from",
       "ga4": "GA4 export",
       "generic": "Generic",
-      "help": "One row per exposure event (don't de-duplicate; furca splits phases by time) with columns <c>user_id</c> STRING, <c>timestamp</c> TIMESTAMP, <c>experiment_key</c> STRING, <c>variation_key</c> STRING. Optionally use <c>@experiment_key</c>, <c>@start_ms</c> and <c>@end_ms</c> (epoch ms) to prune partitions; the GA4 template shows how.",
+      "help": "One row per exposure event (don't de-duplicate; furca splits phases by time) with columns <c>user_id</c> {{text}}, <c>timestamp</c> {{time}}, <c>experiment_key</c> {{text}}, <c>variation_key</c> {{text}}. Optionally filter with <c>@experiment_key</c>, <c>@start_ms</c> and <c>@end_ms</c> (epoch ms), e.g. to prune partitions.",
       "templateInserted": "Template inserted",
       "templateInsertedDescription": "Your previous SQL was replaced.",
-      "undo": "Undo"
+      "undo": "Undo",
+      "label": "{{warehouse}} SQL"
     },
     "errors": {
       "name": "Name the data source",
@@ -131,10 +135,78 @@
       "dataset": "Enter the default dataset",
       "location": "Enter the dataset location, e.g. US",
       "credentials": "Paste or drop the service account key",
-      "sql": "Write the exposure query, or start from a template"
+      "sql": "Write the exposure query, or start from a template",
+      "required": "Required",
+      "account": "Enter only the account identifier, e.g. myorg-myaccount",
+      "url": "Enter an https:// URL without a user name or password",
+      "host": "Enter only the host name, e.g. db.example.com",
+      "port": "Enter a port from 1 to 65535"
     },
     "noChanges": "No unsaved changes.",
     "saveChanges": "Save changes",
-    "create": "Create data source"
+    "create": "Create data source",
+    "secretDescription": "Stored encrypted with this deployment's <c>ENCRYPTION_KEY</c> and never shown again. furca only runs read queries.",
+    "secretStored": "{{secret}} is stored for this data source.",
+    "replace": "Replace",
+    "keep": "Keep current",
+    "privateKey": {
+      "title": "Private key",
+      "placeholder": "Paste the unencrypted PKCS#8 private key, or drop the .p8 file here",
+      "dropLabel": "Drop a private key file",
+      "chooseFile": "Choose key file",
+      "required": "Paste or drop the user's private key",
+      "encrypted": "Encrypted keys aren't supported. Create the key with -nocrypt, or decrypt it with openssl pkcs8.",
+      "pkcs1": "This is a PKCS#1 key. Convert it with: openssl pkcs8 -topk8 -nocrypt -in key.pem -out rsa_key.p8",
+      "invalid": "This isn't a private key. It starts with -----BEGIN PRIVATE KEY-----.",
+      "register": "Register its public key on the Snowflake user (run as a user administrator):",
+      "copySql": "Copy SQL",
+      "howTo": "No key yet? Create one, then paste rsa_key.p8 here to get the ALTER USER statement.",
+      "copyCommand": "Copy command"
+    },
+    "password": {
+      "title": "Password",
+      "label": "Password",
+      "required": "Enter the password"
+    },
+    "access": {
+      "snowflake": "The user's role needs USAGE on the warehouse, database and schema, and SELECT on the tables your SQL reads.",
+      "clickhouse": "Use a user that can only SELECT the tables your SQL reads (readonly users work).",
+      "postgres": "Use a user that can only SELECT the tables your SQL reads. The database must accept connections from the internet (Cloudflare Workers)."
+    },
+    "fields": {
+      "account": "Account identifier",
+      "user": "User",
+      "warehouse": "Warehouse",
+      "database": "Database",
+      "schema": "Schema",
+      "role": "Role",
+      "url": "URL",
+      "host": "Host",
+      "port": "Port",
+      "ssl": "SSL"
+    },
+    "help": {
+      "snowflake": {
+        "account": "The part before .snowflakecomputing.com, e.g. myorg-myaccount.",
+        "role": "Optional. Empty uses the user's default role."
+      },
+      "clickhouse": {
+        "url": "The HTTPS interface, usually port 8443."
+      },
+      "postgres": {
+        "host": "Host name only, without postgres:// or a path.",
+        "ssl": "Managed databases require it."
+      }
+    },
+    "ssl": {
+      "require": "Require (TLS)",
+      "disable": "Disable"
+    }
+  },
+  "types": {
+    "bigquery": "Google's warehouse. Works with GA4 and Segment exports; free dry runs check queries before they run.",
+    "snowflake": "Key-pair authentication over the SQL API. Reads exposures and events from your Snowflake tables.",
+    "clickhouse": "Self-hosted or ClickHouse Cloud, over the HTTPS interface.",
+    "postgres": "Any PostgreSQL 12+ reachable from the internet: Amazon RDS / Aurora, Cloud SQL, Neon, Supabase and more."
   }
 }

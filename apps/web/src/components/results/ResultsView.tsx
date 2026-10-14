@@ -11,6 +11,7 @@ import { VariationSwatch, weightLabel } from "~/components/experiments/parts";
 import { CodeBlock } from "~/components/flags/CodeBlock";
 import { Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { useEnvironment } from "~/lib/environment";
+import { usePermissions } from "~/lib/permissions";
 import { i18n } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
 import { DimensionBreakdown } from "./DimensionBreakdown";
@@ -32,7 +33,9 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
       onError: (error) => toast.danger(i18n.t("results:view.refreshFailed"), { description: errorMessage(error) }),
     }),
   );
-  const onRefresh = () => refresh.mutate({ experimentId: experiment.id });
+  // Viewers read the scheduled snapshots; re-running the analysis is an editor action
+  const { canEdit } = usePermissions();
+  const onRefresh = canEdit ? () => refresh.mutate({ experimentId: experiment.id }) : undefined;
 
   if (latest.isPending) return <ResultsSkeleton />;
   if (latest.error !== null) return <QueryError message={errorMessage(latest.error)} onRetry={() => latest.refetch()} />;
@@ -60,9 +63,11 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
           <p className="font-medium">{t("view.failedTitle")}</p>
           <p className="mt-1 text-body text-muted">{snapshot.error ?? t("view.unknownError")}</p>
           <p className="mt-2 text-label text-muted">{t("view.failedHelp")}</p>
-          <Button size="sm" variant="outline" className="mt-3" onPress={onRefresh} isPending={refresh.isPending}>
-            {t("view.tryAgain")}
-          </Button>
+          {onRefresh !== undefined && (
+            <Button size="sm" variant="outline" className="mt-3" onPress={onRefresh} isPending={refresh.isPending}>
+              {t("view.tryAgain")}
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -120,7 +125,7 @@ function RefreshBar({
   snapshot: ResultSnapshot | null;
   experiment: Experiment;
   isPending: boolean;
-  onRefresh: () => void;
+  onRefresh: (() => void) | undefined;
 }) {
   const { t } = useTranslation(["results", "common"]);
   const phase = experiment.phases.length;
@@ -135,7 +140,7 @@ function RefreshBar({
         {phase > 1 && t("view.phaseOnly", { n: phase })}
         {experiment.status === "stopped" && experiment.stoppedAt !== null && t("view.final")}
       </p>
-      {(experiment.status === "running" || snapshot === null) && (
+      {onRefresh !== undefined && (experiment.status === "running" || snapshot === null) && (
         <Button size="sm" variant="outline" onPress={onRefresh} isPending={isPending}>
           <RefreshCw className={`size-3.5 ${isPending ? "animate-spin" : ""}`} aria-hidden="true" />
           {isPending ? t("view.analyzing") : t("common:actions.refresh")}

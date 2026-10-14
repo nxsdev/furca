@@ -10,6 +10,7 @@ import { MetricForm } from "~/components/metrics/MetricForm";
 import { EmptyState, ListSkeleton, PageHeader, Panel, QueryError } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/metrics/")({
@@ -21,8 +22,9 @@ export const Route = createFileRoute("/_app/metrics/")({
 function Page() {
   const { t } = useTranslation("metrics");
   const { new: isNew } = Route.useSearch();
+  const { canEdit } = usePermissions();
   const navigate = Route.useNavigate();
-  if (isNew)
+  if (isNew && canEdit)
     return (
       <>
         <PageHeader
@@ -56,7 +58,8 @@ function MetricList() {
     return s !== undefined ? dataSourceName(s) : id === "builtin" ? t("builtinEvents") : "—";
   };
 
-  const newButton = (
+  const { canEdit } = usePermissions();
+  const newButton = canEdit && (
     <Link to="/metrics" search={{ new: true }} className={buttonVariants({ size: "sm" })}>
       <Plus className="size-4" />
       {t("list.newMetric")}

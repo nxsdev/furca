@@ -1,13 +1,13 @@
 import { Breadcrumbs, Button, Skeleton, toast } from "@heroui/react";
-import type { DataSource } from "@furca/core/datasources/DataSource";
+import { type DataSource, WAREHOUSE_LABELS, type WarehouseType } from "@furca/core/datasources/DataSource";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CircleCheck, CircleX, PlugZap, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AuditList } from "~/components/audit/AuditList";
-import { BigQueryForm } from "~/components/datasources/BigQueryForm";
-import { dataSourceName } from "~/components/datasources/name";
+import { DataSourceForm } from "~/components/datasources/DataSourceForm";
+import { configSummary, dataSourceName } from "~/components/datasources/name";
 import { formatBytes } from "~/components/environments/Sparkline";
 import { TrafficChart } from "~/components/overview/TrafficChart";
 import { formatCount } from "~/components/results/format";
@@ -16,6 +16,7 @@ import { ListSkeleton, PageHeader, Panel, PanelHeader, QueryError, RelativeTime 
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/data-sources/$dataSourceId")({
@@ -56,7 +57,11 @@ function Page() {
         <QueryError message={t("detail.loadFailed", { error: errorMessage(source.error) })} onRetry={() => source.refetch()} />
       </>
     );
-  return source.data.type === "builtin" ? <BuiltinDetail source={source.data} /> : <WarehouseDetail source={source.data} />;
+  return source.data.type === "builtin" ? (
+    <BuiltinDetail source={source.data} />
+  ) : (
+    <WarehouseDetail source={source.data} type={source.data.type} />
+  );
 }
 
 function MetricsUsing({ sourceId }: { sourceId: string }) {
@@ -218,7 +223,7 @@ function BuiltinDetail({ source }: { source: DataSource }) {
   );
 }
 
-function ConnectionTest({ source }: { source: DataSource }) {
+function ConnectionTest({ source, type }: { source: DataSource; type: WarehouseType }) {
   const { t } = useTranslation("datasources");
   const test = useMutation(orpc.dataSources.test.mutationOptions());
   const r = test.data;
@@ -226,7 +231,7 @@ function ConnectionTest({ source }: { source: DataSource }) {
     <Panel>
       <PanelHeader
         title={t("detail.test.title")}
-        description={t("detail.test.description")}
+        description={type === "bigquery" ? t("detail.test.description") : t("detail.test.descriptionLimit0")}
         actions={
           <Button size="sm" variant="secondary" onPress={() => test.mutate({ id: source.id })} isPending={test.isPending} className="shrink-0">
             <PlugZap className="size-4" />
@@ -236,7 +241,7 @@ function ConnectionTest({ source }: { source: DataSource }) {
       />
       <div className="px-5 py-4" aria-live="polite">
         {test.isPending ? (
-          <p className="text-body text-muted">{t("detail.test.pending")}</p>
+          <p className="text-body text-muted">{t("detail.test.pending", { warehouse: WAREHOUSE_LABELS[type] })}</p>
         ) : test.error !== null ? (
           <p role="alert" className="flex items-start gap-2 text-body text-danger">
             <CircleX className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -244,7 +249,7 @@ function ConnectionTest({ source }: { source: DataSource }) {
           </p>
         ) : r === undefined ? (
           <p className="text-body text-muted">
-            {source.hasCredentials ? t("detail.test.notTested") : t("detail.test.noKey")}
+            {source.hasCredentials ? t("detail.test.notTested") : t(`detail.test.noSecret.${type}`)}
           </p>
         ) : r.ok ? (
           <div className="flex items-start gap-2 text-body">
@@ -281,11 +286,12 @@ function ConnectionTest({ source }: { source: DataSource }) {
   );
 }
 
-function WarehouseDetail({ source }: { source: DataSource }) {
+function WarehouseDetail({ source, type }: { source: DataSource; type: WarehouseType }) {
   const { t } = useTranslation(["datasources", "common"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const { isAdmin } = usePermissions();
   const metrics = useQuery(orpc.metrics.list.queryOptions({ input: { includeArchived: true } }));
   const used = metrics.data?.filter((m) => m.dataSourceId === source.id).length ?? 0;
   const remove = useMutation(
@@ -298,38 +304,40 @@ function WarehouseDetail({ source }: { source: DataSource }) {
       },
     }),
   );
-  const bq = source.bigquery;
   return (
     <>
       <PageHeader
         breadcrumb={crumbs(source.name)}
         title={source.name}
         description={
-          bq === null ? (
-            "BigQuery"
+          source.config === null ? (
+            WAREHOUSE_LABELS[type]
           ) : (
             <>
-              BigQuery ·{" "}
-              <span className="font-mono">
-                {bq.projectId}.{bq.dataset}
-              </span>{" "}
-              · {bq.location}
+              {WAREHOUSE_LABELS[type]} · <span className="font-mono">{configSummary(source.config)}</span>
             </>
           )
         }
         actions={
-          <Button size="sm" variant="tertiary" onPress={() => setConfirming(true)}>
-            <Trash2 className="size-4" />
-            {t("common:actions.delete")}
-          </Button>
+          isAdmin && (
+            <Button size="sm" variant="tertiary" onPress={() => setConfirming(true)}>
+              <Trash2 className="size-4" />
+              {t("common:actions.delete")}
+            </Button>
+          )
         }
       />
       <div className="flex flex-col gap-6">
-        <ConnectionTest source={source} />
-        <section className="flex flex-col gap-3">
-          <h2 className="text-section font-medium">{t("detail.settings")}</h2>
-          <BigQueryForm key={source.updatedAt.toString()} source={source} onSaved={() => toast.success(t("detail.savedToast"))} />
-        </section>
+        {/* Testing and editing need admin (the test runs SQL with the stored credentials) */}
+        {isAdmin && (
+          <>
+            <ConnectionTest source={source} type={type} />
+            <section className="flex flex-col gap-3">
+              <h2 className="text-section font-medium">{t("detail.settings")}</h2>
+              <DataSourceForm key={source.updatedAt.toString()} type={type} source={source} onSaved={() => toast.success(t("detail.savedToast"))} />
+            </section>
+          </>
+        )}
         <MetricsUsing sourceId={source.id} />
         <Panel>
           <PanelHeader title={t("detail.history")} />

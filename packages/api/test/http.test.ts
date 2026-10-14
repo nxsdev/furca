@@ -24,10 +24,11 @@ const BROWSER = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537
 const request = (path: string, init: RequestInit = {}) =>
   handleApiRequest(new Request(`${ORIGIN}${path}`, { ...init, headers: { origin: ORIGIN, "user-agent": BROWSER, ...init.headers } }), env, ctx);
 
-const signUp = async (email: string) => {
+/** `invitation`: the invite URL from members.invite (needed for everyone but the first account) */
+const signUp = async (email: string, invitation?: string) => {
   const res = await request("/api/auth/sign-up/email", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(invitation ? { "x-furca-invitation": invitation.split("/").at(-1)! } : {}) },
     body: JSON.stringify({ email, password: "correct-horse-battery", name: email.split("@")[0] }),
   });
   expect(res.status).toBe(200);
@@ -65,27 +66,27 @@ describe("rpc wire format", () => {
 });
 
 describe("members", () => {
-  it("only the owner removes members, and never themselves", async () => {
-    const invite = await rpc(owner.cookie, "members/invite", { email: "  Member@Example.com " });
+  it("admins remove members, never the owner", async () => {
+    const invite = await rpc(owner.cookie, "members/invite", { email: "  Member@Example.com ", role: "editor" });
     expect(invite.status).toBe(200);
     expect(invite.json.email).toBe("member@example.com");
     expect(invite.json.url).toMatch(/^\/invite\/[0-9a-f]{64}$/);
 
-    const member = await signUp("member@example.com");
-    expect((await rpc(owner.cookie, "members/invite", { email: "member@example.com" })).status).toBe(400);
+    const member = await signUp("member@example.com", invite.json.url);
+    expect((await rpc(owner.cookie, "members/invite", { email: "member@example.com", role: "editor" })).status).toBe(400);
 
     expect((await rpc(member.cookie, "members/remove", { id: owner.id })).status).toBe(403);
     expect((await rpc(owner.cookie, "members/remove", { id: owner.id })).status).toBe(403);
     expect((await rpc(owner.cookie, "members/remove", { id: member.id })).status).toBe(200);
 
     const list = await rpc(owner.cookie, "members/list");
-    expect(list.json.members.map((m: { email: string; isOwner: boolean }) => [m.email, m.isOwner])).toEqual([["owner@example.com", true]]);
+    expect(list.json.members.map((m: { email: string; role: string }) => [m.email, m.role])).toEqual([["owner@example.com", "owner"]]);
     expect(list.json.invitations).toEqual([]);
   });
 
   it("re-inviting replaces the pending invitation", async () => {
-    const first = await rpc(owner.cookie, "members/invite", { email: "again@example.com" });
-    const second = await rpc(owner.cookie, "members/invite", { email: "again@example.com" });
+    const first = await rpc(owner.cookie, "members/invite", { email: "again@example.com", role: "viewer" });
+    const second = await rpc(owner.cookie, "members/invite", { email: "again@example.com", role: "viewer" });
     const list = await rpc(owner.cookie, "members/list");
     expect(list.json.invitations.map((i: { id: string }) => i.id)).toEqual([second.json.id]);
     expect(second.json.id).not.toBe(first.json.id);

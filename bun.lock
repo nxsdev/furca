@@ -118,9 +118,11 @@
       "name": "@furca/integrations",
       "version": "0.0.0",
       "dependencies": {
+        "@clickhouse/client-web": "catalog:",
         "@furca/core": "workspace:*",
         "effect": "catalog:",
         "jose": "catalog:",
+        "postgres": "catalog:",
       },
     },
     "packages/openfeature": {
@@ -192,6 +194,7 @@
   },
   "catalog": {
     "@better-auth/drizzle-adapter": "1.7.7",
+    "@clickhouse/client-web": "1.24.0",
     "@cloudflare/workers-types": "5.20261012.1",
     "@effect/platform-bun": "4.0.3",
     "@effect/platform-node": "4.0.3",
@@ -239,6 +242,7 @@
     "jose": "6.2.12",
     "lucide-react": "1.55.0",
     "miniflare": "4.20260730.0",
+    "postgres": "3.4.9",
     "react": "19.3.0",
     "react-aria": "3.53.1",
     "react-aria-components": "1.22.1",
@@ -322,6 +326,8 @@
     "@chevrotain/types": ["@chevrotain/types@10.5.0", "", {}, "sha512-f1MAia0x/pAVPWH/T73BJVyO2XU5tI4/iE7cnxb7tqdNTNhQI3Uq3XkqcoteTmD4t1aM0LbHCJOhgIDn07kl2A=="],
 
     "@chevrotain/utils": ["@chevrotain/utils@10.5.0", "", {}, "sha512-hBzuU5+JjB2cqNZyszkDHZgOSrUUT8V3dhgRl8Q9Gp6dAj/H5+KILGjbhDpc3Iy9qmqlm/akuOI2ut9VUtzJxQ=="],
+
+    "@clickhouse/client-web": ["@clickhouse/client-web@1.24.0", "", {}, "sha512-s8gPyLOK6wo41UxtKaXXvuqFQoOm/feMfB/n2F3F+LtzJu3mF8ZXpGmeVXgS4b76rorMzRECoKs6Q7jSBp4Gxw=="],
 
     "@cloudflare/unenv-preset": ["@cloudflare/unenv-preset@2.16.2", "", { "peerDependencies": { "unenv": "2.0.0-rc.24", "workerd": ">1.20260305.0 <2.0.0-0" }, "optionalPeers": ["workerd"] }, "sha512-JBP1+Z7ZSNG/d4mRP+y8VC5dka3tZVMLEZRvS+rzQ4DGV1EoxRFQckcJTTkXbHSQiTj0DtNI01Zwb/V2fX0mvQ=="],
 
@@ -1688,6 +1694,8 @@
     "picomatch": ["picomatch@4.0.7", "", {}, "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA=="],
 
     "postcss": ["postcss@8.5.30", "", { "dependencies": { "nanoid": "^3.3.20", "picocolors": "^1.1.1", "source-map-js": "^1.2.2" } }, "sha512-zkd+e9S1AQHhmaBKye9zlFHWjOwVgqXl1q3ECYy8561K7qxR2cREf/STLskulBFd78k6AOFeA+ff1TtEzk9bAA=="],
+
+    "postgres": ["postgres@3.4.9", "", {}, "sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw=="],
 
     "prettier": ["prettier@3.9.10", "", { "bin": { "prettier": "bin/prettier.cjs" } }, "sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA=="],
 

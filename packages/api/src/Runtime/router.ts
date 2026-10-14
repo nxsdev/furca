@@ -13,6 +13,7 @@ import { resultsRouter } from "../Handlers/results";
 import { eventsRouter } from "../Handlers/events";
 import { auditRouter } from "../Handlers/audit";
 import { membersRouter } from "../Handlers/members";
+import { changeRequestsRouter } from "../Handlers/changeRequests";
 import { pub } from "./orpc";
 
 /** The whole admin API. Each domain router lives in ../Handlers/<domain>.ts */
@@ -32,4 +33,5 @@ export const router = pub.router({
   apiKeys: apiKeysRouter,
   webhooks: webhooksRouter,
   members: membersRouter,
+  changeRequests: changeRequestsRouter,
 });

@@ -9,5 +9,7 @@ export class Environment extends Schema.Class<Environment>("Environment")({
   /** Public key the SDK uses to fetch the payload and send events */
   sdkKey: Schema.String,
   sortOrder: Schema.Int,
+  /** Flag on/off and rule changes here go through a reviewed change request */
+  requireApproval: Schema.Boolean,
   createdAt: Schema.Date,
 }) {}

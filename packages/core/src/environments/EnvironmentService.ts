@@ -18,6 +18,10 @@ export interface EnvironmentServiceShape {
   /** New random SDK key; every existing feature gets a disabled row */
   readonly create: (input: { readonly key: string; readonly name: string }, actor: Actor) => Effect.Effect<Environment, Errors>;
   readonly update: (input: { readonly id: string; readonly name: string }, actor: Actor) => Effect.Effect<Environment, Errors>;
+  readonly setRequireApproval: (
+    input: { readonly id: string; readonly requireApproval: boolean },
+    actor: Actor,
+  ) => Effect.Effect<Environment, Errors>;
   /** Publishes under the new key and removes the old one */
   readonly rotateSdkKey: (id: string, actor: Actor) => Effect.Effect<Environment, Errors>;
   /** ConflictError for the last environment or one a running experiment uses */

@@ -11,6 +11,7 @@ import { headlineComparison, isHealthy, regressedGuardrails, verdictLabel, verdi
 import { Panel, PageHeader, QueryError } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 type Filter = ExperimentStatus | "all";
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/_app/experiments/")({
 
 function NewButton() {
   const { t } = useTranslation("experiments");
+  const { canEdit } = usePermissions();
+  if (!canEdit) return null;
   return (
     <Link to="/experiments/new" className="button button--primary button--sm">
       <Plus className="size-4" aria-hidden="true" />

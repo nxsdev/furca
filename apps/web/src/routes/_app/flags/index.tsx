@@ -2,7 +2,7 @@ import type { Feature, FeatureValueType } from "@furca/core/features/Feature";
 import { Button, Checkbox, ListBox, SearchField, Select } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Flag, FlaskConical, Plus } from "lucide-react";
+import { Flag, FlaskConical, Plus, ShieldCheck } from "lucide-react";
 import { type MouseEvent, type ReactNode, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { CodeBlock } from "~/components/flags/CodeBlock";
@@ -13,6 +13,7 @@ import { environmentHue } from "~/components/shell/Sidebar";
 import { CopyButton, EmptyState, ListSkeleton, PageHeader, Panel, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/flags/")({
@@ -40,7 +41,8 @@ function FlagsPage() {
   const features = useQuery(orpc.features.list.queryOptions({ input: { includeArchived: showArchived } }));
   const experiments = useQuery({ ...orpc.experiments.list.queryOptions({ input: { includeArchived: false } }), retry: false });
   const { environments, current } = useEnvironment();
-  const creating = search.new !== undefined;
+  const { canEdit } = usePermissions();
+  const creating = canEdit && search.new !== undefined;
   const setCreating = (open: boolean) => void navigate({ search: open ? { new: 1 } : {}, replace: !open });
 
   const runningByFeature = useMemo(() => {
@@ -69,6 +71,7 @@ function FlagsPage() {
         title={t("shared.flags")}
         description={t("list.description")}
         actions={
+          canEdit &&
           !creating &&
           !isEmpty && (
             <Button size="sm" onPress={() => setCreating(true)}>
@@ -92,10 +95,12 @@ function FlagsPage() {
               <div className="w-full">
                 <CodeBlock title="app.ts" code={SNIPPET} />
               </div>
-              <Button size="sm" onPress={() => setCreating(true)}>
-                <Plus className="size-4" />
-                {t("shared.createFlag")}
-              </Button>
+              {canEdit && (
+                <Button size="sm" onPress={() => setCreating(true)}>
+                  <Plus className="size-4" />
+                  {t("shared.createFlag")}
+                </Button>
+              )}
             </div>
           }
         />
@@ -190,9 +195,10 @@ function FlagsTable({
   runningByFeature: ReadonlyMap<string, ReadonlyArray<{ id: string; name: string }>>;
   emptyMessage: ReactNode;
 }) {
-  const { t } = useTranslation("flags");
+  const { t } = useTranslation(["flags", "reviews"]);
   const navigate = useNavigate();
   const setEnabled = useSetEnabled();
+  const { canEdit } = usePermissions();
   const current = environments.find((e) => e.id === currentEnvironmentId);
   const openRow = (e: MouseEvent, id: string) => {
     if ((e.target as HTMLElement).closest("a,button,input,label,[role=switch]")) return;
@@ -208,9 +214,15 @@ function FlagsTable({
             <th className={`${th} hidden md:table-cell`}>{t("list.columns.type")}</th>
             {environments.map((env) => (
               <th key={env.id} className={`${th} w-px ${env.id === currentEnvironmentId ? "text-foreground" : "hidden sm:table-cell"}`}>
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5" title={env.requireApproval ? t("reviews:request.tableHint", { environment: env.name }) : undefined}>
                   <span className={`size-1.5 rounded-full ${environmentHue(env.key)}`} aria-hidden="true" />
                   {env.name}
+                  {env.requireApproval && (
+                    <>
+                      <ShieldCheck className="size-3.5 text-muted" aria-hidden="true" />
+                      <span className="sr-only">{t("reviews:request.tableHint", { environment: env.name })}</span>
+                    </>
+                  )}
                 </span>
               </th>
             ))}
@@ -279,7 +291,7 @@ function FlagsTable({
                       <FlagSwitch
                         aria-label={t("shared.switchLabel", { key: f.key, environment: env.name })}
                         isSelected={enabled}
-                        isDisabled={f.archived}
+                        isDisabled={f.archived || !canEdit || env.requireApproval}
                         onChange={(next) => setEnabled.mutate({ feature: f, environment: env, enabled: next })}
                       />
                     </td>

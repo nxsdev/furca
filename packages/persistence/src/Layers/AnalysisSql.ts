@@ -1,18 +1,20 @@
 /**
- * Experiment analysis SQL for the built-in store (D1 / SQLite) and BigQuery. Both dialects implement
- * the same semantics and return the same columns, so the stats pipeline does not care which ran:
+ * Experiment analysis SQL for the built-in store (D1 / SQLite) and the warehouses (BigQuery, Snowflake,
+ * ClickHouse, Postgres). Every dialect implements the same semantics and returns the same columns, so
+ * the stats pipeline does not care which ran:
  *
  * - Units: exposures of the experiment key within [start, end]. Per unit: first exposure t0 and
  *   variation. A unit seen in 2+ variations is a multiple exposure: counted, then excluded.
  *   D1 also filters on the phase index (exposures are stored first-seen per phase, so a unit
- *   re-randomized by a new phase counts again). BigQuery exposure SQL returns view events, so the
+ *   re-randomized by a new phase counts again). Warehouse exposure SQL returns view events, so the
  *   phase's time window is what separates phases there
  * - Per-unit value y from the metric's events with t0 + delay <= ts < t0 + window (no upper bound
  *   without a window) and ts <= end. proportion: 1 if any event; mean: count / sum; ratio: numerator y
  *   and denominator d. Units without events are 0
  * - CUPED covariate x: the same value over [t0 - 14 days, t0) (not for ratio metrics)
  * - Capping on per-unit y and x, never on raw events: absolute min(v, cap), or the p-quantile of y
- *   pooled across variations (D1: nearest rank floor(p·(n−1)); BigQuery: APPROX_QUANTILES, 0.1% grid).
+ *   pooled across variations (D1: nearest rank floor(p·(n−1)); BigQuery: APPROX_QUANTILES, 0.1% grid;
+ *   Snowflake / Postgres: PERCENTILE_DISC; ClickHouse: quantileExact).
  *   Not applied to proportion metrics (values are 0/1). Ratio metrics cap the numerator only
  *
  * - Metric property filters (built-in store only; warehouse SQL writes its own WHERE) are AND-ed on
@@ -27,8 +29,10 @@
  * sum_yd, sum_x, sum_x2, sum_xy, cap_value
  *
  * User input is always a bound parameter. The only interpolated text is warehouse SQL written by
- * admins (data source exposure SQL, metric SQL), which is the point of a warehouse-native source
+ * admins (data source exposure SQL, metric SQL), which is the point of a warehouse-native source, and
+ * the cap percentile (a range-checked number) where the warehouse needs a literal
  */
+import type { WarehouseType } from "@furca/core/datasources/DataSource";
 import type { EventSource, Metric, PropertyFilter } from "@furca/core/metrics/Metric";
 
 const HOUR_MS = 3_600_000;
@@ -194,27 +198,104 @@ FROM capped GROUP BY ${slice}variation, day`;
 };
 
 // ---------------------------------------------------------------------------------------------
-// BigQuery (GoogleSQL). The data source's exposure SQL and the metric SQL are wrapped as CTEs.
-// They may reference @experiment_key, @start_ms and @end_ms (epoch ms) for partition pruning
+// Warehouses (BigQuery, Snowflake, ClickHouse, Postgres): one builder, a small dialect per engine.
+// The data source's exposure SQL and the metric SQL are wrapped as CTEs. Parameters are written
+// `@name` and bound natively by each client; admin SQL may use @experiment_key, @start_ms and
+// @end_ms (epoch ms) too, e.g. for BigQuery wildcard-table pruning. Internal aliases never shadow a
+// column of the same name and NULL-extended join columns are read through COALESCE, so ClickHouse
+// needs no session settings (works for readonly users)
 
-export interface BigQueryQuery {
+export interface WarehouseQuery {
   readonly sql: string;
   readonly params: Readonly<Record<string, string | number>>;
 }
 
+interface Dialect {
+  /** A validated plain identifier, quoted to match how the warehouse stores unquoted names */
+  readonly column: (name: string) => string;
+  readonly text: (expr: string) => string;
+  /** The first non-null `expr` ordered by `timestamp`, as an aggregate */
+  readonly first: (expr: string) => string;
+  /** Timestamp from an epoch-milliseconds expression */
+  readonly fromMs: (ms: string) => string;
+  /** `ts` shifted by `ms` milliseconds */
+  readonly shift: (ts: string, sign: "+" | "-", ms: string) => string;
+  /** UTC calendar date of `ts` as YYYY-MM-DD */
+  readonly day: (ts: string) => string;
+  /** p-quantile of y0 over furca_values. BigQuery binds @cap_percentile; the others need a literal */
+  readonly quantile: (p: string) => string;
+  /** Per-unit values as floats where integer and float types do not mix (ClickHouse least()) */
+  readonly float: (expr: string) => string;
+  readonly nullFloat: string;
+}
+
+export const DIALECTS: Record<WarehouseType, Dialect> = {
+  bigquery: {
+    column: (name) => `\`${name}\``,
+    text: (e) => `CAST(${e} AS STRING)`,
+    first: (e) => `ARRAY_AGG(${e} IGNORE NULLS ORDER BY timestamp LIMIT 1)[SAFE_OFFSET(0)]`,
+    fromMs: (ms) => `TIMESTAMP_MILLIS(${ms})`,
+    shift: (ts, sign, ms) => `TIMESTAMP_MILLIS(UNIX_MILLIS(${ts}) ${sign} ${ms})`,
+    day: (ts) => `FORMAT_DATE('%F', DATE(${ts}))`,
+    // 0.1% grid
+    quantile: () => "APPROX_QUANTILES(y0, 1000)[OFFSET(CAST(ROUND(@cap_percentile * 1000) AS INT64))]",
+    float: (e) => e,
+    nullFloat: "CAST(NULL AS FLOAT64)",
+  },
+  snowflake: {
+    // Unquoted identifiers are stored upper-case
+    column: (name) => `"${name.toUpperCase()}"`,
+    text: (e) => `CAST(${e} AS VARCHAR)`,
+    // ARRAY_AGG drops NULLs
+    first: (e) => `GET(ARRAY_AGG(${e}) WITHIN GROUP (ORDER BY timestamp), 0)::VARCHAR`,
+    // The client runs the session in UTC, so TIMESTAMP_NTZ columns read as UTC
+    fromMs: (ms) => `TO_TIMESTAMP_LTZ(${ms}, 3)`,
+    shift: (ts, sign, ms) => `DATEADD(millisecond, ${sign === "-" ? "-" : ""}${ms}, ${ts})`,
+    day: (ts) => `TO_CHAR(CONVERT_TIMEZONE('UTC', ${ts}), 'YYYY-MM-DD')`,
+    quantile: (p) => `PERCENTILE_DISC(${p}) WITHIN GROUP (ORDER BY y0)`,
+    float: (e) => e,
+    nullFloat: "CAST(NULL AS DOUBLE)",
+  },
+  clickhouse: {
+    // Identifiers are case-sensitive
+    column: (name) => `\`${name}\``,
+    text: (e) => `toString(${e})`,
+    first: (e) => `argMinIf(${e}, timestamp, ${e} IS NOT NULL)`,
+    fromMs: (ms) => `fromUnixTimestamp64Milli(${ms})`,
+    shift: (ts, sign, ms) => `${sign === "+" ? "addMilliseconds" : "subtractMilliseconds"}(${ts}, ${ms})`,
+    day: (ts) => `toString(toDate(${ts}, 'UTC'))`,
+    quantile: (p) => `quantileExact(${p})(y0)`,
+    float: (e) => `toFloat64(${e})`,
+    nullFloat: "CAST(NULL AS Nullable(Float64))",
+  },
+  postgres: {
+    // Unquoted identifiers are stored lower-case
+    column: (name) => `"${name.toLowerCase()}"`,
+    text: (e) => `CAST(${e} AS TEXT)`,
+    first: (e) => `(ARRAY_AGG(${e} ORDER BY timestamp) FILTER (WHERE ${e} IS NOT NULL))[1]`,
+    // The client runs the session in UTC, so timestamp without time zone reads as UTC
+    fromMs: (ms) => `to_timestamp(${ms} / 1000.0)`,
+    shift: (ts, sign, ms) => `(${ts} ${sign} ${ms} * INTERVAL '1 millisecond')`,
+    day: (ts) => `to_char(${ts}, 'YYYY-MM-DD')`,
+    quantile: (p) => `PERCENTILE_DISC(${p}) WITHIN GROUP (ORDER BY y0)`,
+    float: (e) => e,
+    nullFloat: "CAST(NULL AS DOUBLE PRECISION)",
+  },
+};
+
 const strip = (sql: string) => sql.trim().replace(/;+$/, "");
 
 /** Breakdown dimensions are exposure SQL columns, so they must be plain identifiers */
-export const isBigQueryColumn = (name: string) => /^[A-Za-z_][A-Za-z0-9_]{0,299}$/.test(name);
+export const isWarehouseColumn = (name: string) => /^[A-Za-z_][A-Za-z0-9_]{0,299}$/.test(name);
 
-const bigQueryUnits = (exposureSql: string, dimension: string | null | undefined) => {
-  if (dimension != null && !isBigQueryColumn(dimension)) throw new Error(`Invalid BigQuery column name: ${dimension}`);
-  const units = `SELECT CAST(user_id AS STRING) AS user_id, MIN(CAST(variation_key AS STRING)) AS variation,
-    COUNT(DISTINCT CAST(variation_key AS STRING)) AS nv, MIN(timestamp) AS t0${
-      dimension == null ? "" : `,\n    ARRAY_AGG(CAST(\`${dimension}\` AS STRING) IGNORE NULLS ORDER BY timestamp LIMIT 1)[SAFE_OFFSET(0)] AS dim`
+const warehouseUnits = (d: Dialect, exposureSql: string, dimension: string | null | undefined) => {
+  if (dimension != null && !isWarehouseColumn(dimension)) throw new Error(`Invalid column name: ${dimension}`);
+  const units = `SELECT ${d.text("user_id")} AS unit_id, MIN(${d.text("variation_key")}) AS arm,
+    COUNT(DISTINCT ${d.text("variation_key")}) AS nv, MIN(timestamp) AS t0${
+      dimension == null ? "" : `,\n    ${d.first(d.text(d.column(dimension)))} AS dim`
     }
   FROM furca_exposure_source
-  WHERE experiment_key = @experiment_key AND timestamp >= TIMESTAMP_MILLIS(@start_ms) AND timestamp <= TIMESTAMP_MILLIS(@end_ms)
+  WHERE experiment_key = @experiment_key AND timestamp >= ${d.fromMs("@start_ms")} AND timestamp <= ${d.fromMs("@end_ms")}
   GROUP BY 1`;
   return `furca_exposure_source AS (
 ${strip(exposureSql)}
@@ -228,54 +309,56 @@ ${
 
 const windowParams = (q: AnalysisWindow) => ({ experiment_key: q.experimentKey, start_ms: q.startMs, end_ms: q.endMs });
 
-export const bigQueryExposureCountsSql = (q: AnalysisWindow & { readonly exposureSql: string }): BigQueryQuery => ({
-  sql: `WITH ${bigQueryUnits(q.exposureSql, q.dimension)}
-SELECT ${q.dimension == null ? "" : "slice, "}IF(nv > 1, NULL, variation) AS variation, COUNT(*) AS users
+export const warehouseExposureCountsSql = (type: WarehouseType, q: AnalysisWindow & { readonly exposureSql: string }): WarehouseQuery => ({
+  sql: `WITH ${warehouseUnits(DIALECTS[type], q.exposureSql, q.dimension)}
+SELECT ${q.dimension == null ? "" : "slice, "}CASE WHEN nv > 1 THEN NULL ELSE arm END AS variation, COUNT(*) AS users
 FROM furca_units GROUP BY ${q.dimension == null ? "1" : "1, 2"}`,
   params: windowParams(q),
 });
 
-export const bigQueryMomentsSql = (
+export const warehouseMomentsSql = (
+  type: WarehouseType,
   q: MomentsOptions & { readonly exposureSql: string; readonly numeratorSql: string; readonly denominatorSql: string | null },
-): BigQueryQuery => {
+): WarehouseQuery => {
+  const d = DIALECTS[type];
   const { ratio, pre, delayMs, windowMs, capping } = plan(q);
   const slice = q.dimension == null ? "" : "slice, ";
   const params: Record<string, string | number> = { ...windowParams(q), delay_ms: delayMs };
+  // Events on the left: ClickHouse builds the join's hash table from the right side (the units)
   const perUnit = (name: string, source: string, range: string) => `${name} AS (
-  SELECT u.user_id, SUM(s.value) AS v
-  FROM furca_units u JOIN ${source} s ON CAST(s.user_id AS STRING) = u.user_id
+  SELECT u.unit_id, SUM(s.value) AS v, COUNT(*) AS c
+  FROM ${source} s JOIN furca_units u ON ${d.text("s.user_id")} = u.unit_id
   WHERE u.nv = 1 AND ${range}
   GROUP BY 1
 )`;
-  let post = "s.timestamp >= TIMESTAMP_MILLIS(UNIX_MILLIS(u.t0) + @delay_ms)";
+  let post = `s.timestamp >= ${d.shift("u.t0", "+", "@delay_ms")}`;
   if (windowMs !== null) {
     params.window_ms = windowMs;
-    post += " AND s.timestamp < TIMESTAMP_MILLIS(UNIX_MILLIS(u.t0) + @window_ms)";
+    post += ` AND s.timestamp < ${d.shift("u.t0", "+", "@window_ms")}`;
   }
-  post += " AND s.timestamp <= TIMESTAMP_MILLIS(@end_ms)";
+  post += ` AND s.timestamp <= ${d.fromMs("@end_ms")}`;
   // proportion: 1 when the unit has any matching row
-  const valueOf = (alias: string) => (q.metric.type === "proportion" ? `IF(${alias}.user_id IS NULL, 0, 1)` : `COALESCE(${alias}.v, 0)`);
+  const valueOf = (alias: string) =>
+    q.metric.type === "proportion" ? `CASE WHEN COALESCE(${alias}.c, 0) > 0 THEN 1 ELSE 0 END` : `COALESCE(${alias}.v, 0)`;
 
   const ctes = [
-    bigQueryUnits(q.exposureSql, q.dimension),
+    warehouseUnits(d, q.exposureSql, q.dimension),
     `furca_numerator_source AS (\n${strip(q.numeratorSql)}\n)`,
     perUnit("furca_numerator", "furca_numerator_source", post),
   ];
-  const joins = ["LEFT JOIN furca_numerator m ON m.user_id = u.user_id"];
+  const joins = ["LEFT JOIN furca_numerator m ON m.unit_id = u.unit_id"];
   const denominator = ratio && q.denominatorSql !== null;
   if (denominator) {
     ctes.push(`furca_denominator_source AS (\n${strip(q.denominatorSql ?? "")}\n)`, perUnit("furca_denominator", "furca_denominator_source", post));
-    joins.push("LEFT JOIN furca_denominator dn ON dn.user_id = u.user_id");
+    joins.push("LEFT JOIN furca_denominator dn ON dn.unit_id = u.unit_id");
   }
   if (pre) {
     params.lookback_ms = LOOKBACK_MS;
-    ctes.push(
-      perUnit("furca_pre", "furca_numerator_source", "s.timestamp >= TIMESTAMP_MILLIS(UNIX_MILLIS(u.t0) - @lookback_ms) AND s.timestamp < u.t0"),
-    );
-    joins.push("LEFT JOIN furca_pre pr ON pr.user_id = u.user_id");
+    ctes.push(perUnit("furca_pre", "furca_numerator_source", `s.timestamp >= ${d.shift("u.t0", "-", "@lookback_ms")} AND s.timestamp < u.t0`));
+    joins.push("LEFT JOIN furca_pre pr ON pr.unit_id = u.unit_id");
   }
   ctes.push(`furca_values AS (
-  SELECT ${slice}u.variation, u.t0, ${valueOf("m")} AS y, ${denominator ? "COALESCE(dn.v, 0)" : "0"} AS d, ${pre ? valueOf("pr") : "0"} AS x
+  SELECT ${slice}u.arm AS variation, u.t0, ${d.float(valueOf("m"))} AS y0, ${d.float(denominator ? "COALESCE(dn.v, 0)" : "0")} AS d, ${d.float(pre ? valueOf("pr") : "0")} AS x0
   FROM furca_units u
   ${joins.join("\n  ")}
   WHERE u.nv = 1
@@ -284,23 +367,22 @@ export const bigQueryMomentsSql = (
   let cap: string | null = null;
   if (capping.type === "absolute") {
     params.cap_value = capping.value;
-    cap = "@cap_value";
+    cap = d.float("@cap_value");
   } else if (capping.type === "percentile") {
+    if (!(capping.value >= 0 && capping.value <= 1)) throw new Error(`Invalid cap percentile: ${capping.value}`);
     params.cap_percentile = capping.value;
-    ctes.push(
-      "furca_cap AS (SELECT APPROX_QUANTILES(y, 1000)[OFFSET(CAST(ROUND(@cap_percentile * 1000) AS INT64))] AS c FROM furca_values)",
-    );
+    ctes.push(`furca_cap AS (SELECT ${d.quantile(String(capping.value))} AS c FROM furca_values)`);
     cap = "(SELECT c FROM furca_cap)";
   }
   ctes.push(`furca_capped AS (
-  SELECT ${slice}variation, t0, ${cap === null ? "y" : `LEAST(y, ${cap})`} AS y, d, ${cap === null ? "x" : `LEAST(x, ${cap})`} AS x, ${cap ?? "CAST(NULL AS FLOAT64)"} AS cap
+  SELECT ${slice}variation, t0, ${cap === null ? "y0" : `least(y0, ${cap})`} AS y, d, ${cap === null ? "x0" : `least(x0, ${cap})`} AS x, ${cap ?? d.nullFloat} AS cap
   FROM furca_values
 )`);
 
   const sql = `WITH ${ctes.join(",\n")}
-SELECT ${slice}variation, FORMAT_DATE('%F', DATE(t0)) AS day, COUNT(*) AS n,
+SELECT ${slice}variation, ${d.day("t0")} AS day, COUNT(*) AS n,
   SUM(y) AS sum_y, SUM(y * y) AS sum_y2, SUM(d) AS sum_d, SUM(d * d) AS sum_d2, SUM(y * d) AS sum_yd,
-  SUM(x) AS sum_x, SUM(x * x) AS sum_x2, SUM(x * y) AS sum_xy, ANY_VALUE(cap) AS cap_value
+  SUM(x) AS sum_x, SUM(x * x) AS sum_x2, SUM(x * y) AS sum_xy, MAX(cap) AS cap_value
 FROM furca_capped GROUP BY ${slice}variation, day`;
   return { sql, params };
 };

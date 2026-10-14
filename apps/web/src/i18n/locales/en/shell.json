@@ -5,6 +5,7 @@
     "flags": "Flags",
     "experiments": "Experiments",
     "metrics": "Metrics",
+    "reviews": "Reviews",
     "dataSources": "Data sources",
     "environments": "SDK & environments",
     "audit": "Audit log",
@@ -13,7 +14,9 @@
     "openNavigation": "Open navigation",
     "navigation": "Navigation",
     "savedGroups": "Saved groups",
-    "namespaces": "Namespaces"
+    "namespaces": "Namespaces",
+    "openReviews_one": "{{count}} open review",
+    "openReviews_other": "{{count}} open reviews"
   },
   "environment": {
     "label": "Environment"
@@ -35,8 +38,12 @@
   },
   "account": {
     "menu": "Account",
-    "owner": "Owner",
-    "member": "Member",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    },
     "light": "Light",
     "dark": "Dark",
     "system": "System",

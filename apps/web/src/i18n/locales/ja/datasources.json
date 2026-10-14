@@ -5,12 +5,12 @@
   "builtinName": "組み込みイベントストア",
   "list": {
     "title": "データソース",
-    "description": "露出と指標のイベントの読み込み元です。組み込みイベントストアは設定なしで使えます。ウェアハウスのデータを使う場合は BigQuery を追加してください。",
-    "connect": "BigQuery を接続",
+    "description": "露出と指標のイベントの読み込み元です。組み込みイベントストアは設定なしで使えます。ウェアハウスのデータを使う場合は BigQuery、Snowflake、ClickHouse、Postgres のいずれかを接続してください。",
+    "connect": "ウェアハウスを接続",
     "loadFailed": "データソースを読み込めませんでした。{{error}}",
     "builtinType": "組み込み（D1）",
     "builtinLocation": "このデプロイの D1",
-    "warehouseHint": "GA4 や Segment のイベントを BigQuery にエクスポートしている場合は、接続するだけで、自分で編集できる SQL を使ってテーブルから露出と指標を直接読み込めます。GA4 と Segment 用のテンプレートも用意しています。",
+    "warehouseHint": "GA4 や Segment のエクスポートなど、すでにウェアハウスにイベントがある場合は、接続するだけで、自分で編集できる SQL を使ってテーブルから露出と指標を直接読み込めます。テンプレートも用意しています。",
     "columns": {
       "name": "名前",
       "type": "種類",
@@ -20,11 +20,12 @@
     }
   },
   "new": {
-    "breadcrumb": "新しい BigQuery ソース",
-    "title": "BigQuery を接続",
-    "description": "GA4 や Segment のエクスポートなど、ウェアハウスにすでにある露出とイベントで実験を分析します。",
+    "breadcrumb": "新しいデータソース",
+    "title": "ウェアハウスを接続",
+    "description": "ウェアハウスにすでにある露出とイベントで実験を分析します。データの保存先を選んでください。",
     "createdToast": "{{name}} を作成しました",
-    "createdToastDescription": "接続テストで、アクセス権限と露出クエリを確認してください。"
+    "createdToastDescription": "接続テストで、アクセス権限と露出クエリを確認してください。",
+    "connect": "{{warehouse}} を接続"
   },
   "detail": {
     "fallbackTitle": "データソース",
@@ -61,12 +62,18 @@
       "title": "接続テスト",
       "description": "保存済みのキーで認証し、露出クエリをドライランします。ドライランは無料で、データは読み込みません。",
       "button": "接続をテスト",
-      "pending": "BigQuery に接続中…",
+      "pending": "{{warehouse}} に接続中…",
       "notTested": "このページを開いてからまだテストしていません。",
-      "noKey": "下の設定でサービスアカウントキーを追加してから、テストしてください。",
       "connected": "接続に成功しました",
       "scan": "露出クエリのスキャン量は、分析1回あたり <bytes>{{bytes}}</bytes> の見込みです。",
-      "failed": "接続に失敗しました"
+      "failed": "接続に失敗しました",
+      "descriptionLimit0": "保存済みの認証情報で認証し、露出クエリを LIMIT 0 で実行します。クエリはコンパイルされますが、行は読み込みません。",
+      "noSecret": {
+        "bigquery": "下の設定でサービスアカウントキーを追加してから、テストしてください。",
+        "snowflake": "下の設定でユーザーの秘密鍵を追加してから、テストしてください。",
+        "clickhouse": "下の設定でパスワードを追加してから、テストしてください。",
+        "postgres": "下の設定でパスワードを追加してから、テストしてください。"
+      }
     },
     "deletedToast": "{{name}} を削除しました",
     "settings": "設定",
@@ -75,13 +82,13 @@
     "delete": {
       "title": "{{name}} を削除しますか？",
       "confirm": "データソースを削除",
-      "body": "保存されているサービスアカウントキーも消去されます。この操作は元に戻せません。",
+      "body": "保存されている認証情報も消去されます。この操作は元に戻せません。",
       "inUse_other": "{{count}}件の指標（アーカイブ済みを含む）がこのソースを参照しています。先に別のソースへ切り替えてください。使用中のソースは削除できません。"
     }
   },
   "form": {
     "warehouse": {
-      "title": "ウェアハウス",
+      "title": "接続設定",
       "name": "名前",
       "namePlaceholder": "分析用ウェアハウス",
       "projectId": "プロジェクト ID",
@@ -92,14 +99,10 @@
     },
     "key": {
       "title": "サービスアカウントキー",
-      "description": "このデプロイの <c>ENCRYPTION_KEY</c> で暗号化して保存され、再表示されることはありません。furca は読み取りクエリのみを実行します。",
-      "stored": "このデータソースにはキーが保存されています。",
-      "replace": "キーを置き換え",
       "dropLabel": "サービスアカウントの JSON キーをドロップ",
       "fieldLabel": "サービスアカウントの JSON キー",
       "placeholder": "JSON キーを貼り付けるか、.json ファイルをここにドロップ",
       "chooseFile": ".json ファイルを選択",
-      "keep": "現在のキーを維持",
       "needsRoles": "サービスアカウントには、このプロジェクトでの <b>BigQuery ジョブユーザー</b> と <b>BigQuery データ閲覧者</b> のロールが必要です。キーを貼り付けると、実行するコマンドが表示されます。",
       "notServiceAccount": "サービスアカウントキーではありません。Google Cloud で IAM → サービス アカウント → キー → 鍵を追加 → JSON の順に操作して作成してください。",
       "invalidJson": "有効な JSON ではありません。波かっこを含め、キーファイル全体を貼り付けてください。"
@@ -119,10 +122,11 @@
       "startFrom": "テンプレート",
       "ga4": "GA4 エクスポート",
       "generic": "汎用",
-      "help": "露出イベントごとに1行を返し（重複は除外しないでください。furca は時刻でフェーズを分けます）、<c>user_id</c> STRING、<c>timestamp</c> TIMESTAMP、<c>experiment_key</c> STRING、<c>variation_key</c> STRING の列を含めてください。必要に応じて <c>@experiment_key</c>、<c>@start_ms</c>、<c>@end_ms</c>（エポックミリ秒）でパーティションを絞り込めます。書き方は GA4 テンプレートを参照してください。",
+      "help": "露出イベントごとに1行を返し（重複は除外しないでください。furca は時刻でフェーズを分けます）、<c>user_id</c> {{text}}、<c>timestamp</c> {{time}}、<c>experiment_key</c> {{text}}、<c>variation_key</c> {{text}} の列を含めてください。必要に応じて <c>@experiment_key</c>、<c>@start_ms</c>、<c>@end_ms</c>（エポックミリ秒）で絞り込めます（パーティションの絞り込みなど）。",
       "templateInserted": "テンプレートを挿入しました",
       "templateInsertedDescription": "入力済みの SQL を置き換えました。",
-      "undo": "元に戻す"
+      "undo": "元に戻す",
+      "label": "{{warehouse}} の SQL"
     },
     "errors": {
       "name": "データソースの名前を入力してください",
@@ -130,10 +134,78 @@
       "dataset": "デフォルトのデータセットを入力してください",
       "location": "データセットのロケーションを入力してください（例: US）",
       "credentials": "サービスアカウントキーを貼り付けるか、ドロップしてください",
-      "sql": "露出クエリを入力するか、テンプレートから始めてください"
+      "sql": "露出クエリを入力するか、テンプレートから始めてください",
+      "required": "入力してください",
+      "account": "アカウント識別子のみを入力してください（例: myorg-myaccount）",
+      "url": "ユーザー名やパスワードを含まない https:// の URL を入力してください",
+      "host": "ホスト名のみを入力してください（例: db.example.com）",
+      "port": "1〜65535 のポート番号を入力してください"
     },
     "noChanges": "未保存の変更はありません。",
     "saveChanges": "変更を保存",
-    "create": "データソースを作成"
+    "create": "データソースを作成",
+    "secretDescription": "このデプロイの <c>ENCRYPTION_KEY</c> で暗号化して保存され、再表示されることはありません。furca は読み取りクエリのみを実行します。",
+    "secretStored": "このデータソースには{{secret}}が保存されています。",
+    "replace": "置き換え",
+    "keep": "現在の値を維持",
+    "privateKey": {
+      "title": "秘密鍵",
+      "placeholder": "暗号化されていない PKCS#8 形式の秘密鍵を貼り付けるか、.p8 ファイルをここにドロップ",
+      "dropLabel": "秘密鍵ファイルをドロップ",
+      "chooseFile": "鍵ファイルを選択",
+      "required": "ユーザーの秘密鍵を貼り付けるか、ドロップしてください",
+      "encrypted": "暗号化された鍵には対応していません。-nocrypt を付けて鍵を作成するか、openssl pkcs8 で復号してください。",
+      "pkcs1": "PKCS#1 形式の鍵です。次のコマンドで変換してください: openssl pkcs8 -topk8 -nocrypt -in key.pem -out rsa_key.p8",
+      "invalid": "秘密鍵ではありません。秘密鍵は -----BEGIN PRIVATE KEY----- で始まります。",
+      "register": "この鍵の公開鍵を Snowflake ユーザーに登録してください（ユーザー管理者として実行）：",
+      "copySql": "SQL をコピー",
+      "howTo": "鍵がまだない場合は作成し、rsa_key.p8 をここに貼り付けると ALTER USER 文が表示されます。",
+      "copyCommand": "コマンドをコピー"
+    },
+    "password": {
+      "title": "パスワード",
+      "label": "パスワード",
+      "required": "パスワードを入力してください"
+    },
+    "access": {
+      "snowflake": "ユーザーのロールには、ウェアハウス・データベース・スキーマへの USAGE と、SQL で読み込むテーブルへの SELECT が必要です。",
+      "clickhouse": "SQL で読み込むテーブルを SELECT できるだけのユーザーを使ってください（readonly ユーザーでも動作します）。",
+      "postgres": "SQL で読み込むテーブルを SELECT できるだけのユーザーを使ってください。データベースはインターネット（Cloudflare Workers）からの接続を受け付ける必要があります。"
+    },
+    "fields": {
+      "account": "アカウント識別子",
+      "user": "ユーザー",
+      "warehouse": "ウェアハウス",
+      "database": "データベース",
+      "schema": "スキーマ",
+      "role": "ロール",
+      "url": "URL",
+      "host": "ホスト",
+      "port": "ポート",
+      "ssl": "SSL"
+    },
+    "help": {
+      "snowflake": {
+        "account": ".snowflakecomputing.com より前の部分です（例: myorg-myaccount）。",
+        "role": "省略可能です。空の場合はユーザーのデフォルトロールを使います。"
+      },
+      "clickhouse": {
+        "url": "HTTPS インターフェースの URL です。通常はポート 8443 です。"
+      },
+      "postgres": {
+        "host": "ホスト名のみを入力します（postgres:// やパスは不要）。",
+        "ssl": "マネージドデータベースでは必須です。"
+      }
+    },
+    "ssl": {
+      "require": "必須（TLS）",
+      "disable": "無効"
+    }
+  },
+  "types": {
+    "bigquery": "Google のデータウェアハウスです。GA4 や Segment のエクスポートに対応し、無料のドライランで実行前にクエリを確認できます。",
+    "snowflake": "SQL API でキーペア認証を使い、Snowflake のテーブルから露出とイベントを読み込みます。",
+    "clickhouse": "セルフホストまたは ClickHouse Cloud に HTTPS インターフェースで接続します。",
+    "postgres": "インターネットから接続できる PostgreSQL 12 以降に対応します（Amazon RDS / Aurora、Cloud SQL、Neon、Supabase など）。"
   }
 }

@@ -16,6 +16,7 @@ import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { EmptyState, ListSkeleton, PageHeader, Panel, QueryError } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/namespaces")({
@@ -89,6 +90,7 @@ function NamespaceEditor({ namespace, onDone }: { namespace?: Namespace; onDone:
 
 function NamespaceRow({ item, onEdit, onDelete }: { item: NamespaceListItem; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation("namespaces");
+  const { canEdit } = usePermissions();
   const { namespace: ns, allocations } = item;
   return (
     <tr className={`${tbl.tr} hover:bg-transparent`}>
@@ -123,7 +125,7 @@ function NamespaceRow({ item, onEdit, onDelete }: { item: NamespaceListItem; onE
         {percentLabel(freeShare(allocations))}
       </td>
       <td className={`${tbl.td} w-px py-3 text-right align-top`}>
-        <Dropdown>
+        {canEdit && <Dropdown>
           <Button isIconOnly size="sm" variant="ghost" aria-label={t("row.moreActions", { name: ns.name })} className="size-8 min-w-8">
             <MoreHorizontal className="size-4" />
           </Button>
@@ -139,7 +141,7 @@ function NamespaceRow({ item, onEdit, onDelete }: { item: NamespaceListItem; onE
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown.Popover>
-        </Dropdown>
+        </Dropdown>}
       </td>
     </tr>
   );
@@ -149,6 +151,7 @@ function Page() {
   const { t } = useTranslation("namespaces");
   const queryClient = useQueryClient();
   const list = useQuery(orpc.namespaces.list.queryOptions());
+  const { canEdit } = usePermissions();
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   // Target outlives `deleteOpen` so the dialog keeps its text during the exit animation
@@ -164,7 +167,7 @@ function Page() {
       },
     }),
   );
-  const newButton = (
+  const newButton = canEdit && (
     <Button size="sm" onPress={() => setCreating(true)} isDisabled={creating}>
       <Plus className="size-4" />
       {t("page.new")}

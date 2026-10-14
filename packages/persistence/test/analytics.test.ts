@@ -16,7 +16,7 @@ import { dataSources, experiments, features, metrics } from "@furca/database/sch
 import { makeTestD1, TestDatabaseLayer } from "@furca/database/testing/TestDatabase";
 import { bqResult, fakeBigQuery, makeTestServiceAccount } from "@furca/integrations/bigquery/testing";
 import { Effect, Layer, Schema } from "effect";
-import { bigQueryExposureCountsSql, bigQueryMomentsSql, d1MomentsSql } from "../src/Layers/AnalysisSql";
+import { d1MomentsSql, warehouseExposureCountsSql, warehouseMomentsSql } from "../src/Layers/AnalysisSql";
 import { EventStatsServiceLive } from "../src/Layers/EventStatsServiceLive";
 import { ExperimentAnalysisServiceLive } from "../src/Layers/ExperimentAnalysisServiceLive";
 import { filtersProblem } from "../src/Layers/MetricServiceLive";
@@ -290,14 +290,14 @@ describe("ExperimentAnalysisService.dimension", () => {
 
     it("reads the dimension from an exposure SQL column with the same name and slices every output", () => {
       const window = { experimentKey: "exp", startMs: START, endMs: START + D, dimension: "country", exposureSql: "SELECT * FROM exposures" };
-      const counts = bigQueryExposureCountsSql(window);
+      const counts = warehouseExposureCountsSql("bigquery", window);
       expect(counts.sql).toContain("ARRAY_AGG(CAST(`country` AS STRING) IGNORE NULLS ORDER BY timestamp LIMIT 1)[SAFE_OFFSET(0)] AS dim");
       expect(counts.sql).toMatch(/LIMIT 20\)\s+THEN dim ELSE '\(other\)' END AS slice/);
-      expect(counts.sql).toMatch(/SELECT slice, IF\(nv > 1, NULL, variation\) AS variation, COUNT\(\*\) AS users\s+FROM furca_units GROUP BY 1, 2$/);
-      const moments = bigQueryMomentsSql({ ...window, cuped: false, metric: countMetric("x"), numeratorSql: "SELECT 1", denominatorSql: null });
-      expect(moments.sql).toContain("SELECT slice, u.variation, u.t0");
+      expect(counts.sql).toMatch(/SELECT slice, CASE WHEN nv > 1 THEN NULL ELSE arm END AS variation, COUNT\(\*\) AS users\s+FROM furca_units GROUP BY 1, 2$/);
+      const moments = warehouseMomentsSql("bigquery", { ...window, cuped: false, metric: countMetric("x"), numeratorSql: "SELECT 1", denominatorSql: null });
+      expect(moments.sql).toContain("SELECT slice, u.arm AS variation, u.t0");
       expect(moments.sql).toContain("GROUP BY slice, variation, day");
-      expect(() => bigQueryExposureCountsSql({ ...window, dimension: "x` UNION ALL SELECT" })).toThrow();
+      expect(() => warehouseExposureCountsSql("bigquery", { ...window, dimension: "x` UNION ALL SELECT" })).toThrow();
     });
 
     it("explains how to add the column when the exposure SQL has none, or the name cannot be a column", async () => {

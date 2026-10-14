@@ -1,5 +1,6 @@
 import { ApiKeyServiceLive } from "@furca/persistence/Layers/ApiKeyServiceLive";
 import { AuditServiceLive } from "@furca/persistence/Layers/AuditServiceLive";
+import { ChangeRequestServiceLive } from "@furca/persistence/Layers/ChangeRequestServiceLive";
 import { DataSourceServiceLive } from "@furca/persistence/Layers/DataSourceServiceLive";
 import { EnvironmentServiceLive } from "@furca/persistence/Layers/EnvironmentServiceLive";
 import { ExperimentServiceLive } from "@furca/persistence/Layers/ExperimentServiceLive";
@@ -18,6 +19,7 @@ import { Layer } from "effect";
  */
 export const CoreServicesLive = Layer.mergeAll(
   AuditServiceLive,
+  ChangeRequestServiceLive,
   DataSourceServiceLive,
   EnvironmentServiceLive,
   ExperimentServiceLive,

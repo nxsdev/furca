@@ -46,12 +46,16 @@ export const newRule = (kind: "force" | "rollout", valueType: FeatureValueType, 
     : { _tag: "rollout", ...base, coverage: 0.1, hashAttribute: "id", seed: crypto.randomUUID() };
 };
 
-/** Unsaved rules of every environment (one form, so drafts survive switching environments) */
+/**
+ * Unsaved rules of every environment (one form, so drafts survive switching environments), and the
+ * note sent with them where an environment requires review
+ */
 export interface RulesDraft {
   envs: Array<{ environmentId: string; rules: Array<Rule> }>;
+  comment: string;
 }
 
-const rulesDraft = { envs: [] } as RulesDraft;
+const rulesDraft = { envs: [], comment: "" } as RulesDraft;
 
 /** Ordered rules of `envs[envIndex]`, edited in place (inline rule editor, toggle, reorder, delete) */
 export const RulesList = withForm({
@@ -66,6 +70,8 @@ export const RulesList = withForm({
     matchedRuleId: string | null;
     attributeSuggestions: ReadonlyArray<string>;
     footer: ReactNode;
+    /** Viewers: no toggles, edits or reordering */
+    readOnly?: boolean;
   },
   render: function RulesList({
     form,
@@ -78,6 +84,7 @@ export const RulesList = withForm({
     matchedRuleId,
     attributeSuggestions,
     footer,
+    readOnly = false,
   }) {
     const { t } = useTranslation("flags");
     const conditionsSummary = useConditionsSummary();
@@ -166,10 +173,11 @@ export const RulesList = withForm({
                         <FlagSwitch
                           aria-label={t("rules.ruleEnabled", { number: i + 1 })}
                           isSelected={rule.enabled}
+                          isDisabled={readOnly}
                           onChange={(enabled) => form.setFieldValue(`envs[${envIndex}].rules[${i}].enabled`, enabled)}
                           className="mr-1"
                         />
-                        {rule._tag !== "experiment" && (
+                        {!readOnly && rule._tag !== "experiment" && (
                           <Button
                             isIconOnly
                             size="sm"
@@ -182,7 +190,7 @@ export const RulesList = withForm({
                             <Pencil className="size-3.5" />
                           </Button>
                         )}
-                        <Dropdown>
+                        {!readOnly && <Dropdown>
                           <Button isIconOnly size="sm" variant="ghost" aria-label={t("rules.moreActions", { number: i + 1 })} className="size-8 min-w-8 text-muted hover:text-foreground">
                             <Ellipsis className="size-4" />
                           </Button>
@@ -215,10 +223,10 @@ export const RulesList = withForm({
                               )}
                             </Dropdown.Menu>
                           </Dropdown.Popover>
-                        </Dropdown>
+                        </Dropdown>}
                       </div>
                     </div>
-                    {editing && rule._tag !== "experiment" && (
+                    {editing && !readOnly && rule._tag !== "experiment" && (
                       <RuleEditor
                         form={form}
                         name={`envs[${envIndex}].rules[${i}]`}

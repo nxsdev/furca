@@ -7,7 +7,7 @@ import {
   validateFeatureValue,
 } from "@furca/core/features/Feature";
 import { FeatureService } from "@furca/core/features/FeatureService";
-import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "@furca/core/shared/errors";
 import { Database, type Db } from "@furca/database/Database";
 import { environments, featureEnvironments, features } from "@furca/database/schema/index";
 import { and, eq, sql } from "drizzle-orm";
@@ -87,6 +87,23 @@ export const FeatureServiceLive = Layer.effect(
     const environmentRow = (id: string, environmentId: string) =>
       and(eq(featureEnvironments.featureId, id), eq(featureEnvironments.environmentId, environmentId));
 
+    /**
+     * On/off and rules of an environment that requires approval change only through an approved
+     * change request (ChangeRequestServiceLive). Not covered by reviews: edits that affect every
+     * environment at once (archive, delete, default value, description, tags) and rules that
+     * experiments add or replace when they are created, started or stopped
+     */
+    const requireDirectEdit = (environmentId: string) =>
+      database
+        .run("environments.get", (db) =>
+          db.query.environments.findFirst({ columns: { name: true, requireApproval: true }, where: { id: environmentId } }),
+        )
+        .pipe(
+          Effect.flatMap((env) =>
+            env?.requireApproval === true ? Effect.fail(new ForbiddenError({ message: `${env.name} requires a review` })) : Effect.void,
+          ),
+        );
+
     return {
       list: (includeArchived) => loadFeatures(database, { includeArchived }),
 
@@ -165,6 +182,7 @@ export const FeatureServiceLive = Layer.effect(
       setEnabled: Effect.fn("FeatureService.setEnabled")(function* (input, actor) {
         const before = yield* getFeature(database, input.id);
         yield* environmentConfig(before, input.environmentId);
+        yield* requireDirectEdit(input.environmentId);
         const now = new Date();
         const after = withEnvironment(before, input.environmentId, { enabled: input.enabled }, now);
         yield* commit(input.enabled ? "enabled" : "disabled", actor, before, after, (db) => [
@@ -177,6 +195,7 @@ export const FeatureServiceLive = Layer.effect(
       saveRules: Effect.fn("FeatureService.saveRules")(function* (input, actor) {
         const before = yield* getFeature(database, input.id);
         const current = yield* environmentConfig(before, input.environmentId);
+        yield* requireDirectEdit(input.environmentId);
         const error = validateRules(before, current.rules, input.rules);
         if (error !== null) return yield* invalid(error);
         yield* requireGroups(

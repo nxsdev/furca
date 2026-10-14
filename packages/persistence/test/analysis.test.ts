@@ -16,7 +16,7 @@ import { makeTestD1, TestDatabaseLayer } from "@furca/database/testing/TestDatab
 import { bqResult, fakeBigQuery, makeTestServiceAccount } from "@furca/integrations/bigquery/testing";
 import { eq } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
-import { bigQueryMomentsSql, d1ExposureCountsSql, d1MomentsSql, LOOKBACK_MS } from "../src/Layers/AnalysisSql";
+import { d1ExposureCountsSql, d1MomentsSql, LOOKBACK_MS, warehouseMomentsSql } from "../src/Layers/AnalysisSql";
 import { ExperimentAnalysisServiceLive } from "../src/Layers/ExperimentAnalysisServiceLive";
 import { experimentJsonColumns } from "../src/mappers";
 
@@ -184,7 +184,7 @@ describe("D1 moments SQL", () => {
 
 describe("BigQuery moments SQL", () => {
   it("wraps the data source and metric SQL as CTEs and passes every value as a named parameter", () => {
-    const q = bigQueryMomentsSql({
+    const q = warehouseMomentsSql("bigquery", {
       experimentKey: "checkout'; DROP TABLE x; --",
       startMs: START,
       endMs: END,
@@ -205,12 +205,12 @@ describe("BigQuery moments SQL", () => {
     expect(q.sql).not.toContain("DROP TABLE");
     expect(q.sql).toContain("furca_exposure_source AS (\nSELECT * FROM `acme.analytics.exposures`\n)");
     expect(q.sql).toContain("furca_denominator_source AS (\nSELECT user_id, timestamp, 1 AS value FROM sessions\n)");
-    expect(q.sql).toContain("APPROX_QUANTILES(y, 1000)");
+    expect(q.sql).toContain("APPROX_QUANTILES(y0, 1000)");
     expect(q.sql).not.toContain("furca_pre"); // no CUPED for ratio metrics
   });
 
   it("omits the window bound without a window, adds the lookback for CUPED and never caps proportions", () => {
-    const q = bigQueryMomentsSql({
+    const q = warehouseMomentsSql("bigquery", {
       experimentKey: "checkout",
       startMs: START,
       endMs: END,
@@ -222,8 +222,8 @@ describe("BigQuery moments SQL", () => {
     });
     expect(q.params).toEqual({ experiment_key: "checkout", start_ms: START, end_ms: END, delay_ms: 0, lookback_ms: LOOKBACK_MS });
     expect(q.sql).not.toContain("@window_ms");
-    expect(q.sql).not.toContain("LEAST(");
-    expect(q.sql).toContain("IF(pr.user_id IS NULL, 0, 1) AS x");
+    expect(q.sql).not.toContain("least(");
+    expect(q.sql).toContain("CASE WHEN COALESCE(pr.c, 0) > 0 THEN 1 ELSE 0 END AS x0");
   });
 });
 

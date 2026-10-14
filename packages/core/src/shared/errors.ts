@@ -26,3 +26,8 @@ export class WarehouseError extends Schema.TaggedError<WarehouseError>()("Wareho
 export class ConflictError extends Schema.TaggedError<ConflictError>()("ConflictError", {
   message: Schema.String,
 }) {}
+
+/** The caller may not do this (role, own review, protected environment). message is safe to show */
+export class ForbiddenError extends Schema.TaggedError<ForbiddenError>()("ForbiddenError", {
+  message: Schema.String,
+}) {}

@@ -43,7 +43,8 @@ const snapshot = (json: string | null): Record<string, unknown> | null => {
 const entityName = (entry: AuditLog): string => {
   const s = snapshot(entry.after) ?? snapshot(entry.before);
   const pick = (k: string) => (typeof s?.[k] === "string" && s[k] !== "" ? (s[k] as string) : null);
-  return (entry.entityType === "feature" ? pick("key") : null) ?? pick("name") ?? pick("key") ?? pick("email") ?? entry.entityId;
+  // Review rows on a flag snapshot the change request, which names the flag `featureKey`
+  return (entry.entityType === "feature" ? (pick("key") ?? pick("featureKey")) : null) ?? pick("name") ?? pick("key") ?? pick("email") ?? entry.entityId;
 };
 
 /** Every action the server writes; each has a label under `audit:actions` */
@@ -65,6 +66,13 @@ const KNOWN_ACTIONS = [
   "sdkKey.rotated",
   "credentials.updated",
   "invitation.revoked",
+  "role.updated",
+  "review.requested",
+  "review.approved",
+  "review.rejected",
+  "review.cancelled",
+  "review.required",
+  "review.notRequired",
 ] as const;
 const isKnownAction = (a: string): a is (typeof KNOWN_ACTIONS)[number] => (KNOWN_ACTIONS as ReadonlyArray<string>).includes(a);
 

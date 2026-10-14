@@ -1,5 +1,6 @@
 import type { Member } from "@furca/core/members/Member";
 import { Dropdown, Kbd, Label, ListBox, Select, Separator, useTheme } from "@heroui/react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ChartLine,
@@ -16,6 +17,7 @@ import {
   Moon,
   Search,
   Settings,
+  ShieldCheck,
   Sun,
   UsersRound,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { currentLocale, setLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
+import { orpc } from "~/lib/rpc";
 import { Logo } from "./Logo";
 
 export type NavKey =
@@ -30,6 +33,7 @@ export type NavKey =
   | "flags"
   | "experiments"
   | "metrics"
+  | "reviews"
   | "savedGroups"
   | "namespaces"
   | "dataSources"
@@ -49,6 +53,7 @@ export const primaryNav: ReadonlyArray<NavItem> = [
   { to: "/flags", label: "flags", icon: Flag },
   { to: "/experiments", label: "experiments", icon: FlaskConical },
   { to: "/metrics", label: "metrics", icon: ChartLine },
+  { to: "/reviews", label: "reviews", icon: ShieldCheck },
 ];
 
 export const secondaryNav: ReadonlyArray<NavItem> = [
@@ -64,7 +69,7 @@ export const secondaryNav: ReadonlyArray<NavItem> = [
 export const environmentHue = (key: string) =>
   key === "production" ? "bg-win" : key === "development" ? "bg-variation-1" : "bg-variation-2";
 
-function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
+function NavLink({ item, onNavigate, badge = 0 }: { item: NavItem; onNavigate?: () => void; badge?: number }) {
   const { t } = useTranslation("shell");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
@@ -80,6 +85,12 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
     >
       <Icon className={`size-4 shrink-0 ${active ? "text-foreground" : "text-muted group-hover:text-foreground"}`} />
       {t(`nav.${item.label}`)}
+      {badge > 0 && (
+        <span className="ml-auto rounded-full bg-default px-1.5 font-mono text-meta leading-[18px] tabular text-foreground">
+          {badge}
+          <span className="sr-only"> {t("nav.openReviews", { count: badge })}</span>
+        </span>
+      )}
     </Link>
   );
 }
@@ -130,7 +141,7 @@ function UserMenu({ me, onSignOut }: { me: Member; onSignOut: () => void }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-label font-medium">{me.name || me.email}</span>
-          <span className="block truncate text-meta text-muted">{me.isOwner ? t("account.owner") : t("account.member")}</span>
+          <span className="block truncate text-meta text-muted">{t(`account.roles.${me.role}`)}</span>
         </span>
       </Dropdown.Trigger>
       <Dropdown.Popover placement="top start" className="min-w-56">
@@ -191,6 +202,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const { t } = useTranslation("shell");
+  const reviews = useQuery({ ...orpc.changeRequests.list.queryOptions({ input: { status: "open" } }), staleTime: 30_000 });
   return (
     <nav aria-label={t("nav.main")} className="flex h-full flex-col gap-4 bg-surface-secondary px-3 py-4">
       <div className="px-1">
@@ -213,7 +225,7 @@ export function Sidebar({
       </button>
       <div className="flex flex-col gap-0.5">
         {primaryNav.map((item) => (
-          <NavLink key={item.to} item={item} onNavigate={onNavigate} />
+          <NavLink key={item.to} item={item} onNavigate={onNavigate} badge={item.label === "reviews" ? (reviews.data?.length ?? 0) : 0} />
         ))}
       </div>
       <div className="flex flex-col gap-0.5 border-t border-border pt-4">

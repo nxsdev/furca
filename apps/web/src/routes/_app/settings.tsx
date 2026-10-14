@@ -1,5 +1,5 @@
-import { Button, toast } from "@heroui/react";
-import type { Invitation, Member } from "@furca/core/members/Member";
+import { Button, ListBox, Select, toast } from "@heroui/react";
+import type { AssignableRole, Invitation, Member, Role } from "@furca/core/members/Member";
 import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -13,6 +13,7 @@ import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { CopyButton, ListSkeleton, PageHeader, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n, intlLocale } from "~/i18n";
+import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/settings")({
@@ -26,15 +27,18 @@ const formatJoined = (d: Date) => d.toLocaleDateString(intlLocale(), { month: "s
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const ROLES: ReadonlyArray<Role> = ["owner", "admin", "editor", "viewer"];
+const ASSIGNABLE: ReadonlyArray<AssignableRole> = ["admin", "editor", "viewer"];
+
 function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
   const { t } = useTranslation(["settings", "common"]);
   const queryClient = useQueryClient();
   const required = useRequired();
   const form = useAppForm({
-    defaultValues: { email: "" },
+    defaultValues: { email: "", role: "editor" as AssignableRole },
     onSubmit: async ({ value, formApi }) => {
       try {
-        const inv = await client.members.invite({ email: value.email.trim() });
+        const inv = await client.members.invite({ email: value.email.trim(), role: value.role });
         void queryClient.invalidateQueries({ queryKey: orpc.members.key() });
         formApi.reset();
         onCreated(inv);
@@ -68,6 +72,15 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
               placeholder="teammate@company.com"
               autoComplete="off"
               className="sm:w-80"
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="role">
+          {(field) => (
+            <field.SelectField
+              label={t("invite.role")}
+              options={ASSIGNABLE.map((r) => ({ id: r, label: t(`roles.${r}`), textValue: t(`roles.${r}`) }))}
+              className="sm:w-36"
             />
           )}
         </form.AppField>
@@ -121,9 +134,53 @@ function CreatedInvite({ invitation, onDismiss }: { invitation: Invitation; onDi
   );
 }
 
-function MembersPanel({ me, members }: { me: Member | undefined; members: ReadonlyArray<Member> }) {
+function RoleSelect({ member }: { member: Member }) {
   const { t } = useTranslation("settings");
   const queryClient = useQueryClient();
+  const name = member.name || member.email;
+  const setRole = useMutation(
+    orpc.members.setRole.mutationOptions({
+      onSuccess: (saved) => {
+        void queryClient.invalidateQueries({ queryKey: orpc.members.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.session.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+        toast(t("members.roleUpdated", { name, role: t(`roles.${saved.role}`) }));
+      },
+      onError: (e) => toast.danger(t("members.roleFailed"), { description: errorMessage(e) }),
+    }),
+  );
+  return (
+    <Select
+      aria-label={t("members.roleOf", { name })}
+      value={member.role}
+      isDisabled={setRole.isPending}
+      onChange={(role) => {
+        if (role === "admin" || role === "editor" || role === "viewer") setRole.mutate({ id: member.id, role });
+      }}
+      className="w-28"
+    >
+      <Select.Trigger className="h-8">
+        <Select.Value className="text-label" />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox>
+          {ASSIGNABLE.map((r) => (
+            <ListBox.Item key={r} id={r} textValue={t(`roles.${r}`)}>
+              {t(`roles.${r}`)}
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+    </Select>
+  );
+}
+
+function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
+  const { t } = useTranslation("settings");
+  const queryClient = useQueryClient();
+  const { me, isAdmin } = usePermissions();
   const [removing, setRemoving] = useState<Member | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
   const remove = useMutation(
@@ -136,20 +193,18 @@ function MembersPanel({ me, members }: { me: Member | undefined; members: Readon
       },
     }),
   );
-  const canRemove = (m: Member) => me?.isOwner === true && !m.isOwner && m.id !== me.id;
-  const anyRemovable = members.some(canRemove);
+  const canManage = (m: Member) => isAdmin && m.role !== "owner" && m.id !== me?.id;
+  const anyRemovable = members.some(canManage);
   return (
     <Panel>
-      <PanelHeader
-        title={t("members.title")}
-        description={me?.isOwner === true ? t("members.descriptionOwner") : t("members.description")}
-      />
+      <PanelHeader title={t("members.title")} description={isAdmin ? t("members.descriptionAdmin") : t("members.description")} />
       <div className="overflow-x-auto">
         <table className={tbl.table}>
           <thead>
             <tr>
               <th className={tbl.th}>{t("members.name")}</th>
               <th className={`${tbl.th} hidden sm:table-cell`}>{t("members.email")}</th>
+              <th className={tbl.th}>{t("members.role")}</th>
               <th className={`${tbl.th} hidden text-right md:table-cell`}>{t("members.joined")}</th>
               {anyRemovable && (
                 <th className={tbl.th}>
@@ -169,9 +224,6 @@ function MembersPanel({ me, members }: { me: Member | undefined; members: Readon
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
                         <span className="truncate font-medium">{m.name || m.email}</span>
-                        {m.isOwner && (
-                          <span className="rounded-[5px] border border-border px-1.5 text-meta font-medium text-muted">{t("members.owner")}</span>
-                        )}
                         {m.id === me?.id && <span className="text-meta text-muted">{t("members.you")}</span>}
                       </span>
                       <span className="block truncate text-meta text-muted sm:hidden">{m.email}</span>
@@ -179,12 +231,15 @@ function MembersPanel({ me, members }: { me: Member | undefined; members: Readon
                   </span>
                 </td>
                 <td className={`${tbl.td} hidden max-w-[280px] truncate text-muted sm:table-cell`}>{m.email}</td>
+                <td className={`${tbl.td} whitespace-nowrap`}>
+                  {canManage(m) ? <RoleSelect member={m} /> : <span className={m.role === "owner" ? "font-medium" : ""}>{t(`roles.${m.role}`)}</span>}
+                </td>
                 <td className={`${tbl.td} hidden whitespace-nowrap text-right text-muted tabular md:table-cell`}>
                   {formatJoined(new Date(m.createdAt))}
                 </td>
                 {anyRemovable && (
                   <td className={`${tbl.td} w-px text-right`}>
-                    {canRemove(m) && (
+                    {canManage(m) && (
                       <Button size="sm" variant="ghost" className="h-8 text-muted" onPress={() => {
                           setRemoving(m);
                           remove.reset();
@@ -200,6 +255,14 @@ function MembersPanel({ me, members }: { me: Member | undefined; members: Readon
           </tbody>
         </table>
       </div>
+      <dl className="grid gap-x-6 gap-y-1.5 border-t border-border px-5 py-4 text-label sm:grid-cols-[auto_1fr]">
+        {ROLES.map((r) => (
+          <div key={r} className="contents">
+            <dt className="font-medium">{t(`roles.${r}`)}</dt>
+            <dd className="text-muted">{t(`roles.${r}Help`)}</dd>
+          </div>
+        ))}
+      </dl>
       <ConfirmDialog
         isOpen={removeOpen}
         onOpenChange={setRemoveOpen}
@@ -249,6 +312,7 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
             <thead>
               <tr>
                 <th className={tbl.th}>{t("invitations.pending")}</th>
+                <th className={tbl.th}>{t("members.role")}</th>
                 <th className={`${tbl.th} hidden sm:table-cell`}>{t("invitations.expires")}</th>
                 <th className={tbl.th}>
                   <span className="sr-only">{t("invitations.actions")}</span>
@@ -267,6 +331,7 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
                         <Trans t={t} i18nKey={expired ? "invitations.expiredAt" : "invitations.expiresAt"} components={relative} />
                       </span>
                     </td>
+                    <td className={`${tbl.td} whitespace-nowrap`}>{t(`roles.${inv.role}`)}</td>
                     <td className={`${tbl.td} hidden text-muted sm:table-cell`}>
                       {expired ? (
                         <Trans t={t} i18nKey="invitations.expiredAt" components={relative} />
@@ -342,7 +407,7 @@ function AboutPanel() {
 
 function Page() {
   const { t } = useTranslation("settings");
-  const me = useQuery(orpc.session.me.queryOptions());
+  const { isAdmin } = usePermissions();
   const list = useQuery(orpc.members.list.queryOptions());
   return (
     <>
@@ -356,12 +421,13 @@ function Page() {
           <QueryError message={t("page.loadFailed", { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
         ) : (
           <>
-            <MembersPanel me={me.data} members={list.data.members} />
-            <InvitationsPanel invitations={list.data.invitations} />
+            <MembersPanel members={list.data.members} />
+            {isAdmin && <InvitationsPanel invitations={list.data.invitations} />}
           </>
         )}
-        <ApiKeysPanel />
-        <WebhooksPanel />
+        {/* Admin-only on the server; nothing useful to show anyone else */}
+        {isAdmin && <ApiKeysPanel />}
+        {isAdmin && <WebhooksPanel />}
         <AboutPanel />
       </div>
     </>

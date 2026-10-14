@@ -8,6 +8,6 @@ export const sessionRouter = {
     const database = yield* Database;
     const row = yield* database.run("user.get", (db) => db.query.user.findFirst({ where: { id: context.user.id } }));
     if (row === undefined) return yield* Effect.fail(new ORPCError("UNAUTHORIZED", { message: "Sign in required" }));
-    return { id: row.id, email: row.email, name: row.name, isOwner: context.user.isOwner, createdAt: row.createdAt };
+    return { id: row.id, email: row.email, name: row.name, role: context.user.role, createdAt: row.createdAt };
   }),
 };

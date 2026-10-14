@@ -22,6 +22,8 @@ export const environments = sqliteTable("environments", {
   name: text("name").notNull(),
   sdkKey: text("sdk_key").notNull().unique(),
   sortOrder: integer("sort_order").notNull().default(0),
+  /** Flag on/off and rule changes go through change_requests */
+  requireApproval: integer("require_approval", { mode: "boolean" }).notNull().default(false),
   createdAt: createdAt(),
 });
 
@@ -214,6 +216,8 @@ export const invitations = sqliteTable(
     email: text("email").notNull(),
     token: text("token").notNull(),
     invitedBy: text("invited_by").notNull(),
+    /** admin | editor | viewer, given to the account created through this invitation */
+    role: text("role").notNull().default("viewer"),
     createdAt: createdAt(),
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
@@ -273,3 +277,33 @@ export const webhooks = sqliteTable("webhooks", {
   lastStatus: integer("last_status"),
   lastError: text("last_error"),
 });
+
+/** Reviewed flag changes for environments that require approval */
+export const changeRequests = sqliteTable(
+  "change_requests",
+  {
+    id: text("id").primaryKey(),
+    featureId: text("feature_id")
+      .notNull()
+      .references(() => features.id, { onDelete: "cascade" }),
+    featureKey: text("feature_key").notNull(),
+    environmentId: text("environment_id")
+      .notNull()
+      .references(() => environments.id, { onDelete: "cascade" }),
+    /** FlagChange JSON: { type: "toggle", enabled } | { type: "rules", rules } */
+    change: json("change"),
+    /** FlagState JSON ({ enabled, rules }) when the request was opened */
+    base: json("base"),
+    comment: text("comment").notNull().default(""),
+    /** open | approved | rejected | cancelled */
+    status: text("status").notNull(),
+    authorId: text("author_id").notNull(),
+    authorEmail: text("author_email").notNull(),
+    reviewerId: text("reviewer_id"),
+    reviewerEmail: text("reviewer_email"),
+    reviewComment: text("review_comment").notNull().default(""),
+    createdAt: createdAt(),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [index("change_requests_status_idx").on(t.status, t.createdAt), index("change_requests_feature_idx").on(t.featureId)],
+);

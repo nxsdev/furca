@@ -16,6 +16,7 @@ import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { Code, PageHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
+import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 type Tab = "results" | "setup" | "phases" | "history";
@@ -70,6 +71,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { environments } = useEnvironment();
+  const { canEdit } = usePermissions();
   const search = Route.useSearch();
   const [mode, setMode] = useState<Mode>("view");
   const [confirm, setConfirm] = useState<"start" | "delete" | null>(null);
@@ -148,8 +150,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       </>
     );
 
-  const actions =
-    x.status === "draft" ? (
+  const actions = !canEdit ? undefined : x.status === "draft" ? (
       <>
         <Button size="sm" variant="ghost" onPress={() => setConfirm("delete")} aria-label={t("detail.actions.deleteDraft")} isIconOnly className="text-muted">
           <Trash2 className="size-4" />

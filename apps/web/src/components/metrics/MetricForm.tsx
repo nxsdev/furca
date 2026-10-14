@@ -13,14 +13,14 @@ import {
   TextField,
 } from "@heroui/react";
 import { type EventNameStat, Key } from "@furca/api/contract";
-import { BUILTIN_DATA_SOURCE_ID, type DataSource } from "@furca/core/datasources/DataSource";
+import { BUILTIN_DATA_SOURCE_ID, WAREHOUSE_LABELS, type WarehouseConfig, type WarehouseType } from "@furca/core/datasources/DataSource";
 import type { EventAggregation, EventSource, Metric, MetricType } from "@furca/core/metrics/Metric";
 import { type AnyFieldApi, type DeepKeys, useStore } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Schema } from "effect";
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { dataSourceName } from "~/components/datasources/name";
+import { dataSourceName, SQL_TYPES } from "~/components/datasources/name";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
 import { formatCount } from "~/components/results/format";
 import { RelativeTime } from "~/components/ui/primitives";
@@ -160,14 +160,32 @@ const validate = (d: Values, isSql: boolean, isEdit: boolean): FieldErrors => {
 const shown = (field: AnyFieldApi): string | undefined =>
   field.state.meta.isTouched || field.form.state.submissionAttempts > 0 ? errorText(field.state.meta.errors) || undefined : undefined;
 
-const sqlTemplate = (bq: DataSource["bigquery"], event: string) => `-- One row per event. Required columns:
+const sqlTemplate = (config: WarehouseConfig | null, event: string) => {
+  if (config === null || config._tag === "bigquery")
+    return `-- One row per event. Required columns:
 --   user_id STRING, timestamp TIMESTAMP, value FLOAT64 (use 1 to count)
 SELECT
   user_pseudo_id AS user_id,
   TIMESTAMP_MICROS(event_timestamp) AS timestamp,
   1 AS value
-FROM \`${bq?.projectId || "<project>"}.${bq?.dataset || "<dataset>"}.events_*\`
+FROM \`${config?.projectId || "<project>"}.${config?.dataset || "<dataset>"}.events_*\`
 WHERE event_name = '${event}'`;
+  const types = SQL_TYPES[config._tag];
+  const table =
+    config._tag === "snowflake"
+      ? `${config.database || "<database>"}.${config.schema || "<schema>"}.events`
+      : config._tag === "clickhouse"
+        ? `${config.database || "default"}.events`
+        : "public.events";
+  return `-- One row per event. Required columns:
+--   user_id ${types.text}, timestamp ${types.time}, value ${types.float} (use 1 to count)
+SELECT
+  user_id,
+  created_at AS timestamp,
+  1 AS value
+FROM ${table}
+WHERE event_name = '${event}'`;
+};
 
 function Section({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return (
@@ -256,6 +274,7 @@ function SqlField({
   onBlur,
   onTemplate,
   error,
+  warehouse,
 }: {
   label: string;
   value: string;
@@ -263,6 +282,8 @@ function SqlField({
   onBlur: () => void;
   onTemplate: () => void;
   error?: string | undefined;
+  /** The selected source's dialect, named in the help text */
+  warehouse: WarehouseType;
 }) {
   const { t } = useTranslation("metrics");
   return (
@@ -282,7 +303,7 @@ function SqlField({
         className="w-full resize-y font-mono text-[0.8125rem] leading-5"
       />
       <Description>
-        <Trans t={t} i18nKey="form.sql.help" components={{ c: code }} />
+        <Trans t={t} i18nKey="form.sql.help" values={{ ...SQL_TYPES[warehouse], warehouse: WAREHOUSE_LABELS[warehouse] }} components={{ c: code }} />
       </Description>
       <FieldError>{error}</FieldError>
     </TextField>
@@ -347,6 +368,7 @@ export function MetricForm({
   const d = useStore(form.store, (s) => s.values);
   const source = sourceList.find((s) => s.id === d.dataSourceId);
   const isSql = isSqlSource(d.dataSourceId);
+  const warehouse = source?.config?._tag ?? "bigquery";
   const input = toInput(d, isSql);
 
   // Follow the name until the user edits the key; a name with no ASCII slug (e.g. Japanese) leaves the key alone
@@ -441,13 +463,15 @@ export function MetricForm({
                     ).map((s) => (
                       <ListBox.Item key={s.id} id={s.id} textValue={dataSourceName(s)}>
                         <span className="flex-1 truncate">{dataSourceName(s)}</span>
-                        <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : "BigQuery"}</span>
+                        <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : WAREHOUSE_LABELS[s.type]}</span>
                         <ListBox.ItemIndicator />
                       </ListBox.Item>
                     ))}
                   </ListBox>
                 </Select.Popover>
-                <Description>{isSql ? t("form.dataSource.sqlHelp") : t("form.dataSource.sdkHelp")}</Description>
+                <Description>
+                  {isSql ? t("form.dataSource.sqlHelp", { warehouse: WAREHOUSE_LABELS[warehouse] }) : t("form.dataSource.sdkHelp")}
+                </Description>
               </Select>
             )}
           </form.AppField>
@@ -461,8 +485,9 @@ export function MetricForm({
                     value={field.state.value}
                     onChange={field.handleChange}
                     onBlur={field.handleBlur}
-                    onTemplate={() => field.handleChange(sqlTemplate(source?.bigquery ?? null, "purchase"))}
+                    onTemplate={() => field.handleChange(sqlTemplate(source?.config ?? null, "purchase"))}
                     error={shown(field)}
+                    warehouse={warehouse}
                   />
                 )}
               </form.AppField>
@@ -474,8 +499,9 @@ export function MetricForm({
                       value={field.state.value}
                       onChange={field.handleChange}
                       onBlur={field.handleBlur}
-                      onTemplate={() => field.handleChange(sqlTemplate(source?.bigquery ?? null, "add_to_cart"))}
+                      onTemplate={() => field.handleChange(sqlTemplate(source?.config ?? null, "add_to_cart"))}
                       error={shown(field)}
+                      warehouse={warehouse}
                     />
                   )}
                 </form.AppField>

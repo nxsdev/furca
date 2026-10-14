@@ -161,7 +161,7 @@
     "dataSource": {
       "label": "Data source",
       "sdkEvents": "SDK events",
-      "sqlHelp": "Events come from your BigQuery SQL.",
+      "sqlHelp": "Events come from your {{warehouse}} SQL.",
       "sdkHelp": "Events your app sends with the SDK's track()."
     },
     "sql": {
@@ -169,7 +169,7 @@
       "event": "Event SQL",
       "denominator": "Denominator SQL",
       "insertTemplate": "Insert template",
-      "help": "One row per event with columns <c>user_id</c> STRING, <c>timestamp</c> TIMESTAMP, <c>value</c> FLOAT64 (use 1 to count). furca joins it to exposures by <c>user_id</c>."
+      "help": "One row per event with columns <c>user_id</c> {{text}}, <c>timestamp</c> {{time}}, <c>value</c> {{float}} (use 1 to count), in {{warehouse}} SQL. furca joins it to exposures by <c>user_id</c>."
     },
     "event": {
       "label": "Event",

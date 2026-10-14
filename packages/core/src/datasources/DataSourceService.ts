@@ -1,7 +1,7 @@
 import { Context, type Effect } from "effect";
 import type { Actor } from "../audit/AuditLog";
 import type { ConflictError, NotFoundError, PersistenceError, ValidationError } from "../shared/errors";
-import type { BigQueryConfig, DataSource } from "./DataSource";
+import type { DataSource, WarehouseConfig } from "./DataSource";
 
 type Errors = NotFoundError | ValidationError | PersistenceError;
 
@@ -9,18 +9,21 @@ type Errors = NotFoundError | ValidationError | PersistenceError;
 export interface DataSourceServiceShape {
   readonly list: Effect.Effect<ReadonlyArray<DataSource>, PersistenceError>;
   readonly get: (id: string) => Effect.Effect<DataSource, NotFoundError | PersistenceError>;
-  /** credentialsJson: service account key JSON (needs client_email and private_key) */
-  readonly createBigQuery: (
-    input: { readonly name: string; readonly bigquery: BigQueryConfig; readonly credentialsJson: string; readonly exposureSql: string },
+  /**
+   * The warehouse type is config._tag. credentials: BigQuery service account key JSON, Snowflake
+   * PKCS#8 private key PEM, ClickHouse / Postgres password
+   */
+  readonly create: (
+    input: { readonly name: string; readonly config: WarehouseConfig; readonly credentials: string; readonly exposureSql: string },
     actor: Actor,
   ) => Effect.Effect<DataSource, Errors>;
-  /** credentialsJson null keeps the stored credentials. The builtin source only takes a new name */
+  /** credentials null keeps the stored ones. The type cannot change. The builtin source only takes a new name */
   readonly update: (
     input: {
       readonly id: string;
       readonly name: string;
-      readonly bigquery: BigQueryConfig | null;
-      readonly credentialsJson: string | null;
+      readonly config: WarehouseConfig | null;
+      readonly credentials: string | null;
       readonly exposureSql: string;
     },
     actor: Actor,

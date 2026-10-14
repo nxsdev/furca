@@ -5,6 +5,7 @@ import { Flag, FlaskConical, Plus, ChartLine } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { Autocomplete } from "react-aria-components";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "~/lib/permissions";
 import { orpc } from "~/lib/rpc";
 import { primaryNav, secondaryNav } from "./Sidebar";
 
@@ -22,6 +23,7 @@ export function CommandPalette({ isOpen, onOpenChange }: { isOpen: boolean; onOp
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
   const { contains } = useFilter({ sensitivity: "base" });
+  const { canEdit } = usePermissions();
   const features = useQuery({ ...orpc.features.list.queryOptions({ input: { includeArchived: false } }), enabled: isOpen });
   const experiments = useQuery({ ...orpc.experiments.list.queryOptions({ input: { includeArchived: false } }), enabled: isOpen });
   const metrics = useQuery({ ...orpc.metrics.list.queryOptions({ input: { includeArchived: false } }), enabled: isOpen });
@@ -37,10 +39,13 @@ export function CommandPalette({ isOpen, onOpenChange }: { isOpen: boolean; onOp
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, onOpenChange]);
 
-  const commands: Array<Command> = [
+  const createCommands: Array<Command> = [
     { id: "new-flag", label: t("search.createFlag"), icon: <Plus className="size-4" />, to: "/flags", search: { new: "1" } },
     { id: "new-experiment", label: t("search.createExperiment"), icon: <Plus className="size-4" />, to: "/experiments/new" },
     { id: "new-metric", label: t("search.createMetric"), icon: <Plus className="size-4" />, to: "/metrics", search: { new: "1" } },
+  ];
+  const commands: Array<Command> = [
+    ...(canEdit ? createCommands : []),
     ...[...primaryNav, ...secondaryNav].map((item) => {
       const Icon = item.icon;
       return { id: `nav:${item.to}`, label: t(`nav.${item.label}`), hint: t("search.goTo"), icon: <Icon className="size-4" />, to: item.to };

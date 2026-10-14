@@ -325,15 +325,15 @@ describe("data sources and metrics", () => {
 
   it("stores BigQuery credentials encrypted, keeps them on update with null, and never returns them", async () => {
     const bad = await fail(
-      DataSourceService.use((s) => s.createBigQuery({ name: "BQ", bigquery, credentialsJson: '{"type":"x"}', exposureSql: "select 1" }, actor)),
+      DataSourceService.use((s) => s.create({ name: "BQ", config: bigquery, credentials: '{"type":"x"}', exposureSql: "select 1" }, actor)),
     );
     expect(bad._tag).toBe("ValidationError");
-    const source = await run(DataSourceService.use((s) => s.createBigQuery({ name: "BQ", bigquery, credentialsJson: key, exposureSql: "select 1" }, actor)));
+    const source = await run(DataSourceService.use((s) => s.create({ name: "BQ", config: bigquery, credentials: key, exposureSql: "select 1" }, actor)));
     expect(source).toMatchObject({ type: "bigquery", hasCredentials: true });
     expect(JSON.stringify(source)).not.toContain("private_key");
     expect((await credentials(source.id))!.credentials).toBe(`enc:${key}`);
     await run(
-      DataSourceService.use((s) => s.update({ id: source.id, name: "Renamed", bigquery, credentialsJson: null, exposureSql: "select 2" }, actor)),
+      DataSourceService.use((s) => s.update({ id: source.id, name: "Renamed", config: bigquery, credentials: null, exposureSql: "select 2" }, actor)),
     );
     expect((await credentials(source.id))!.credentials).toBe(`enc:${key}`);
 

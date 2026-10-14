@@ -8,7 +8,7 @@
  */
 import type { AuditLog } from "@furca/core/audit/AuditLog";
 import { AuditEntityType } from "@furca/core/audit/AuditLog";
-import { BigQueryConfig, type DataSource } from "@furca/core/datasources/DataSource";
+import { type DataSource, WarehouseConfig } from "@furca/core/datasources/DataSource";
 import type { Environment } from "@furca/core/environments/Environment";
 import {
   DecisionOutcome,
@@ -18,7 +18,8 @@ import {
   Variation,
 } from "@furca/core/experiments/Experiment";
 import { type Feature, FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
-import type { Invitation, Member } from "@furca/core/members/Member";
+import { AssignableRole, type Invitation, type Member } from "@furca/core/members/Member";
+import { type ChangeRequest, ChangeRequestStatus, FlagChange } from "@furca/core/approvals/ChangeRequest";
 import { type Metric, MetricCapping, MetricDefinition, MetricType } from "@furca/core/metrics/Metric";
 import { NamespaceAllocation, type Namespace } from "@furca/core/experiments/Namespace";
 import { ApiKeyRole, type ApiKey } from "@furca/core/platform/ApiKey";
@@ -53,7 +54,7 @@ export interface EnvironmentListItem {
 export interface ConnectionTestResult {
   readonly ok: boolean;
   readonly message: string;
-  /** BigQuery dry-run estimate of the exposure query */
+  /** BigQuery dry-run estimate of the exposure query; null for other warehouses */
   readonly bytesProcessed: number | null;
 }
 
@@ -158,6 +159,8 @@ export const contract = {
     create: oc.input(input({ key: Key, name: Schema.String })).output(type<Environment>()),
     update: oc.input(input({ ...Id, name: Schema.String })).output(type<Environment>()),
     rotateSdkKey: oc.input(input(Id)).output(type<Environment>()),
+    /** When on, flag on/off and rule changes here need an approved change request */
+    setRequireApproval: oc.input(input({ ...Id, requireApproval: Schema.Boolean })).output(type<Environment>()),
     /** CONFLICT while experiments run in it; the last environment cannot be deleted */
     delete: oc.input(input(Id)).output(type<void>()),
     /** The exact JSON the SDK receives (pretty-printed), for debugging delivery */
@@ -181,12 +184,13 @@ export const contract = {
     update: oc
       .input(input({ ...Id, description: Schema.String, defaultValue: Schema.String, tags: Schema.Array(Schema.String) }))
       .output(type<Feature>()),
+    /** FORBIDDEN where the environment requires a review: use changeRequests.create */
     setEnabled: oc
       .input(input({ ...Id, environmentId: Schema.String, enabled: Schema.Boolean }))
       .output(type<Feature>()),
     /**
      * Replaces the ordered rules of one environment. Experiment rules may be reordered or
-     * toggled but not added / removed here (experiments own them)
+     * toggled but not added / removed here (experiments own them). FORBIDDEN like setEnabled
      */
     saveRules: oc
       .input(input({ ...Id, environmentId: Schema.String, rules: Schema.Array(FeatureRule) }))
@@ -253,31 +257,35 @@ export const contract = {
   dataSources: {
     list: oc.output(type<ReadonlyArray<DataSource>>()),
     get: oc.input(input(Id)).output(type<DataSource>()),
-    createBigQuery: oc
+    /**
+     * A warehouse source; its type is config._tag. credentials (write-only): BigQuery service account
+     * key JSON, Snowflake PKCS#8 private key PEM, ClickHouse / Postgres password
+     */
+    create: oc
       .input(
         input({
           name: Schema.String,
-          bigquery: BigQueryConfig,
-          credentialsJson: Schema.String,
+          config: WarehouseConfig,
+          credentials: Schema.String,
           exposureSql: Schema.String,
         }),
       )
       .output(type<DataSource>()),
-    /** credentialsJson null keeps the stored credentials */
+    /** credentials null keeps the stored ones; config is null for the builtin source; the type cannot change */
     update: oc
       .input(
         input({
           ...Id,
           name: Schema.String,
-          bigquery: Schema.NullOr(BigQueryConfig),
-          credentialsJson: Schema.NullOr(Schema.String),
+          config: Schema.NullOr(WarehouseConfig),
+          credentials: Schema.NullOr(Schema.String),
           exposureSql: Schema.String,
         }),
       )
       .output(type<DataSource>()),
     /** The builtin source and sources used by metrics cannot be deleted (CONFLICT) */
     delete: oc.input(input(Id)).output(type<void>()),
-    /** Authenticates and dry-runs the exposure SQL */
+    /** Authenticates and compiles the exposure SQL without reading data (BigQuery dry run, elsewhere LIMIT 0) */
     test: oc.input(input(Id)).output(type<ConnectionTestResult>()),
   },
 
@@ -366,12 +374,40 @@ export const contract = {
   },
 
   members: {
+    /** Pending invitations are only listed for admins (empty otherwise) */
     list: oc.output(type<{ members: ReadonlyArray<Member>; invitations: ReadonlyArray<Invitation> }>()),
-    /** Creates a 7-day one-time sign-up link (no email is sent; share the URL) */
-    invite: oc.input(input({ email: Schema.String })).output(type<Invitation>()),
+    /** Creates a 7-day one-time sign-up link (no email is sent; share the URL). The account gets `role` */
+    invite: oc.input(input({ email: Schema.String, role: AssignableRole })).output(type<Invitation>()),
     revokeInvitation: oc.input(input(Id)).output(type<void>()),
-    /** Owner only; the owner cannot remove themselves */
+    /** FORBIDDEN for the owner; CONFLICT when it would demote the last admin */
+    setRole: oc.input(input({ ...Id, role: AssignableRole })).output(type<Member>()),
+    /** The owner cannot be removed */
     remove: oc.input(input(Id)).output(type<void>()),
+  },
+
+  /**
+   * Reviews of flag changes in environments that require approval (environments.setRequireApproval).
+   * Editors open them; another admin approves (applies the change) or rejects; the author or an
+   * admin cancels
+   */
+  changeRequests: {
+    /** Newest first */
+    list: oc
+      .input(input({ status: Schema.optional(ChangeRequestStatus), featureId: Schema.optional(Schema.String) }))
+      .output(type<ReadonlyArray<ChangeRequest>>()),
+    get: oc.input(input(Id)).output(type<ChangeRequest>()),
+    /** Stores the change with the environment's current state as its base. BAD_REQUEST when nothing changes */
+    create: oc
+      .input(input({ featureId: Schema.String, environmentId: Schema.String, change: FlagChange, comment: Schema.String }))
+      .output(type<ChangeRequest>()),
+    /**
+     * Applies the change and republishes. FORBIDDEN for the author; CONFLICT when the request is
+     * closed or the flag changed since it was opened
+     */
+    approve: oc.input(input({ ...Id, comment: Schema.String })).output(type<ChangeRequest>()),
+    reject: oc.input(input({ ...Id, comment: Schema.String })).output(type<ChangeRequest>()),
+    /** Author or admin */
+    cancel: oc.input(input(Id)).output(type<ChangeRequest>()),
   },
 };
 

@@ -11,6 +11,9 @@ export const environmentsRouter = {
   update: authed.environments.update.effect(function* ({ context }, input) {
     return yield* (yield* EnvironmentService).update(input, context.user);
   }),
+  setRequireApproval: authed.environments.setRequireApproval.effect(function* ({ context }, input) {
+    return yield* (yield* EnvironmentService).setRequireApproval(input, context.user);
+  }),
   rotateSdkKey: authed.environments.rotateSdkKey.effect(function* ({ context }, { id }) {
     return yield* (yield* EnvironmentService).rotateSdkKey(id, context.user);
   }),

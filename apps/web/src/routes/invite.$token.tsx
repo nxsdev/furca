@@ -47,7 +47,8 @@ function InvitePage() {
         { name: "password", label: t("auth.fields.password"), type: "password", autoComplete: "new-password", minLength: 10 },
       ]}
       onSubmit={async ({ name, email, password }) => {
-        const { error } = await authClient.signUp.email({ name, email, password });
+        // The server accepts the sign-up only with this invitation's one-time token (INVITATION_HEADER in Auth.ts)
+        const { error } = await authClient.signUp.email({ name, email, password, fetchOptions: { headers: { "x-furca-invitation": token } } });
         if (error) return authErrorMessage(error, "createFailed");
         await navigate({ to: "/overview" });
         return null;

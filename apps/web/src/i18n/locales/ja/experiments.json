@@ -277,7 +277,7 @@
       "placeholder": "country, plan, platform",
       "suggested": "ターゲティングで使用中:",
       "description": "結果を分けて見る属性です。SDK が露出ごとにその値を送信するため、開始後に露出したユーザーだけが対象になります。開始後は変更できないので、いま選んでください。",
-      "warehouse": "BigQuery の場合は、代わりに露出 SQL に同じ名前の列を追加してください。"
+      "warehouse": "ウェアハウスのデータソースの場合は、代わりに露出 SQL に同じ名前の列を追加してください。"
     }
   },
   "traffic": {

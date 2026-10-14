@@ -158,7 +158,7 @@
     "dataSource": {
       "label": "データソース",
       "sdkEvents": "SDK イベント",
-      "sqlHelp": "イベントは BigQuery の SQL から取得します。",
+      "sqlHelp": "イベントは {{warehouse}} の SQL から取得します。",
       "sdkHelp": "アプリが SDK の track() で送信するイベントを使います。"
     },
     "sql": {
@@ -166,7 +166,7 @@
       "event": "イベントの SQL",
       "denominator": "分母の SQL",
       "insertTemplate": "テンプレートを挿入",
-      "help": "イベントごとに1行を返し、<c>user_id</c> STRING、<c>timestamp</c> TIMESTAMP、<c>value</c> FLOAT64（回数を数える場合は 1）の列を含めてください。furca は <c>user_id</c> で露出と結合します。"
+      "help": "イベントごとに1行を返し、<c>user_id</c> {{text}}、<c>timestamp</c> {{time}}、<c>value</c> {{float}}（回数を数える場合は 1）の列を含む {{warehouse}} の SQL を書いてください。furca は <c>user_id</c> で露出と結合します。"
     },
     "event": {
       "label": "イベント",

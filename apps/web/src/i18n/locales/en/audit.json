@@ -49,6 +49,17 @@
     },
     "invitation": {
       "revoked": "revoked invitation"
+    },
+    "role": {
+      "updated": "changed role"
+    },
+    "review": {
+      "requested": "requested review",
+      "approved": "approved review",
+      "rejected": "rejected review",
+      "cancelled": "cancelled review",
+      "required": "turned on Require review",
+      "notRequired": "turned off Require review"
     }
   },
   "list": {

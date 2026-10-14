@@ -1,5 +1,6 @@
 import { ExperimentAnalysisService } from "@furca/core/analysis/Analysis";
 import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
+import { WAREHOUSE_LABELS } from "@furca/core/datasources/DataSource";
 import type { Experiment, ExperimentPhase } from "@furca/core/experiments/Experiment";
 import type { Metric } from "@furca/core/metrics/Metric";
 import {
@@ -18,7 +19,7 @@ import {
 import { NotFoundError, ValidationError, WarehouseError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { dataSources as dataSourcesTable, resultSnapshots } from "@furca/database/schema/index";
-import * as BigQuery from "@furca/integrations/bigquery/client";
+import * as Warehouse from "@furca/integrations/warehouse";
 import {
   adjustedInterval,
   type AnalysisSettings,
@@ -37,15 +38,15 @@ import { Effect, Layer, Schema } from "effect";
 import { toDataSource, toExperiment, toMetric } from "../mappers";
 import {
   type AnalysisWindow,
-  bigQueryExposureCountsSql,
-  bigQueryMomentsSql,
-  type BigQueryQuery,
   d1ExposureCountsSql,
   d1MomentsSql,
   type D1Query,
-  isBigQueryColumn,
+  isWarehouseColumn,
   NOT_SET_SLICE,
   OTHER_SLICE,
+  warehouseExposureCountsSql,
+  warehouseMomentsSql,
+  type WarehouseQuery,
 } from "./AnalysisSql";
 
 type Rows = ReadonlyArray<Record<string, unknown>>;
@@ -89,32 +90,26 @@ const builtinSource = (d1: D1Database, environmentId: string, phase: number, win
   };
 };
 
-const bigQuerySource = (
-  sa: BigQuery.ServiceAccount,
-  target: BigQuery.BigQueryTarget,
-  exposureSql: string,
-  window: AnalysisWindow,
-): AnalysisSource => {
+const warehouseSource = (warehouse: Warehouse.Warehouse, exposureSql: string, window: AnalysisWindow): AnalysisSource => {
   const dimension = window.dimension;
-  if (dimension != null && !isBigQueryColumn(dimension)) {
+  if (dimension != null && !isWarehouseColumn(dimension)) {
     const error = Effect.fail(new WarehouseError({ message: missingColumn(dimension) }));
     return { exposureCounts: error, moments: () => error };
   }
-  const run = (q: BigQueryQuery) =>
-    BigQuery.query(sa, target, q.sql, q.params).pipe(
-      // BigQuery: "Unrecognized name: plan at [6:22]" when the exposure SQL has no such column
-      Effect.mapError((e) =>
-        dimension != null && new RegExp(`Unrecognized name: ${dimension}\\b`).test(e.message)
-          ? new WarehouseError({ message: missingColumn(dimension) })
-          : e,
-      ),
+  // The exposure SQL has no such column. BigQuery: "Unrecognized name: plan", Snowflake: invalid
+  // identifier '"PLAN"', Postgres: column "plan" does not exist, ClickHouse: Unknown expression
+  // identifier `plan` / Missing columns: 'plan'
+  const unknownColumn = dimension == null ? null : new RegExp(`(unrecognized name|identifier|missing columns|column)\\W+${dimension}\\b`, "i");
+  const run = (q: WarehouseQuery) =>
+    warehouse.query(q.sql, q.params).pipe(
+      Effect.mapError((e) => (dimension != null && unknownColumn?.test(e.message) ? new WarehouseError({ message: missingColumn(dimension) }) : e)),
     );
   return {
-    exposureCounts: run(bigQueryExposureCountsSql({ ...window, exposureSql })),
+    exposureCounts: run(warehouseExposureCountsSql(warehouse.type, { ...window, exposureSql })),
     moments: (metric, cuped) =>
       metric.definition._tag === "sql"
         ? run(
-            bigQueryMomentsSql({
+            warehouseMomentsSql(warehouse.type, {
               ...window,
               exposureSql,
               metric,
@@ -123,7 +118,9 @@ const bigQuerySource = (
               denominatorSql: metric.definition.denominatorSql,
             }),
           )
-        : Effect.fail(new WarehouseError({ message: `Metric "${metric.name}" uses built-in events; BigQuery cannot read them` })),
+        : Effect.fail(
+            new WarehouseError({ message: `Metric "${metric.name}" uses built-in events; ${WAREHOUSE_LABELS[warehouse.type]} cannot read them` }),
+          ),
   };
 };
 
@@ -375,17 +372,16 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
       }
       const dataSource = toDataSource(row);
       if (dataSource.type === "builtin") return builtinSource(database.d1, experiment.analysisEnvironmentId, phaseIndex, window);
-      if (dataSource.bigquery === null || row.credentials === null) {
-        return yield* new WarehouseError({ message: `BigQuery data source "${dataSource.name}" has no project or service account key` });
+      if (dataSource.config === null || row.credentials === null) {
+        return yield* new WarehouseError({ message: `Data source "${dataSource.name}" has no connection settings or credentials` });
       }
       if (dataSource.exposureSql.trim() === "") {
-        return yield* new WarehouseError({ message: `BigQuery data source "${dataSource.name}" has no exposure SQL` });
+        return yield* new WarehouseError({ message: `Data source "${dataSource.name}" has no exposure SQL` });
       }
-      const json = yield* cipher
+      const credentials = yield* cipher
         .decrypt(row.credentials)
         .pipe(Effect.mapError((e) => new WarehouseError({ message: e.message })));
-      const sa = yield* BigQuery.parseServiceAccount(json);
-      return bigQuerySource(sa, dataSource.bigquery, dataSource.exposureSql, window);
+      return warehouseSource(yield* Warehouse.connect(dataSource.config, credentials), dataSource.exposureSql, window);
     });
 
     /** Exposure counts and per-metric moments rows of the current phase (sliced when `dimension` is set) */
