@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { ErrorCode } from "../shared/errors";
 import { Condition } from "../targeting/Condition";
 
 export const FeatureValueType = Schema.Literals(["boolean", "string", "number", "json"]);
@@ -72,21 +73,21 @@ export class Feature extends Schema.Class<Feature>("Feature")({
   updatedAt: Schema.Date,
 }) {}
 
-/** Checks a JSON-encoded value against valueType; returns an error message or null */
-export const validateFeatureValue = (valueType: FeatureValueType, json: string): string | null => {
+/** Checks a JSON-encoded value against valueType; returns the problem's error code (`value.*`) or null */
+export const validateFeatureValue = (valueType: FeatureValueType, json: string): ErrorCode | null => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
   } catch {
-    return "Value is not valid JSON";
+    return "value.invalidJson";
   }
   switch (valueType) {
     case "boolean":
-      return typeof parsed === "boolean" ? null : "Expected true or false";
+      return typeof parsed === "boolean" ? null : "value.expectedBoolean";
     case "string":
-      return typeof parsed === "string" ? null : "Expected a string";
+      return typeof parsed === "string" ? null : "value.expectedString";
     case "number":
-      return typeof parsed === "number" && Number.isFinite(parsed) ? null : "Expected a number";
+      return typeof parsed === "number" && Number.isFinite(parsed) ? null : "value.expectedNumber";
     case "json":
       return null;
   }

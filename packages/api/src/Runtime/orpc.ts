@@ -2,6 +2,7 @@ import "@orpc/experimental-effect/extensions/effect";
 import { hasRole, Role } from "@furca/core/members/Member";
 import type { ApiKeyRole } from "@furca/core/platform/ApiKey";
 import { ApiKeyService } from "@furca/core/platform/ApiKeyService";
+import { type ErrorCode, issue, type NotFoundError, type ValidationError } from "@furca/core/shared/errors";
 import { runPromise, type WithEffectContext } from "@orpc/experimental-effect";
 import { implement, ORPCError } from "@orpc/server";
 import { Effect, Schema } from "effect";
@@ -40,21 +41,23 @@ const errorStatus = {
 } as const;
 
 /**
+ * oRPC error with the English `message` (API clients, logs) and, when the error has a code,
+ * `data: { code, params, field }`: the admin UI translates the code and shows it under `field`
+ */
+export const orpcError = (status: string, { message, code, params, field }: Pick<ValidationError, "message" | "code" | "params" | "field">) =>
+  new ORPCError(status, { message, data: code === undefined ? undefined : { code, params, field } });
+
+/**
  * Domain errors (core/shared/errors) thrown out of Effect handlers become typed oRPC errors.
  * PersistenceError and unknown failures are logged and hidden behind INTERNAL_SERVER_ERROR
  */
 export const toORPCError = (error: unknown): ORPCError<string, unknown> => {
   if (error instanceof ORPCError) return error;
   const tag = typeof error === "object" && error !== null && "_tag" in error ? String(error._tag) : "";
-  if (tag === "NotFoundError") {
-    const { entity } = error as { entity: string };
-    return new ORPCError("NOT_FOUND", { message: `${entity[0]?.toUpperCase()}${entity.slice(1)} not found` });
-  }
-  if (tag in errorStatus) {
-    return new ORPCError(errorStatus[tag as keyof typeof errorStatus], { message: (error as { message: string }).message });
-  }
+  if (tag === "NotFoundError") return orpcError("NOT_FOUND", issue(`notFound.${(error as NotFoundError).entity}`));
+  if (tag in errorStatus) return orpcError(errorStatus[tag as keyof typeof errorStatus], error as ValidationError);
   console.error("Unhandled API error", error);
-  return new ORPCError("INTERNAL_SERVER_ERROR", { message: "Something went wrong. Try again." });
+  return orpcError("INTERNAL_SERVER_ERROR", issue("common.unexpected"));
 };
 
 /**
@@ -141,13 +144,13 @@ export const accessOf = (path: ReadonlyArray<string>): Access =>
 
 const requiredRole = { read: "viewer", editor: "editor", admin: "admin" } as const satisfies Record<Access, Role>;
 
-const adminOnly: Partial<Record<string, string>> = {
-  environments: "Only admins can manage environments",
-  dataSources: "Only admins can manage data sources",
-  apiKeys: "Only admins can manage API keys",
-  webhooks: "Only admins can manage webhooks",
-  members: "Only admins can manage members",
-  changeRequests: "Only admins can approve or reject reviews",
+const adminOnly: Partial<Record<string, ErrorCode>> = {
+  environments: "access.environments",
+  dataSources: "access.dataSources",
+  apiKeys: "access.apiKeys",
+  webhooks: "access.webhooks",
+  members: "access.members",
+  changeRequests: "access.changeRequests",
 };
 
 const authenticate = async (
@@ -156,12 +159,12 @@ const authenticate = async (
   const bearer = /^Bearer\s+(\S+)$/i.exec(context.headers.get("authorization") ?? "")?.[1];
   if (bearer !== undefined) {
     const key = await runPromise(ApiKeyService.use((s) => s.authenticate(bearer)).pipe(Effect.provide(context["effect/context"])));
-    if (key === null) throw new ORPCError("UNAUTHORIZED", { message: "Invalid or revoked API key" });
+    if (key === null) throw orpcError("UNAUTHORIZED", issue("auth.invalidApiKey"));
     const role = key.role === "admin" ? "admin" : "viewer";
     return { user: { id: `apikey:${key.id}`, email: `api-key:${key.name}`, role }, apiKey: { id: key.id, role: key.role } };
   }
   const session = await context.auth.api.getSession({ headers: context.headers });
-  if (session === null) throw new ORPCError("UNAUTHORIZED", { message: "Sign in required" });
+  if (session === null) throw orpcError("UNAUTHORIZED", issue("auth.signInRequired"));
   const role = Schema.is(Role)(session.user.role) ? session.user.role : "viewer";
   return { user: { id: session.user.id, email: session.user.email, role }, apiKey: null };
 };
@@ -176,13 +179,13 @@ export const authed = pub.use(async ({ context, next, path }) => {
   const { user, apiKey } = await authenticate(context);
   const access = accessOf(path);
   if (!hasRole(user.role, requiredRole[access])) {
-    const message =
+    const code =
       apiKey?.role === "readonly"
-        ? "This API key is read-only"
+        ? "access.readOnlyKey"
         : access === "admin"
-          ? (adminOnly[path[0] ?? ""] ?? "Only admins can do this")
-          : "Viewers can't make changes. Ask an admin for editor access";
-    throw new ORPCError("FORBIDDEN", { message });
+          ? (adminOnly[path[0] ?? ""] ?? "access.adminOnly")
+          : "access.viewer";
+    throw orpcError("FORBIDDEN", issue(code));
   }
   return next({ context: { user, apiKey } });
 });

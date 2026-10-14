@@ -1,7 +1,7 @@
 import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
 import { PayloadStore } from "@furca/core/environments/PayloadStore";
 import { BackgroundTasks } from "@furca/core/platform/BackgroundTasks";
-import { PersistenceError, ValidationError } from "@furca/core/shared/errors";
+import { issue, PersistenceError, ValidationError } from "@furca/core/shared/errors";
 import { DatabaseLive } from "@furca/database/Database";
 import { Effect, Layer } from "effect";
 import type { FurcaEnv } from "./Env";
@@ -49,7 +49,7 @@ export const CredentialCipherAesGcm = (secret: string) => {
           const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(iv) }, await key, unb64(data));
           return new TextDecoder().decode(plain);
         },
-        catch: () => new ValidationError({ message: "Stored credentials cannot be decrypted. Was ENCRYPTION_KEY changed?" }),
+        catch: () => new ValidationError(issue("dataSource.credentialsUndecryptable")),
       }),
   });
 };

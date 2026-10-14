@@ -13,6 +13,6 @@ export const authErrorMessage = (
   if (code === "INVALID_EMAIL_OR_PASSWORD") return i18n.t("shell:auth.errors.invalidCredentials");
   if (code.startsWith("USER_ALREADY_EXISTS")) return i18n.t("shell:auth.errors.userExists");
   if (code === "PASSWORD_TOO_SHORT") return i18n.t("shell:auth.errors.passwordTooShort");
-  if (error.message?.includes("invite-only")) return i18n.t("shell:auth.errors.inviteOnly");
+  if (code === "INVITE_ONLY") return i18n.t("shell:auth.errors.inviteOnly");
   return error.message ?? i18n.t(`shell:auth.errors.${fallback}`);
 };

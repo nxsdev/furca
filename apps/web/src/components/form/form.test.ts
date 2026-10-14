@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { ORPCError } from "@orpc/client";
 import { type AnyFormApi, FieldApi, FormApi } from "@tanstack/react-form";
 import { setServerError } from "./form";
 
@@ -42,5 +43,19 @@ describe("setServerError", () => {
     expect(key.state.meta.errors as ReadonlyArray<unknown>).toEqual([]);
     await form.handleSubmit();
     expect(submissions()).toBe(1);
+  });
+
+  it("puts a coded server error under the field it names when the form shows that field, else at form level", () => {
+    const duplicate = new ORPCError("BAD_REQUEST", {
+      message: 'A flag with key "checkout" already exists',
+      data: { code: "flag.keyTaken", params: { key: "checkout" }, field: "key" },
+    });
+    const { form, key } = makeForm();
+    setServerError(form, duplicate);
+    expect(key.state.meta.errors as ReadonlyArray<unknown>).toEqual(['A flag with key "checkout" already exists']);
+
+    const other = makeForm();
+    setServerError(other.form, new ORPCError("BAD_REQUEST", { message: "Name is required", data: { code: "common.nameRequired", field: "name" } }));
+    expect(other.form.state.errorMap.onServer).toBe("Name is required");
   });
 });

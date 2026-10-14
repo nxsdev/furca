@@ -4,7 +4,7 @@ import type { Actor } from "@furca/core/audit/AuditLog";
 import { PayloadStore } from "@furca/core/environments/PayloadStore";
 import { Feature, FeatureEnvironmentConfig } from "@furca/core/features/Feature";
 import type { Experiment } from "@furca/core/experiments/Experiment";
-import { ConflictError, ForbiddenError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, ForbiddenError, issue, NotFoundError, ValidationError } from "@furca/core/shared/errors";
 import { Database, type Db } from "@furca/database/Database";
 import { changeRequests, featureEnvironments, features } from "@furca/database/schema/index";
 import { and, eq } from "drizzle-orm";
@@ -56,10 +56,10 @@ export const ChangeRequestServiceLive = Layer.effect(
         db.query.user.findMany({ columns: { id: true }, where: { role: { in: ["owner", "admin"] } } }),
       );
       if (admins.some((a) => a.id !== actor.id)) {
-        return yield* new ForbiddenError({ message: "You can't approve your own request. Ask another admin" });
+        return yield* new ForbiddenError(issue("review.ownRequest"));
       }
       if (comment.trim() === "") {
-        return yield* invalid("You are the only admin, so you can approve your own request. Say why in the comment; it is kept in the audit log");
+        return yield* invalid("review.selfApprovalReason", undefined, "comment");
       }
       return "review.selfApproved";
     });
@@ -69,7 +69,7 @@ export const ChangeRequestServiceLive = Layer.effect(
         .run("changeRequests.get", (db) => db.query.changeRequests.findFirst({ where: { id } }))
         .pipe(
           Effect.flatMap((row) =>
-            row ? Effect.succeed(toChangeRequest(row)) : Effect.fail(new NotFoundError({ entity: "change request", id })),
+            row ? Effect.succeed(toChangeRequest(row)) : Effect.fail(new NotFoundError({ entity: "changeRequest", id })),
           ),
         );
 
@@ -77,7 +77,10 @@ export const ChangeRequestServiceLive = Layer.effect(
       load(id).pipe(
         Effect.filterOrFail(
           (cr) => cr.status === "open",
-          (cr) => new ConflictError({ message: `This request was already ${cr.status}` }),
+          (cr) =>
+            new ConflictError(
+              issue(cr.status === "approved" ? "review.alreadyApproved" : cr.status === "rejected" ? "review.alreadyRejected" : "review.alreadyCancelled"),
+            ),
         ),
       );
 
@@ -95,11 +98,11 @@ export const ChangeRequestServiceLive = Layer.effect(
     /** Same checks as a direct save, so nobody approves rules that could not be saved */
     const validate = Effect.fn("ChangeRequestService.validate")(function* (feature: Feature, state: FlagState, change: FlagChange) {
       if (change.type !== "rules") return;
-      const error = validateRules(feature, state.rules, change.rules);
-      if (error !== null) return yield* invalid(error);
+      const problem = validateRules(feature, state.rules, change.rules);
+      if (problem !== null) return yield* new ValidationError(problem);
       yield* requireGroups(
         database,
-        change.rules.flatMap((rule, i) => (rule._tag === "experiment" ? [] : [{ where: `Rule ${i + 1}`, conditions: rule.conditions }])),
+        change.rules.flatMap((rule, i) => (rule._tag === "experiment" ? [] : [{ rule: i + 1, conditions: rule.conditions }])),
       );
     });
 
@@ -150,7 +153,7 @@ export const ChangeRequestServiceLive = Layer.effect(
         if (isExperimentChange(input.change)) {
           const experiment = yield* experimentOps.load(input.change.experimentId);
           if (experiment.featureId !== feature.id || !experiment.environmentIds.includes(input.environmentId)) {
-            return yield* invalid("The experiment does not run on this flag in this environment");
+            return yield* invalid("review.experimentNotOnFlag");
           }
           // One pending decision per experiment (two tabs, API retries)
           const open = yield* database.run("changeRequests.openForFeature", (db) =>
@@ -158,12 +161,12 @@ export const ChangeRequestServiceLive = Layer.effect(
           );
           const experimentId = experiment.id;
           if (open.map(toChangeRequest).some((cr) => isExperimentChange(cr.change) && cr.change.experimentId === experimentId)) {
-            return yield* new ConflictError({ message: "This experiment already has a pending review request" });
+            return yield* new ConflictError(issue("review.experimentPending"));
           }
           // Fails now, rather than at approval, when the action isn't possible
           yield* prepare(experiment, input.change, actor.email, new Date());
         } else {
-          if (sameState(state, applied(state, input.change))) return yield* invalid("Nothing to review: the flag is already in this state");
+          if (sameState(state, applied(state, input.change))) return yield* invalid("review.nothingToReview");
           yield* validate(feature, state, input.change);
         }
         const cr = ChangeRequest.make({
@@ -215,7 +218,7 @@ export const ChangeRequestServiceLive = Layer.effect(
         if (isExperimentChange(cr.change)) {
           const before = yield* experimentOps.load(cr.change.experimentId);
           if (before.updatedAt.getTime() > cr.createdAt.getTime()) {
-            return yield* new ConflictError({ message: "The experiment changed since this request; open a new one" });
+            return yield* new ConflictError(issue("review.experimentChanged"));
           }
           // The author made the decision; the approver applies it
           const t = yield* prepare(before, cr.change, cr.authorEmail, now);
@@ -235,7 +238,7 @@ export const ChangeRequestServiceLive = Layer.effect(
         const { feature: before, state } = yield* current(cr.featureId, cr.environmentId);
         // ponytail: read-compare-write, not a conditional UPDATE. Direct edits are blocked in this
         // environment, so only a simultaneous approval or experiment change could slip in between
-        if (!sameState(state, cr.base)) return yield* new ConflictError({ message: "The flag changed since this request; open a new one" });
+        if (!sameState(state, cr.base)) return yield* new ConflictError(issue("review.flagChanged"));
         yield* validate(before, state, cr.change);
         const next = applied(state, cr.change);
         const after = Feature.make({

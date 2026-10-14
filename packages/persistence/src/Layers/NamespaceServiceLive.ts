@@ -1,7 +1,7 @@
 import type { Actor } from "@furca/core/audit/AuditLog";
 import { Namespace } from "@furca/core/experiments/Namespace";
 import { NamespaceService } from "@furca/core/experiments/NamespaceService";
-import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, issue, NotFoundError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { namespaces } from "@furca/database/schema/index";
 import { eq } from "drizzle-orm";
@@ -41,7 +41,7 @@ export const NamespaceServiceLive = Layer.effect(
         ]),
       );
 
-    const requireName = (name: string) => (name.trim() === "" ? invalid("Name is required") : Effect.void);
+    const requireName = (name: string) => (name.trim() === "" ? invalid("common.nameRequired", undefined, "name") : Effect.void);
 
     return {
       list: Effect.gen(function* () {
@@ -62,7 +62,7 @@ export const NamespaceServiceLive = Layer.effect(
       create: Effect.fn("NamespaceService.create")(function* (input, actor) {
         yield* requireName(input.name);
         const existing = yield* database.run("namespaces.byKey", (db) => db.query.namespaces.findFirst({ where: { key: input.key } }));
-        if (existing !== undefined) return yield* invalid(`A namespace with key "${input.key}" already exists`);
+        if (existing !== undefined) return yield* invalid("namespace.keyTaken", { key: input.key }, "key");
         const now = new Date();
         const namespace = Namespace.make({
           id: newId(),
@@ -89,11 +89,9 @@ export const NamespaceServiceLive = Layer.effect(
         const before = yield* load(id);
         const holder = (yield* holders).find((e) => e.namespace?.namespaceId === id);
         if (holder !== undefined) {
-          return yield* new ConflictError({
-            message: `The experiment "${holder.name}" holds a slice of this namespace. ${
-              holder.status === "running" ? "Stop the experiment first" : "Remove the namespace from the draft first"
-            }`,
-          });
+          return yield* new ConflictError(
+            issue(holder.status === "running" ? "namespace.heldByRunning" : "namespace.heldByDraft", { experiment: holder.name }),
+          );
         }
         yield* database.run("namespaces.delete", (db) =>
           batch(db, [

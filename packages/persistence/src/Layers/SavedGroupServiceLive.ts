@@ -1,6 +1,6 @@
 import type { Actor } from "@furca/core/audit/AuditLog";
 import { PayloadStore } from "@furca/core/environments/PayloadStore";
-import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, issue, NotFoundError } from "@furca/core/shared/errors";
 import { SavedGroup } from "@furca/core/targeting/SavedGroup";
 import { type SavedGroupInput, SavedGroupService } from "@furca/core/targeting/SavedGroupService";
 import { Database } from "@furca/database/Database";
@@ -18,20 +18,20 @@ const MAX_VALUES = 10_000;
 const normalize = (input: SavedGroupInput) =>
   Effect.gen(function* () {
     const name = input.name.trim();
-    if (name === "") return yield* invalid("Name is required");
+    if (name === "") return yield* invalid("common.nameRequired", undefined, "name");
     if (input.type === "condition") {
-      if (input.conditions.length === 0) return yield* invalid("Add at least one condition");
+      if (input.conditions.length === 0) return yield* invalid("savedGroup.conditionRequired", undefined, "conditions");
       if (input.conditions.some((c) => isGroupOperator(c.operator))) {
-        return yield* invalid("A saved group cannot target another saved group");
+        return yield* invalid("savedGroup.nested", undefined, "conditions");
       }
-      if (input.conditions.some((c) => c.attribute.trim() === "")) return yield* invalid("Every condition needs an attribute");
+      if (input.conditions.some((c) => c.attribute.trim() === "")) return yield* invalid("savedGroup.conditionAttribute", undefined, "conditions");
       return { ...input, name, attribute: "", values: [] };
     }
     const attribute = input.attribute.trim();
-    if (attribute === "") return yield* invalid("Choose the attribute the list is matched against");
+    if (attribute === "") return yield* invalid("savedGroup.attributeRequired", undefined, "attribute");
     const values = [...new Set(input.values.map((v) => v.trim()).filter((v) => v !== ""))];
-    if (values.length === 0) return yield* invalid("Add at least one value");
-    if (values.length > MAX_VALUES) return yield* invalid(`A list can hold at most ${MAX_VALUES.toLocaleString("en-US")} values`);
+    if (values.length === 0) return yield* invalid("savedGroup.valueRequired", undefined, "ids");
+    if (values.length > MAX_VALUES) return yield* invalid("savedGroup.tooManyValues", { max: MAX_VALUES.toLocaleString("en-US") }, "ids");
     return { ...input, name, attribute, values, conditions: [] };
   });
 
@@ -46,7 +46,7 @@ export const SavedGroupServiceLive = Layer.effect(
         .run("savedGroups.get", (db) => db.query.savedGroups.findFirst({ where: { id } }))
         .pipe(
           Effect.flatMap((row) =>
-            row ? Effect.succeed(toSavedGroup(row)) : Effect.fail(new NotFoundError({ entity: "saved group", id })),
+            row ? Effect.succeed(toSavedGroup(row)) : Effect.fail(new NotFoundError({ entity: "savedGroup", id })),
           ),
         );
 
@@ -60,7 +60,7 @@ export const SavedGroupServiceLive = Layer.effect(
       updatedAt: g.updatedAt,
     });
 
-    /** What references the group, as a sentence for the CONFLICT message, or null */
+    /** What references the group, as the CONFLICT issue, or null */
     const usedBy = Effect.fn("SavedGroupService.usedBy")(function* (id: string) {
       const [features, envRows, experiments, groups] = yield* database.run("savedGroups.references", (db) =>
         Promise.all([
@@ -75,12 +75,12 @@ export const SavedGroupServiceLive = Layer.effect(
       );
       if (flagRow !== undefined) {
         const key = features.find((f) => f.id === flagRow.featureId)?.key ?? flagRow.featureId;
-        return `The flag "${key}" targets this group in its rules`;
+        return issue("savedGroup.usedByFlag", { flag: key });
       }
       const experiment = experiments.map(toExperiment).find((e) => groupIdsOf(e.conditions).includes(id));
-      if (experiment !== undefined) return `The experiment "${experiment.name}" targets this group`;
+      if (experiment !== undefined) return issue("savedGroup.usedByExperiment", { experiment: experiment.name });
       const group = groups.map(toSavedGroup).find((g) => groupIdsOf(g.conditions).includes(id));
-      if (group !== undefined) return `The saved group "${group.name}" references this group`;
+      if (group !== undefined) return issue("savedGroup.usedByGroup", { group: group.name });
       return null;
     });
 
@@ -105,7 +105,7 @@ export const SavedGroupServiceLive = Layer.effect(
         const { key, ...fields } = input;
         const valid = yield* normalize(fields);
         const existing = yield* database.run("savedGroups.byKey", (db) => db.query.savedGroups.findFirst({ where: { key } }));
-        if (existing !== undefined) return yield* invalid(`A saved group with key "${key}" already exists`);
+        if (existing !== undefined) return yield* invalid("savedGroup.keyTaken", { key }, "key");
         const now = new Date();
         const group = SavedGroup.make({ ...valid, id: newId(), key, createdAt: now, updatedAt: now });
         // Nothing references a new group yet: payloads do not change
@@ -126,7 +126,7 @@ export const SavedGroupServiceLive = Layer.effect(
       delete: Effect.fn("SavedGroupService.delete")(function* (id, actor) {
         const before = yield* load(id);
         const reference = yield* usedBy(id);
-        if (reference !== null) return yield* new ConflictError({ message: `${reference}. Remove it there before deleting the group` });
+        if (reference !== null) return yield* new ConflictError(reference);
         yield* database.run("savedGroups.delete", (db) =>
           batch(db, [
             db.delete(savedGroups).where(eq(savedGroups.id, id)),

@@ -35,8 +35,13 @@ const signUp = async (email: string, token?: string) => {
     headers: { "content-type": "application/json", ...(token === undefined ? {} : { "x-furca-invitation": token }) },
     body: JSON.stringify({ email, password: "correct-horse-battery", name: email.split("@")[0], role: "admin" }),
   });
-  const body = (await res.json()) as { user?: { id: string } };
-  return { status: res.status, id: body.user?.id ?? "", cookie: res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ") };
+  const body = (await res.json()) as { user?: { id: string }; code?: string };
+  return {
+    status: res.status,
+    code: body.code,
+    id: body.user?.id ?? "",
+    cookie: res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; "),
+  };
 };
 
 const rpc = async (cookie: string, path: string, input?: unknown) => {
@@ -94,7 +99,7 @@ describe("procedure classification", () => {
 describe("invitation sign-up", () => {
   it("requires the invitation's one-time token, for the invited email, while it is pending", async () => {
     const { token } = await invite("token@example.com", "editor");
-    expect((await signUp("token@example.com")).status).toBe(403);
+    expect(await signUp("token@example.com")).toMatchObject({ status: 403, code: "INVITE_ONLY" });
     expect((await signUp("token@example.com", "0".repeat(64))).status).toBe(403);
     // A valid token does not let someone else's address in
     await invite("other@example.com", "admin");
@@ -164,7 +169,11 @@ describe("roles", () => {
     expect((await rpc(viewer.cookie, "features/create", flagInput("nope"))).json.message).toBe(
       "Viewers can't make changes. Ask an admin for editor access",
     );
-    expect((await rpc(editor.cookie, "apiKeys/create", { name: "x", role: "admin" })).json.message).toBe("Only admins can manage API keys");
+    // `data.code` lets the admin UI show it in the user's language
+    expect((await rpc(editor.cookie, "apiKeys/create", { name: "x", role: "admin" })).json).toMatchObject({
+      message: "Only admins can manage API keys",
+      data: { code: "access.apiKeys" },
+    });
     expect((await rpc(editor.cookie, "members/invite", { email: "x@example.com", role: "admin" })).json.message).toBe(
       "Only admins can manage members",
     );

@@ -9,8 +9,9 @@
  *     <form.AppForm><form.FormError /><form.SubmitButton label={t("create")} /></form.AppForm>
  *   </form>
  *
- * Server errors: `setServerError(form, error, "key")` puts the API message under that field;
- * without a field name it becomes the form-level error shown by <form.FormError />
+ * Server errors: `setServerError(form, error)` puts the API message under the field the server named
+ * (`data.field`, e.g. "key" for a duplicate key) when the form shows that field, else it becomes the
+ * form-level error shown by <form.FormError />. Pass a field name to override
  */
 import {
   Button,
@@ -30,7 +31,7 @@ import { Schema } from "effect";
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { i18n } from "~/i18n";
-import { errorMessage } from "~/lib/rpc";
+import { errorField, errorMessage } from "~/lib/rpc";
 
 export const { fieldContext, formContext, useFieldContext, useFormContext } = createFormHookContexts();
 
@@ -401,11 +402,18 @@ export const matches =
   ({ value }: { value: unknown }): string | undefined =>
     Schema.is(schema)(value) ? undefined : message();
 
+/** The server error's field when this form has it mounted (a hidden field could not show it) */
+const mountedErrorField = (form: AnyFormApi, error: unknown): string | undefined => {
+  const field = errorField(error);
+  return field !== undefined && form.fieldInfo[field]?.instance ? field : undefined;
+};
+
 /**
- * Shows an API error under `field`, or as the form-level error when no field is given.
- * Stored as the `onServer` error, which the next submit clears, so the user can always retry
+ * Shows an API error under `field` (default: the field the server named, if mounted), or as the
+ * form-level error. Stored as the `onServer` error, which the next submit clears, so the user can
+ * always retry
  */
-export const setServerError = (form: AnyFormApi, error: unknown, field?: string): void => {
+export const setServerError = (form: AnyFormApi, error: unknown, field = mountedErrorField(form, error)): void => {
   const message = typeof error === "string" ? error : errorMessage(error);
   if (field === undefined) {
     form.setErrorMap({ onServer: { form: message, fields: {} } });

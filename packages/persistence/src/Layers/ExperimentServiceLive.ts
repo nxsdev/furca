@@ -10,7 +10,7 @@ import {
 import { type ExperimentDraft, ExperimentService, type TrafficChange } from "@furca/core/experiments/ExperimentService";
 import { ExperimentRule, type FeatureRule, FeatureValueType, ForceRule, validateFeatureValue } from "@furca/core/features/Feature";
 import { experimentReach, shadowedBy } from "@furca/core/features/ruleReach";
-import { ForbiddenError, NotFoundError } from "@furca/core/shared/errors";
+import { type ErrorCode, ForbiddenError, issue, NotFoundError } from "@furca/core/shared/errors";
 import { Database, type Db } from "@furca/database/Database";
 import { experiments, featureEnvironments } from "@furca/database/schema/index";
 import { and, eq } from "drizzle-orm";
@@ -71,10 +71,10 @@ const removeRule = (experimentId: string) => (rules: ReadonlyArray<FeatureRule>)
   rules.some(isRuleOf(experimentId)) ? rules.filter((r) => !isRuleOf(experimentId)(r)) : rules;
 
 const validateTraffic = (traffic: { readonly coverage: number; readonly weights: ReadonlyArray<number> }, variations: number) => {
-  if (!(traffic.coverage > 0 && traffic.coverage <= 1)) return invalid("Coverage must be more than 0% and at most 100%");
-  if (traffic.weights.length !== variations) return invalid("Provide one weight per variation");
-  if (traffic.weights.some((w) => !(w >= 0))) return invalid("Weights cannot be negative");
-  if (Math.abs(traffic.weights.reduce((a, b) => a + b, 0) - 1) > 1e-6) return invalid("Weights must add up to 100%");
+  if (!(traffic.coverage > 0 && traffic.coverage <= 1)) return invalid("experiment.coverageRange", undefined, "coverage");
+  if (traffic.weights.length !== variations) return invalid("experiment.weightPerVariation");
+  if (traffic.weights.some((w) => !(w >= 0))) return invalid("experiment.weightsNegative");
+  if (Math.abs(traffic.weights.reduce((a, b) => a + b, 0) - 1) > 1e-6) return invalid("experiment.weightsSum");
   return Effect.void;
 };
 
@@ -137,10 +137,10 @@ export const makeExperimentOps = Effect.gen(function* () {
     const rows = yield* database.run("metrics.byIds", (db) => db.query.metrics.findMany({ where: { id: { in: unique } } }));
     for (const id of unique) {
       const metric = rows.find((m) => m.id === id);
-      if (metric === undefined) return yield* invalid("A selected metric no longer exists");
-      if (metric.archivedAt !== null) return yield* invalid(`Metric "${metric.name}" is archived`);
+      if (metric === undefined) return yield* invalid("experiment.metricGone");
+      if (metric.archivedAt !== null) return yield* invalid("experiment.metricArchived", { metric: metric.name });
       if (metric.dataSourceId !== dataSourceId) {
-        return yield* invalid(`Metric "${metric.name}" reads from a different data source than the experiment`);
+        return yield* invalid("experiment.metricOtherSource", { metric: metric.name });
       }
     }
   });
@@ -149,10 +149,10 @@ export const makeExperimentOps = Effect.gen(function* () {
   const validateNamespace = Effect.fn("ExperimentService.validateNamespace")(function* (allocation: Experiment["namespace"]) {
     if (allocation === null) return;
     if (!(allocation.start >= 0 && allocation.start < allocation.end && allocation.end <= 1)) {
-      return yield* invalid("The namespace slice must start before it ends, between 0% and 100%");
+      return yield* invalid("experiment.namespaceSliceRange", undefined, "namespace");
     }
     const row = yield* database.run("namespaces.get", (db) => db.query.namespaces.findFirst({ where: { id: allocation.namespaceId } }));
-    if (row === undefined) return yield* invalid("The selected namespace no longer exists");
+    if (row === undefined) return yield* invalid("experiment.namespaceGone", undefined, "namespace");
   });
 
   /** Mutual exclusion: no other running experiment may hold an overlapping slice of the same namespace */
@@ -166,49 +166,47 @@ export const makeExperimentOps = Effect.gen(function* () {
       .map(toExperiment)
       .find((o) => o.namespace?.namespaceId === mine.namespaceId && o.namespace.start < mine.end && mine.start < o.namespace.end);
     if (clash !== undefined) {
-      return yield* invalid(
-        `The namespace slice overlaps "${clash.name}", which is running in the same namespace. Choose a free range or stop that experiment first`,
-      );
+      return yield* invalid("experiment.namespaceOverlap", { experiment: clash.name }, "namespace");
     }
   });
 
   const validateDraft = Effect.fn("ExperimentService.validateDraft")(function* (draft: ExperimentDraft) {
-    if (draft.name.trim() === "") return yield* invalid("Name is required");
-    if (draft.variations.length < 2) return yield* invalid("An experiment needs at least two variations");
+    if (draft.name.trim() === "") return yield* invalid("common.nameRequired", undefined, "name");
+    if (draft.variations.length < 2) return yield* invalid("experiment.twoVariations", undefined, "variations");
     const keys = draft.variations.map((v) => v.key.trim());
-    if (keys.some((k) => k === "")) return yield* invalid("Every variation needs a key");
-    if (new Set(keys).size !== keys.length) return yield* invalid("Variation keys must be unique");
+    if (keys.some((k) => k === "")) return yield* invalid("experiment.variationKeyRequired", undefined, "variations");
+    if (new Set(keys).size !== keys.length) return yield* invalid("experiment.variationKeysUnique", undefined, "variations");
     yield* validateTraffic(draft, draft.variations.length);
-    if (draft.hashAttribute.trim() === "") return yield* invalid("Choose the attribute to hash users by");
-    if (draft.dimensions.length > 5) return yield* invalid("Record at most 5 breakdown attributes");
+    if (draft.hashAttribute.trim() === "") return yield* invalid("experiment.hashAttributeRequired", undefined, "hashAttribute");
+    if (draft.dimensions.length > 5) return yield* invalid("experiment.tooManyDimensions", undefined, "dimensions");
     if (draft.dimensions.some((d) => d.trim() === "" || d.length > 64 || /["\\]/.test(d))) {
-      return yield* invalid('Breakdown attributes need a name of at most 64 characters without " or \\');
+      return yield* invalid("experiment.dimensionName", undefined, "dimensions");
     }
-    if (new Set(draft.dimensions).size !== draft.dimensions.length) return yield* invalid("Each breakdown attribute can be chosen once");
-    if (draft.environmentIds.length === 0) return yield* invalid("Choose at least one environment");
-    if (new Set(draft.environmentIds).size !== draft.environmentIds.length) return yield* invalid("Each environment can be chosen once");
+    if (new Set(draft.dimensions).size !== draft.dimensions.length) return yield* invalid("experiment.dimensionTwice", undefined, "dimensions");
+    if (draft.environmentIds.length === 0) return yield* invalid("experiment.environmentRequired");
+    if (new Set(draft.environmentIds).size !== draft.environmentIds.length) return yield* invalid("experiment.environmentTwice");
     if (!draft.environmentIds.includes(draft.analysisEnvironmentId)) {
-      return yield* invalid("The analysis environment must be one of the experiment's environments");
+      return yield* invalid("experiment.analysisEnvironment", undefined, "analysisEnvironmentId");
     }
-    if (!(draft.stats.alpha > 0 && draft.stats.alpha < 1)) return yield* invalid("Significance level must be between 0 and 1");
-    yield* requireGroups(database, [{ where: "Targeting", conditions: draft.conditions }]);
+    if (!(draft.stats.alpha > 0 && draft.stats.alpha < 1)) return yield* invalid("experiment.alphaRange", undefined, "stats");
+    yield* requireGroups(database, [{ rule: null, conditions: draft.conditions }]);
     yield* validateNamespace(draft.namespace);
 
     const feature = yield* database.run("features.get", (db) => db.query.features.findFirst({ where: { id: draft.featureId } }));
-    if (feature === undefined) return yield* invalid("The selected flag no longer exists");
-    if (feature.archivedAt !== null) return yield* invalid("Archived flags cannot run experiments");
+    if (feature === undefined) return yield* invalid("experiment.flagGone", undefined, "featureId");
+    if (feature.archivedAt !== null) return yield* invalid("experiment.flagArchived", undefined, "featureId");
     for (const v of draft.variations) {
-      const error = validateFeatureValue(valueType(feature.valueType), v.value);
-      if (error !== null) return yield* invalid(`Variation "${v.key}": ${error}`);
+      const reason = validateFeatureValue(valueType(feature.valueType), v.value);
+      if (reason !== null) return yield* invalid("experiment.variationValueInvalid", { variation: v.key, reason }, "variations");
     }
     const envs = yield* database.run("environments.byIds", (db) =>
       db.query.environments.findMany({ where: { id: { in: [...draft.environmentIds] } } }),
     );
-    if (envs.length !== draft.environmentIds.length) return yield* invalid("A selected environment no longer exists");
+    if (envs.length !== draft.environmentIds.length) return yield* invalid("experiment.environmentGone");
     const source = yield* database.run("dataSources.get", (db) =>
       db.query.dataSources.findFirst({ where: { id: draft.dataSourceId } }),
     );
-    if (source === undefined) return yield* invalid("The selected data source no longer exists");
+    if (source === undefined) return yield* invalid("dataSource.gone");
     yield* validateMetrics(
       [...(draft.primaryMetricId === null ? [] : [draft.primaryMetricId]), ...draft.secondaryMetricIds, ...draft.guardrailMetricIds],
       draft.dataSourceId,
@@ -237,8 +235,8 @@ export const makeExperimentOps = Effect.gen(function* () {
       });
   });
 
-  const requireStatus = (e: Experiment, status: Experiment["status"], message: string) =>
-    e.status === status ? Effect.void : invalid(message);
+  const requireStatus = (e: Experiment, status: Experiment["status"], code: ErrorCode) =>
+    e.status === status ? Effect.void : invalid(code);
 
   /**
    * Starting, changing traffic and stopping rewrite what the flag serves in every environment of the
@@ -255,7 +253,7 @@ export const makeExperimentOps = Effect.gen(function* () {
       )
       .pipe(
         Effect.flatMap((env) =>
-          env === undefined ? Effect.void : Effect.fail(new ForbiddenError({ message: `${env.name} requires a review` })),
+          env === undefined ? Effect.void : Effect.fail(new ForbiddenError(issue("review.required", { environment: env.name }))),
         ),
       );
 
@@ -275,16 +273,14 @@ export const makeExperimentOps = Effect.gen(function* () {
       const blocker = shadowedBy(rules, (id) => reach.get(id))[rules.findIndex(isRuleOf(e.id))];
       if (blocker !== null && blocker !== undefined) {
         const env = envs.find((x) => x.id === row.environmentId)?.name ?? row.environmentId;
-        return yield* invalid(
-          `In ${env}, rule ${blocker + 1} serves everyone before the experiment's rule, so nobody would enter the experiment. Move the experiment's rule above it on the flag page`,
-        );
+        return yield* invalid("experiment.unreachable", { environment: env, rule: blocker + 1 });
       }
     }
   });
 
   const prepareStart = Effect.fn("ExperimentService.prepareStart")(function* (before: Experiment, now: Date) {
-    yield* requireStatus(before, "draft", "Only draft experiments can be started");
-    if (before.primaryMetricId === null) return yield* invalid("Choose a primary metric before starting");
+    yield* requireStatus(before, "draft", "experiment.startDraftOnly");
+    if (before.primaryMetricId === null) return yield* invalid("experiment.primaryMetricRequired", undefined, "primaryMetricId");
     yield* validateDraft(before);
     yield* requireFreeSlice(before);
     const after = Experiment.make({
@@ -310,11 +306,11 @@ export const makeExperimentOps = Effect.gen(function* () {
   });
 
   const prepareTraffic = Effect.fn("ExperimentService.prepareTraffic")(function* (before: Experiment, input: TrafficChange, now: Date) {
-    yield* requireStatus(before, "running", "Traffic can only change while the experiment is running");
+    yield* requireStatus(before, "running", "experiment.trafficRunningOnly");
     yield* validateTraffic(input, before.variations.length);
-    yield* requireGroups(database, [{ where: "Targeting", conditions: input.conditions }]);
+    yield* requireGroups(database, [{ rule: null, conditions: input.conditions }]);
     const current = before.phases.at(-1);
-    if (current === undefined) return yield* invalid("The experiment has no open phase");
+    if (current === undefined) return yield* invalid("experiment.noOpenPhase");
     const newPhase = trafficChangeNeedsNewPhase(current, input);
     const closed = before.phases.slice(0, -1);
     const phases = newPhase
@@ -350,9 +346,9 @@ export const makeExperimentOps = Effect.gen(function* () {
     decidedBy: string,
     now: Date,
   ) {
-    yield* requireStatus(before, "running", "Only running experiments can be stopped");
+    yield* requireStatus(before, "running", "experiment.stopRunningOnly");
     const variation = input.outcome === "ship" ? before.variations.find((v) => v.key === input.variationKey) : undefined;
-    if (input.outcome === "ship" && variation === undefined) return yield* invalid("Choose the variation to ship");
+    if (input.outcome === "ship" && variation === undefined) return yield* invalid("experiment.shipVariationRequired", undefined, "choice");
     const current = before.phases.at(-1);
     const after = Experiment.make({
       ...before,
@@ -465,7 +461,7 @@ export const ExperimentServiceLive = Layer.effect(
         const { key, ...draft } = input;
         yield* validateDraft(draft);
         const existing = yield* database.run("experiments.byKey", (db) => db.query.experiments.findFirst({ where: { key } }));
-        if (existing !== undefined) return yield* invalid(`An experiment with key "${key}" already exists`);
+        if (existing !== undefined) return yield* invalid("experiment.keyTaken", { key }, "key");
         const now = new Date();
         const experiment = Experiment.make({
           ...draft,
@@ -497,11 +493,9 @@ export const ExperimentServiceLive = Layer.effect(
         }
         const locked = DRAFT_KEYS.filter((k) => !MUTABLE_AFTER_START.has(k) && canonical(k, before[k]) !== canonical(k, draft[k]));
         if (locked.length > 0) {
-          return yield* invalid(
-            `Only the name, hypothesis, secondary and guardrail metrics and the plan can change after the experiment has started (changed: ${locked.join(", ")})`,
-          );
+          return yield* invalid("experiment.lockedAfterStart", { fields: locked.join(", ") });
         }
-        if (draft.name.trim() === "") return yield* invalid("Name is required");
+        if (draft.name.trim() === "") return yield* invalid("common.nameRequired", undefined, "name");
         yield* validateMetrics([...draft.secondaryMetricIds, ...draft.guardrailMetricIds], before.dataSourceId);
         const after = Experiment.make({
           ...before,
@@ -535,14 +529,14 @@ export const ExperimentServiceLive = Layer.effect(
 
       archive: Effect.fn("ExperimentService.archive")(function* (input, actor) {
         const before = yield* load(input.id);
-        if (input.archived && before.status === "running") return yield* invalid("Stop the experiment before archiving it");
+        if (input.archived && before.status === "running") return yield* invalid("experiment.stopBeforeArchive");
         const after = Experiment.make({ ...before, archived: input.archived, updatedAt: new Date() });
         return yield* save(input.archived ? "archived" : "unarchived", actor, before, after, () => [], false);
       }),
 
       delete: Effect.fn("ExperimentService.delete")(function* (id, actor) {
         const before = yield* load(id);
-        yield* requireStatus(before, "draft", "Only draft experiments can be deleted");
+        yield* requireStatus(before, "draft", "experiment.deleteDraftOnly");
         const writes = yield* ruleWrites([before.featureId], removeRule(id));
         yield* database.run("experiments.delete", (db) =>
           batch(db, [

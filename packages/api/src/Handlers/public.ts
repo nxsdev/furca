@@ -1,10 +1,10 @@
 import { AssignableRole } from "@furca/core/members/Member";
+import { issue } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { user } from "@furca/database/schema/index";
-import { ORPCError } from "@orpc/server";
 import { count } from "drizzle-orm";
 import { Effect, Schema } from "effect";
-import { pub } from "../Runtime/orpc";
+import { orpcError, pub } from "../Runtime/orpc";
 
 export const publicRouter = {
   setupStatus: pub.public.setupStatus.effect(function* () {
@@ -21,7 +21,7 @@ export const publicRouter = {
       }),
     );
     if (invite === undefined) {
-      return yield* Effect.fail(new ORPCError("NOT_FOUND", { message: "This invitation is invalid or has expired" }));
+      return yield* Effect.fail(orpcError("NOT_FOUND", issue("invitation.invalid")));
     }
     return { email: invite.email, role: Schema.decodeUnknownSync(AssignableRole)(invite.role) };
   }),

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { errorCodes } from "@furca/core/shared/errors";
 import { resources } from "./index";
 
 type Tree = { readonly [key: string]: string | Tree };
@@ -30,4 +31,12 @@ describe("locales", () => {
       }
     });
   }
+});
+
+describe("server error codes", () => {
+  it("every code the server can send has English and Japanese text in the errors namespace", () => {
+    const en = flatten(resources.en.errors as Tree);
+    const ja = flatten(resources.ja.errors as Tree);
+    expect(errorCodes.filter((code) => en[code] === undefined || ja[code] === undefined)).toEqual([]);
+  });
 });

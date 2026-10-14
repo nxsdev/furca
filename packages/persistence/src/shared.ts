@@ -1,7 +1,7 @@
 /** Helpers shared by the *ServiceLive layers */
 import type { Actor, AuditEntityType } from "@furca/core/audit/AuditLog";
 import type { Feature } from "@furca/core/features/Feature";
-import { NotFoundError, type PersistenceError, ValidationError } from "@furca/core/shared/errors";
+import { type ErrorCode, type ErrorParams, issue, NotFoundError, type PersistenceError, ValidationError } from "@furca/core/shared/errors";
 import type { DatabaseShape, Db } from "@furca/database/Database";
 import { auditLogs } from "@furca/database/schema/index";
 import { Effect } from "effect";
@@ -12,7 +12,8 @@ export const newId = () => crypto.randomUUID();
 export const randomHex = (bytes: number) =>
   Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) => b.toString(16).padStart(2, "0")).join("");
 
-export const invalid = (message: string) => Effect.fail(new ValidationError({ message }));
+/** ValidationError for a coded issue; `field` names the form field it belongs to */
+export const invalid = (code: ErrorCode, params?: ErrorParams, field?: string) => Effect.fail(new ValidationError(issue(code, params, field)));
 
 export type BatchItem = Parameters<Db["batch"]>[0][number];
 

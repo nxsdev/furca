@@ -19,15 +19,15 @@ type Outcome = { readonly status: number | null; readonly error: string | null }
 const validate = (input: WebhookInput) => {
   const name = input.name.trim();
   const url = input.url.trim();
-  if (name === "") return invalid("Name is required");
+  if (name === "") return invalid("common.nameRequired", undefined, "name");
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
-    return invalid("Enter a valid URL, e.g. https://example.com/hooks/furca");
+    return invalid("webhook.urlInvalid", undefined, "url");
   }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return invalid("The URL must start with https:// or http://");
-  if (input.events.length === 0) return invalid("Choose at least one event");
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return invalid("webhook.urlScheme", undefined, "url");
+  if (input.events.length === 0) return invalid("webhook.eventRequired", undefined, "events");
   return Effect.succeed({ name, url, format: input.format, events: [...new Set(input.events)] });
 };
 

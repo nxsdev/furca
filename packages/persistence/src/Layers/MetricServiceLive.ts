@@ -1,7 +1,7 @@
 import type { Actor } from "@furca/core/audit/AuditLog";
 import { type EventSource, Metric, MetricCapping, MetricDefinition } from "@furca/core/metrics/Metric";
 import { type MetricInput, MetricService } from "@furca/core/metrics/MetricService";
-import { NotFoundError } from "@furca/core/shared/errors";
+import { type Issue, issue, NotFoundError, ValidationError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { metrics } from "@furca/database/schema/index";
 import { eq } from "drizzle-orm";
@@ -12,26 +12,26 @@ import { auditInsert, batch, invalid, newId } from "../shared";
 const MAX_FILTERS = 10;
 
 /** Problem with an event source's property filters, or null. Values per operator: see PropertyFilter */
-export const filtersProblem = (source: EventSource): string | null => {
-  if (source.filters.length > MAX_FILTERS) return `Use at most ${MAX_FILTERS} filters per event`;
+export const filtersProblem = (source: EventSource): Issue | null => {
+  if (source.filters.length > MAX_FILTERS) return issue("metric.tooManyFilters", { max: MAX_FILTERS });
   for (const f of source.filters) {
     const name = f.property.trim();
-    if (name === "") return "Choose a property for every filter";
-    if (/["\\]/.test(name)) return `Property "${name}" cannot be filtered: names with " or \\ are not supported`;
-    const label = `Filter on "${name}"`;
+    if (name === "") return issue("metric.filterPropertyRequired");
+    const property = { property: name };
+    if (/["\\]/.test(name)) return issue("metric.filterPropertyName", property);
     const { values } = f;
     if (f.operator === "exists" || f.operator === "not_exists") {
-      if (values.length > 0) return `${label} takes no value`;
+      if (values.length > 0) return issue("metric.filterNoValue", property);
       continue;
     }
-    if (values.some((v) => v === "")) return `${label} needs a value`;
+    if (values.some((v) => v === "")) return issue("metric.filterValueRequired", property);
     if (f.operator === "in" || f.operator === "not_in") {
-      if (values.length === 0) return `${label} needs at least one value`;
+      if (values.length === 0) return issue("metric.filterValuesRequired", property);
       continue;
     }
-    if (values.length !== 1) return `${label} needs exactly one value`;
+    if (values.length !== 1) return issue("metric.filterOneValue", property);
     if (["gt", "gte", "lt", "lte"].includes(f.operator) && !Number.isFinite(Number(values[0]))) {
-      return `${label} compares numbers: enter a number`;
+      return issue("metric.filterNumber", property);
     }
   }
   return null;
@@ -63,35 +63,33 @@ export const MetricServiceLive = Layer.effect(
         );
 
     const validate = Effect.fn("MetricService.validate")(function* (input: MetricInput) {
-      if (input.name.trim() === "") return yield* invalid("Name is required");
+      if (input.name.trim() === "") return yield* invalid("common.nameRequired", undefined, "name");
       const source = yield* database.run("dataSources.get", (db) =>
         db.query.dataSources.findFirst({ where: { id: input.dataSourceId } }),
       );
-      if (source === undefined) return yield* invalid("The selected data source no longer exists");
+      if (source === undefined) return yield* invalid("dataSource.gone", undefined, "dataSourceId");
       const definition = input.definition;
       const expected = source.type === "builtin" ? "event" : "sql";
       if (definition._tag !== expected) {
-        return yield* invalid(
-          source.type === "builtin" ? "Built-in event store metrics are defined by event names" : "Warehouse metrics are defined with SQL",
-        );
+        return yield* invalid(source.type === "builtin" ? "metric.eventDefinition" : "metric.sqlDefinition");
       }
       const hasDenominator = definition._tag === "event" ? definition.denominator !== null : definition.denominatorSql !== null;
-      if (input.type === "ratio" && !hasDenominator) return yield* invalid("Ratio metrics need a denominator");
-      if (input.type !== "ratio" && hasDenominator) return yield* invalid("Only ratio metrics have a denominator");
+      if (input.type === "ratio" && !hasDenominator) return yield* invalid("metric.denominatorRequired");
+      if (input.type !== "ratio" && hasDenominator) return yield* invalid("metric.denominatorRatioOnly");
       if (definition._tag === "event") {
         if (definition.numerator.event.trim() === "" || definition.denominator?.event.trim() === "") {
-          return yield* invalid("Choose an event name");
+          return yield* invalid("metric.eventRequired");
         }
         const problem = filtersProblem(definition.numerator) ?? (definition.denominator && filtersProblem(definition.denominator));
-        if (problem) return yield* invalid(problem);
+        if (problem) return yield* new ValidationError(problem);
       } else if (definition.numeratorSql.trim() === "" || definition.denominatorSql?.trim() === "") {
-        return yield* invalid("SQL is required");
+        return yield* invalid("metric.sqlRequired");
       }
-      if (input.windowHours !== null && !(input.windowHours > 0)) return yield* invalid("The conversion window must be longer than 0 hours");
-      if (!(input.delayHours >= 0)) return yield* invalid("The delay cannot be negative");
-      if (input.capping.type === "absolute" && !(input.capping.value > 0)) return yield* invalid("The cap must be greater than 0");
+      if (input.windowHours !== null && !(input.windowHours > 0)) return yield* invalid("metric.windowPositive", undefined, "window");
+      if (!(input.delayHours >= 0)) return yield* invalid("metric.delayNegative");
+      if (input.capping.type === "absolute" && !(input.capping.value > 0)) return yield* invalid("metric.capPositive", undefined, "capAbsolute");
       if (input.capping.type === "percentile" && !(input.capping.value > 0 && input.capping.value < 1)) {
-        return yield* invalid("The percentile cap must be between 0 and 1 (e.g. 0.99)");
+        return yield* invalid("metric.capPercentile", undefined, "capPercentile");
       }
     });
 
@@ -125,7 +123,7 @@ export const MetricServiceLive = Layer.effect(
         const { key, ...fields } = input;
         yield* validate(fields);
         const existing = yield* database.run("metrics.byKey", (db) => db.query.metrics.findFirst({ where: { key } }));
-        if (existing !== undefined) return yield* invalid(`A metric with key "${key}" already exists`);
+        if (existing !== undefined) return yield* invalid("metric.keyTaken", { key }, "key");
         const now = new Date();
         const metric = Metric.make({ ...fields, id: newId(), key, archived: false, createdAt: now, updatedAt: now });
         yield* write("created", actor, null, metric);

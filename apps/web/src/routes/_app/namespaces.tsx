@@ -1,7 +1,6 @@
 import { Button, Dropdown, Label, toast } from "@heroui/react";
 import { Key, type NamespaceListItem } from "@furca/api/contract";
 import type { Namespace } from "@furca/core/experiments/Namespace";
-import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layers, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
@@ -44,7 +43,7 @@ function NamespaceEditor({ namespace, onDone }: { namespace?: Namespace; onDone:
         onDone();
       } catch (e) {
         // BAD_REQUEST on create is the duplicate-key check (the name is validated here first)
-        setServerError(formApi, e, !isEdit && e instanceof ORPCError && e.code === "BAD_REQUEST" ? "key" : undefined);
+        setServerError(formApi, e);
       }
     },
   });

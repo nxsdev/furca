@@ -1,7 +1,7 @@
 import { Environment } from "@furca/core/environments/Environment";
 import { EnvironmentService } from "@furca/core/environments/EnvironmentService";
 import { PayloadStore } from "@furca/core/environments/PayloadStore";
-import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, issue, NotFoundError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { environments, experiments, featureEnvironments, features } from "@furca/database/schema/index";
 import { and, count, eq, isNull, max, sql } from "drizzle-orm";
@@ -27,7 +27,7 @@ export const EnvironmentServiceLive = Layer.effect(
           ),
         );
 
-    const requireName = (name: string) => (name.trim() === "" ? invalid("Name is required") : Effect.void);
+    const requireName = (name: string) => (name.trim() === "" ? invalid("common.nameRequired", undefined, "name") : Effect.void);
 
     return {
       list: Effect.gen(function* () {
@@ -61,7 +61,7 @@ export const EnvironmentServiceLive = Layer.effect(
         const existing = yield* database.run("environments.byKey", (db) =>
           db.query.environments.findFirst({ where: { key: input.key } }),
         );
-        if (existing !== undefined) return yield* invalid(`An environment with key "${input.key}" already exists`);
+        if (existing !== undefined) return yield* invalid("environment.keyTaken", { key: input.key }, "key");
         const [last] = yield* database.run("environments.maxSort", (db) =>
           db.select({ sortOrder: max(environments.sortOrder) }).from(environments),
         );
@@ -147,14 +147,14 @@ export const EnvironmentServiceLive = Layer.effect(
       delete: Effect.fn("EnvironmentService.delete")(function* (id, actor) {
         const before = yield* load(id);
         const [total] = yield* database.run("environments.count", (db) => db.select({ n: count() }).from(environments));
-        if ((total?.n ?? 0) <= 1) return yield* new ConflictError({ message: "The last environment cannot be deleted" });
+        if ((total?.n ?? 0) <= 1) return yield* new ConflictError(issue("environment.last"));
         const rows = yield* database.run("experiments.notStopped", (db) =>
           db.query.experiments.findMany({ where: { status: { in: ["draft", "running"] } } }),
         );
         const using = rows.map(toExperiment).filter((e) => e.environmentIds.includes(id) || e.analysisEnvironmentId === id);
         const running = using.find((e) => e.status === "running");
         if (running !== undefined) {
-          return yield* new ConflictError({ message: `The experiment "${running.name}" is running in this environment. Stop it first` });
+          return yield* new ConflictError(issue("environment.experimentRunning", { experiment: running.name }));
         }
         yield* database.run("environments.delete", (db) =>
           batch(db, [

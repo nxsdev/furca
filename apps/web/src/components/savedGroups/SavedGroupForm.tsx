@@ -12,7 +12,7 @@ import { formatCount } from "~/components/results/format";
 import { ConditionBuilder, type ConditionValue, conditionIssue } from "~/components/targeting/ConditionBuilder";
 import { Segmented } from "~/components/ui/Segmented";
 import { i18n } from "~/i18n";
-import { client, errorMessage, orpc } from "~/lib/rpc";
+import { client, orpc } from "~/lib/rpc";
 import { MAX_LIST_VALUES, parseIds } from "./usage";
 
 interface Values {
@@ -108,8 +108,7 @@ export function SavedGroupForm({
           ? await client.savedGroups.update({ id: group.id, ...toInput(value) })
           : await client.savedGroups.create({ key: value.key, ...toInput(value) });
       } catch (error) {
-        // ponytail: the only key error the API returns is the duplicate check ("… already exists")
-        setServerError(formApi, error, !isEdit && errorMessage(error).includes("already exists") ? "key" : undefined);
+        setServerError(formApi, error);
         return;
       }
       void queryClient.invalidateQueries({ queryKey: orpc.savedGroups.key() });

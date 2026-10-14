@@ -11,7 +11,9 @@ const { user, session, account, verification, invitations } = schema;
 /** Header the invite page sends with sign-up: the one-time token from the invitation link */
 export const INVITATION_HEADER = "x-furca-invitation";
 
-const inviteOnly = () => new APIError("FORBIDDEN", { message: "Sign-up is invite-only. Ask a member for an invitation link." });
+/** `code` lets the sign-up screens show it in the user's language */
+const inviteOnly = () =>
+  new APIError("FORBIDDEN", { code: "INVITE_ONLY", message: "Sign-up is invite-only. Ask a member for an invitation link." });
 
 /**
  * Email + password auth. The first account becomes the owner; after that sign-up requires the

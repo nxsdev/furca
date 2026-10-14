@@ -1,7 +1,6 @@
 import { Key } from "@furca/api/contract";
 import type { FeatureValueType } from "@furca/core/features/Feature";
 import { Button, Disclosure, Label, toast } from "@heroui/react";
-import { ORPCError } from "@orpc/client";
 import { useStore } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
@@ -55,8 +54,7 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
       const feature = await client.features
         .create({ key: value.key, valueType: value.valueType, defaultValue: value.defaultValue, tags: value.tags, description })
         .catch((error: unknown) => {
-          // "A flag with key … already exists" belongs under the key field
-          setServerError(formApi, error, error instanceof ORPCError && /\bkey\b/i.test(error.message) ? "key" : undefined);
+          setServerError(formApi, error);
           return null;
         });
       if (feature === null) return;

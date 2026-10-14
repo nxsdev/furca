@@ -16,7 +16,7 @@ import {
   VariationComparison,
   VariationMetricSummary,
 } from "@furca/core/results/ExperimentResult";
-import { NotFoundError, ValidationError, WarehouseError } from "@furca/core/shared/errors";
+import { issue, NotFoundError, ValidationError, WarehouseError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { dataSources as dataSourcesTable, resultSnapshots } from "@furca/database/schema/index";
 import * as Warehouse from "@furca/integrations/warehouse";
@@ -448,7 +448,7 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
       const experiment = yield* loadExperiment(experimentId);
       const phaseIndex = experiment.phases.length - 1;
       const phase = experiment.phases[phaseIndex];
-      if (phase === undefined) return yield* new ValidationError({ message: "Start the experiment to see results" });
+      if (phase === undefined) return yield* new ValidationError(issue("experiment.notStarted"));
       return { experiment, phaseIndex, phase };
     });
 
@@ -497,7 +497,7 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
       dimension: Effect.fn("ExperimentAnalysisService.dimension")(function* (experimentId: string, dimension: string) {
         const { experiment, phaseIndex, phase } = yield* currentPhase(experimentId);
         if (!experiment.dimensions.includes(dimension)) {
-          return yield* new ValidationError({ message: `This experiment does not record "${dimension}" with exposures` });
+          return yield* new ValidationError(issue("experiment.dimensionNotRecorded", { dimension }));
         }
         const computedAt = new Date();
         const result = (slices: ReadonlyArray<DimensionSlice>, error: string | null) =>

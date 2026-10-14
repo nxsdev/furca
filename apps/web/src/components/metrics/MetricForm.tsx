@@ -27,7 +27,7 @@ import { HelpTip } from "~/components/ui/HelpTip";
 import { RelativeTime } from "~/components/ui/primitives";
 import { Segmented } from "~/components/ui/Segmented";
 import { useEnvironment } from "~/lib/environment";
-import { client, errorMessage, orpc } from "~/lib/rpc";
+import { client, orpc } from "~/lib/rpc";
 import { Direction, formatHours, metricTypeLabel, MetricSentence } from "./describe";
 import {
   ADVANCED_FIELDS,
@@ -255,8 +255,7 @@ export function MetricForm({
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         onSaved(saved);
       } catch (error) {
-        // ponytail: the API's only key error is the duplicate check ("A metric with key … already exists")
-        setServerError(formApi, error, !isEdit && errorMessage(error).includes("already exists") ? "key" : undefined);
+        setServerError(formApi, error);
       }
     },
   });

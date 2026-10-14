@@ -141,7 +141,7 @@ describe("metric property filters (D1)", () => {
 
   it("rejects filters without a property, with the wrong number of values or a non-numeric bound", () => {
     const problem = (property: string, operator: PropertyFilterOperator, values: string[]) =>
-      filtersProblem(EventSource.make({ event: "e", aggregation: "count", filters: [PropertyFilter.make({ property, operator, values })] }));
+      filtersProblem(EventSource.make({ event: "e", aggregation: "count", filters: [PropertyFilter.make({ property, operator, values })] }))?.message ?? null;
     expect(problem("plan", "eq", ["pro"])).toBeNull();
     expect(problem("plan", "in", ["pro", "free"])).toBeNull();
     expect(problem("plan", "exists", [])).toBeNull();

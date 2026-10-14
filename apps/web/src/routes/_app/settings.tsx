@@ -1,6 +1,5 @@
 import { Button, ListBox, Select, toast } from "@heroui/react";
 import type { AssignableRole, Invitation, Member, Role } from "@furca/core/members/Member";
-import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, Link2 } from "lucide-react";
@@ -44,7 +43,7 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
         onCreated(inv);
       } catch (e) {
         // BAD_REQUEST: invalid address or already a member
-        setServerError(formApi, e, e instanceof ORPCError && e.code === "BAD_REQUEST" ? "email" : undefined);
+        setServerError(formApi, e);
       }
     },
   });

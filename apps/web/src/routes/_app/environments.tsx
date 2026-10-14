@@ -1,7 +1,6 @@
 import { Button, Description, Drawer, Dropdown, FieldError, Input, Label, Spinner, TextField, toast, Tooltip } from "@heroui/react";
 import { type EnvironmentListItem, Key } from "@furca/api/contract";
 import type { Environment } from "@furca/core/environments/Environment";
-import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileJson, KeyRound, MoreHorizontal, Plus, RotateCw, ShieldCheck, TriangleAlert } from "lucide-react";
@@ -97,7 +96,7 @@ function CreateEnvironment({ onDone }: { onDone: () => void }) {
         onDone();
       } catch (e) {
         // BAD_REQUEST is the duplicate-key check (the name is validated here first)
-        setServerError(formApi, e, e instanceof ORPCError && e.code === "BAD_REQUEST" ? "key" : undefined);
+        setServerError(formApi, e);
       }
     },
   });

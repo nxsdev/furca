@@ -49,7 +49,7 @@ describe("warehouse config validation", () => {
     [{ ...configs.postgres, port: 70000 }, "Port must be a whole number from 1 to 65535"],
     [{ ...configs.bigquery, projectId: "" }, "Project ID is required"],
   ])("rejects %o with a readable message", (config, message) => {
-    expect(checkConfig(config as WarehouseConfig)).toBe(message);
+    expect(checkConfig(config as WarehouseConfig)?.message).toBe(message);
   });
 
   it("accepts locator-style Snowflake accounts and complete configs", () => {
@@ -58,12 +58,12 @@ describe("warehouse config validation", () => {
   });
 
   it("checks the secret's shape per type without echoing it", () => {
-    expect(checkCredentials("snowflake", "-----BEGIN ENCRYPTED PRIVATE KEY-----\nabc")).toContain("Encrypted private keys are not supported");
-    expect(checkCredentials("snowflake", "-----BEGIN RSA PRIVATE KEY-----\nabc")).toContain("openssl pkcs8 -topk8 -nocrypt");
+    expect(checkCredentials("snowflake", "-----BEGIN ENCRYPTED PRIVATE KEY-----\nabc")?.message).toContain("Encrypted private keys are not supported");
+    expect(checkCredentials("snowflake", "-----BEGIN RSA PRIVATE KEY-----\nabc")?.message).toContain("openssl pkcs8 -topk8 -nocrypt");
     expect(checkCredentials("snowflake", "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----")).toBeNull();
-    expect(checkCredentials("postgres", "")).toBe("Enter the password");
+    expect(checkCredentials("postgres", "")).toMatchObject({ message: "Enter the password", field: "credentials" });
     expect(checkCredentials("clickhouse", "hunter2")).toBeNull();
-    expect(checkCredentials("bigquery", "hunter2")).not.toContain("hunter2");
+    expect(checkCredentials("bigquery", "hunter2")?.message).not.toContain("hunter2");
   });
 });
 

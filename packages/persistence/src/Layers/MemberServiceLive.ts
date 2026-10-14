@@ -1,6 +1,6 @@
 import { AssignableRole, Invitation, Member, Role } from "@furca/core/members/Member";
 import { MemberService } from "@furca/core/members/MemberService";
-import { ConflictError, ForbiddenError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, ForbiddenError, issue, NotFoundError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { account, invitations, session, user } from "@furca/database/schema/index";
 import { and, eq, isNull, sql } from "drizzle-orm";
@@ -46,11 +46,11 @@ export const MemberServiceLive = Layer.effect(
 
       invite: Effect.fn("MemberService.invite")(function* (rawEmail, role, actor) {
         const email = rawEmail.trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+$/.test(email)) return yield* invalid("Enter a valid email address");
+        if (!/^[^\s@]+@[^\s@]+$/.test(email)) return yield* invalid("member.emailInvalid", undefined, "email");
         const existing = yield* database.run("members.byEmail", (db) =>
           db.query.user.findFirst({ where: { RAW: (u) => sql`lower(${u.email}) = ${email}` } }),
         );
-        if (existing !== undefined) return yield* invalid(`${email} is already a member`);
+        if (existing !== undefined) return yield* invalid("member.alreadyMember", { email }, "email");
         const now = new Date();
         const row = {
           id: newId(),
@@ -89,14 +89,14 @@ export const MemberServiceLive = Layer.effect(
 
       setRole: Effect.fn("MemberService.setRole")(function* (id, role, actor) {
         const before = yield* load(id);
-        if (before.role === "owner") return yield* new ForbiddenError({ message: "The owner's role can't be changed" });
+        if (before.role === "owner") return yield* new ForbiddenError(issue("member.ownerRole"));
         if (before.role === role) return before;
         if (before.role === "admin") {
           const admins = yield* database.run("members.admins", (db) =>
             db.query.user.findMany({ columns: { id: true }, where: { role: { in: ["owner", "admin"] } } }),
           );
           if (admins.every((a) => a.id === id)) {
-            return yield* new ConflictError({ message: "At least one admin must remain. Make someone else an admin first" });
+            return yield* new ConflictError(issue("member.lastAdmin"));
           }
         }
         const after = Member.make({ ...before, role });
@@ -111,7 +111,7 @@ export const MemberServiceLive = Layer.effect(
 
       remove: Effect.fn("MemberService.remove")(function* (id, actor) {
         const before = yield* load(id);
-        if (before.role === "owner") return yield* new ForbiddenError({ message: "The owner cannot be removed" });
+        if (before.role === "owner") return yield* new ForbiddenError(issue("member.ownerRemove"));
         yield* database.run("members.remove", (db) =>
           batch(db, [
             db.delete(session).where(eq(session.userId, id)),

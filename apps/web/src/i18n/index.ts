@@ -1,3 +1,4 @@
+import { errorMessages as enErrors } from "@furca/core/shared/errorMessages";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import enSavedGroups from "./locales/en/savedGroups.json";
@@ -10,6 +11,7 @@ import jaNamespaces from "./locales/ja/namespaces.json";
 import jaPlatform from "./locales/ja/platform.json";
 import jaCharts from "./locales/ja/charts.json";
 import jaReviews from "./locales/ja/reviews.json";
+import jaErrors from "./locales/ja/errors.json";
 import enCommon from "./locales/en/common.json";
 import enShell from "./locales/en/shell.json";
 import enFlags from "./locales/en/flags.json";
@@ -38,10 +40,13 @@ import jaOverview from "./locales/ja/overview.json";
 export const LOCALES = ["en", "ja"] as const;
 export type Locale = (typeof LOCALES)[number];
 
-/** Namespaces map 1:1 to UI areas, so each area's copy lives in its own file */
+/**
+ * Namespaces map 1:1 to UI areas, so each area's copy lives in its own file. `errors` translates
+ * server error codes; its English is the server's own text (core/shared/errorMessages)
+ */
 export const resources = {
-  en: { common: enCommon, shell: enShell, flags: enFlags, targeting: enTargeting, experiments: enExperiments, results: enResults, metrics: enMetrics, datasources: enDatasources, environments: enEnvironments, audit: enAudit, settings: enSettings, overview: enOverview, savedGroups: enSavedGroups, namespaces: enNamespaces, platform: enPlatform, charts: enCharts, reviews: enReviews },
-  ja: { common: jaCommon, shell: jaShell, flags: jaFlags, targeting: jaTargeting, experiments: jaExperiments, results: jaResults, metrics: jaMetrics, datasources: jaDatasources, environments: jaEnvironments, audit: jaAudit, settings: jaSettings, overview: jaOverview, savedGroups: jaSavedGroups, namespaces: jaNamespaces, platform: jaPlatform, charts: jaCharts, reviews: jaReviews },
+  en: { common: enCommon, shell: enShell, flags: enFlags, targeting: enTargeting, experiments: enExperiments, results: enResults, metrics: enMetrics, datasources: enDatasources, environments: enEnvironments, audit: enAudit, settings: enSettings, overview: enOverview, savedGroups: enSavedGroups, namespaces: enNamespaces, platform: enPlatform, charts: enCharts, reviews: enReviews, errors: enErrors },
+  ja: { common: jaCommon, shell: jaShell, flags: jaFlags, targeting: jaTargeting, experiments: jaExperiments, results: jaResults, metrics: jaMetrics, datasources: jaDatasources, environments: jaEnvironments, audit: jaAudit, settings: jaSettings, overview: jaOverview, savedGroups: jaSavedGroups, namespaces: jaNamespaces, platform: jaPlatform, charts: jaCharts, reviews: jaReviews, errors: jaErrors },
 } as const;
 
 const STORAGE_KEY = "furca-locale";

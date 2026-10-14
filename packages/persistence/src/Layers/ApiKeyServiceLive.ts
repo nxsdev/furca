@@ -32,8 +32,8 @@ export const ApiKeyServiceLive = Layer.effect(
 
       create: Effect.fn("ApiKeyService.create")(function* (input, actor) {
         const name = input.name.trim();
-        if (name === "") return yield* invalid("Name is required");
-        if (name.length > 100) return yield* invalid("Use at most 100 characters");
+        if (name === "") return yield* invalid("common.nameRequired", undefined, "name");
+        if (name.length > 100) return yield* invalid("apiKey.nameTooLong", { max: 100 }, "name");
         const secret = `furca_${base64url(crypto.getRandomValues(new Uint8Array(32)))}`;
         const secretHash = yield* Effect.promise(() => hashSecret(secret));
         const apiKey = ApiKey.make({
@@ -57,7 +57,7 @@ export const ApiKeyServiceLive = Layer.effect(
 
       revoke: Effect.fn("ApiKeyService.revoke")(function* (id, actor) {
         const row = yield* database.run("apiKeys.get", (db) => db.query.apiKeys.findFirst({ where: { id } }));
-        if (row === undefined) return yield* new NotFoundError({ entity: "API key", id });
+        if (row === undefined) return yield* new NotFoundError({ entity: "apiKey", id });
         const before = toApiKey(row);
         if (before.revokedAt !== null) return before;
         const after = ApiKey.make({ ...before, revokedAt: new Date() });

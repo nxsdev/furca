@@ -7,7 +7,7 @@ import {
   validateFeatureValue,
 } from "@furca/core/features/Feature";
 import { FeatureService } from "@furca/core/features/FeatureService";
-import { ConflictError, ForbiddenError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, ForbiddenError, type Issue, issue, NotFoundError, ValidationError } from "@furca/core/shared/errors";
 import { Database, type Db } from "@furca/database/Database";
 import { environments, featureEnvironments, features } from "@furca/database/schema/index";
 import { and, eq, sql } from "drizzle-orm";
@@ -24,26 +24,24 @@ const experimentIds = (rules: ReadonlyArray<FeatureRule>) =>
     .sort()
     .join("\n");
 
-/** Error message for the first invalid rule, or null */
+/** The first invalid rule's issue, or null */
 export const validateRules = (
   feature: Feature,
   current: ReadonlyArray<FeatureRule>,
   next: ReadonlyArray<FeatureRule>,
-): string | null => {
+): Issue | null => {
   for (const [i, rule] of next.entries()) {
     if (rule._tag === "experiment") continue;
-    const at = `Rule ${i + 1}`;
-    const error = validateFeatureValue(feature.valueType, rule.value);
-    if (error !== null) return `${at}: ${error}`;
+    const at = { rule: i + 1 };
+    const reason = validateFeatureValue(feature.valueType, rule.value);
+    if (reason !== null) return issue("rule.valueInvalid", { ...at, reason });
     if (rule._tag === "rollout") {
-      if (!(rule.coverage >= 0 && rule.coverage <= 1)) return `${at}: coverage must be between 0% and 100%`;
-      if (rule.hashAttribute.trim() === "") return `${at}: choose the attribute to hash users by`;
-      if (rule.seed.trim() === "") return `${at}: seed is required`;
+      if (!(rule.coverage >= 0 && rule.coverage <= 1)) return issue("rule.coverageRange", at);
+      if (rule.hashAttribute.trim() === "") return issue("rule.hashAttributeRequired", at);
+      if (rule.seed.trim() === "") return issue("rule.seedRequired", at);
     }
   }
-  if (experimentIds(next) !== experimentIds(current)) {
-    return "Experiment rules belong to their experiment: reorder or toggle them here, but add or remove them from the experiment";
-  }
+  if (experimentIds(next) !== experimentIds(current)) return issue("rule.experimentRulesFixed");
   return null;
 };
 
@@ -101,7 +99,7 @@ export const FeatureServiceLive = Layer.effect(
         )
         .pipe(
           Effect.flatMap((env) =>
-            env?.requireApproval === true ? Effect.fail(new ForbiddenError({ message: `${env.name} requires a review` })) : Effect.void,
+            env?.requireApproval === true ? Effect.fail(new ForbiddenError(issue("review.required", { environment: env.name }))) : Effect.void,
           ),
         );
 
@@ -111,10 +109,10 @@ export const FeatureServiceLive = Layer.effect(
       get: (id) => getFeature(database, id),
 
       create: Effect.fn("FeatureService.create")(function* (input, actor) {
-        const error = validateFeatureValue(input.valueType, input.defaultValue);
-        if (error !== null) return yield* invalid(`Default value: ${error}`);
+        const reason = validateFeatureValue(input.valueType, input.defaultValue);
+        if (reason !== null) return yield* invalid("flag.defaultValueInvalid", { reason }, "defaultValue");
         const existing = yield* database.run("features.byKey", (db) => db.query.features.findFirst({ where: { key: input.key } }));
-        if (existing !== undefined) return yield* invalid(`A flag with key "${input.key}" already exists`);
+        if (existing !== undefined) return yield* invalid("flag.keyTaken", { key: input.key }, "key");
         const envs = yield* database.run("environments.list", (db) =>
           db.query.environments.findMany({ orderBy: { sortOrder: "asc" } }),
         );
@@ -161,8 +159,8 @@ export const FeatureServiceLive = Layer.effect(
 
       update: Effect.fn("FeatureService.update")(function* (input, actor) {
         const before = yield* getFeature(database, input.id);
-        const error = validateFeatureValue(before.valueType, input.defaultValue);
-        if (error !== null) return yield* invalid(`Default value: ${error}`);
+        const reason = validateFeatureValue(before.valueType, input.defaultValue);
+        if (reason !== null) return yield* invalid("flag.defaultValueInvalid", { reason }, "defaultValue");
         const now = new Date();
         const after = Feature.make({
           ...before,
@@ -197,11 +195,11 @@ export const FeatureServiceLive = Layer.effect(
         const before = yield* getFeature(database, input.id);
         const current = yield* environmentConfig(before, input.environmentId);
         yield* requireDirectEdit(input.environmentId);
-        const error = validateRules(before, current.rules, input.rules);
-        if (error !== null) return yield* invalid(error);
+        const problem = validateRules(before, current.rules, input.rules);
+        if (problem !== null) return yield* new ValidationError(problem);
         yield* requireGroups(
           database,
-          input.rules.flatMap((rule, i) => (rule._tag === "experiment" ? [] : [{ where: `Rule ${i + 1}`, conditions: rule.conditions }])),
+          input.rules.flatMap((rule, i) => (rule._tag === "experiment" ? [] : [{ rule: i + 1, conditions: rule.conditions }])),
         );
         const now = new Date();
         const after = withEnvironment(before, input.environmentId, { rules: input.rules }, now);
@@ -218,7 +216,7 @@ export const FeatureServiceLive = Layer.effect(
           const running = yield* database.run("experiments.runningForFeature", (db) =>
             db.query.experiments.findFirst({ where: { featureId: before.id, status: "running" } }),
           );
-          if (running !== undefined) return yield* invalid(`Stop the experiment "${running.name}" before archiving this flag`);
+          if (running !== undefined) return yield* invalid("flag.stopExperimentFirst", { experiment: running.name });
         }
         const now = new Date();
         const after = Feature.make({ ...before, archived: input.archived, updatedAt: now });
@@ -237,9 +235,7 @@ export const FeatureServiceLive = Layer.effect(
           db.query.experiments.findFirst({ where: { featureId: id } }),
         );
         if (experiment !== undefined) {
-          return yield* new ConflictError({
-            message: `The experiment "${experiment.name}" uses this flag. Archive the flag instead`,
-          });
+          return yield* new ConflictError(issue("flag.usedByExperiment", { experiment: experiment.name }));
         }
         yield* commit("deleted", actor, before, null, (db) => [
           db.delete(featureEnvironments).where(eq(featureEnvironments.featureId, id)),

@@ -1,7 +1,7 @@
 import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
 import { BUILTIN_DATA_SOURCE_ID, DataSource, WarehouseConfig, type WarehouseType } from "@furca/core/datasources/DataSource";
 import { DataSourceService } from "@furca/core/datasources/DataSourceService";
-import { ConflictError, NotFoundError } from "@furca/core/shared/errors";
+import { ConflictError, type ErrorCode, type Issue, issue, NotFoundError, ValidationError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
 import { dataSources } from "@furca/database/schema/index";
 import { eq } from "drizzle-orm";
@@ -9,8 +9,8 @@ import { Effect, Layer, Schema } from "effect";
 import { toDataSource } from "../mappers";
 import { auditInsert, batch, invalid, newId } from "../shared";
 
-/** Error message when the text is not a service account key, else null */
-export const checkServiceAccountJson = (json: string): string | null => {
+/** Issue when the text is not a service account key, else null */
+export const checkServiceAccountJson = (json: string): Issue | null => {
   try {
     const parsed: unknown = JSON.parse(json);
     if (typeof parsed === "object" && parsed !== null) {
@@ -20,66 +20,63 @@ export const checkServiceAccountJson = (json: string): string | null => {
   } catch {
     // fall through
   }
-  return "Paste a service account JSON key (it must contain client_email and private_key)";
+  return issue("dataSource.serviceAccountJson", undefined, "credentials");
 };
 
-/** Error message for the stored secret of a warehouse type, else null. Never echoes the secret */
-export const checkCredentials = (type: WarehouseType, credentials: string): string | null => {
+const badCredentials = (code: ErrorCode) => issue(code, undefined, "credentials");
+
+/** Issue with the stored secret of a warehouse type, else null. Never echoes the secret */
+export const checkCredentials = (type: WarehouseType, credentials: string): Issue | null => {
   switch (type) {
     case "bigquery":
       return checkServiceAccountJson(credentials);
     case "snowflake":
-      if (credentials.includes("ENCRYPTED PRIVATE KEY")) {
-        return "Encrypted private keys are not supported. Paste the unencrypted PKCS#8 key (-----BEGIN PRIVATE KEY-----)";
-      }
-      if (credentials.includes("BEGIN RSA PRIVATE KEY")) {
-        return "This is a PKCS#1 key. Convert it to PKCS#8 with: openssl pkcs8 -topk8 -nocrypt -in key.pem -out rsa_key.p8";
-      }
+      if (credentials.includes("ENCRYPTED PRIVATE KEY")) return badCredentials("dataSource.encryptedKey");
+      if (credentials.includes("BEGIN RSA PRIVATE KEY")) return badCredentials("dataSource.pkcs1Key");
       return /-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(credentials)
         ? null
-        : "Paste the private key PEM (it starts with -----BEGIN PRIVATE KEY-----)";
+        : badCredentials("dataSource.privateKeyPem");
     case "clickhouse":
     case "postgres":
-      return credentials === "" ? "Enter the password" : null;
+      return credentials === "" ? badCredentials("dataSource.passwordRequired") : null;
   }
 };
 
-const blank = (value: string, message: string) => (value.trim() === "" ? message : null);
+/** `field`: the form field (WarehouseConfig fields share their names with the form's) */
+const blank = (value: string, code: ErrorCode, field: string) => (value.trim() === "" ? issue(code, undefined, field) : null);
 
 /** First problem with a warehouse's connection settings, else null */
-export const checkConfig = (c: WarehouseConfig): string | null => {
+export const checkConfig = (c: WarehouseConfig): Issue | null => {
   switch (c._tag) {
     case "bigquery":
-      return blank(c.projectId, "Project ID is required") ?? blank(c.location, "Location is required");
+      return blank(c.projectId, "dataSource.projectIdRequired", "projectId") ?? blank(c.location, "dataSource.locationRequired", "location");
     case "snowflake":
       if (!/^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)*$/.test(c.account.trim()) || /snowflakecomputing/i.test(c.account)) {
-        return "Enter the account identifier, e.g. myorg-myaccount (the part before .snowflakecomputing.com)";
+        return issue("dataSource.snowflakeAccount", undefined, "account");
       }
       return (
-        blank(c.user, "User is required") ??
-        blank(c.warehouse, "Warehouse is required") ??
-        blank(c.database, "Database is required") ??
-        blank(c.schema, "Schema is required")
+        blank(c.user, "dataSource.userRequired", "user") ??
+        blank(c.warehouse, "dataSource.warehouseRequired", "warehouse") ??
+        blank(c.database, "dataSource.databaseRequired", "database") ??
+        blank(c.schema, "dataSource.schemaRequired", "schema")
       );
     case "clickhouse": {
       const url = URL.parse(c.url.trim());
-      if (url === null || url.protocol !== "https:") {
-        return "Enter the HTTPS URL of the ClickHouse server, e.g. https://abc123.eu-west-1.aws.clickhouse.cloud:8443";
-      }
-      if (url.username !== "" || url.password !== "") return "Put the user name and password in their own fields, not in the URL";
-      return blank(c.database, "Database is required") ?? blank(c.username, "User is required");
+      if (url === null || url.protocol !== "https:") return issue("dataSource.clickhouseUrl", undefined, "url");
+      if (url.username !== "" || url.password !== "") return issue("dataSource.credentialsInUrl", undefined, "url");
+      return blank(c.database, "dataSource.databaseRequired", "database") ?? blank(c.username, "dataSource.userRequired", "user");
     }
     case "postgres":
-      if (c.host.trim() === "") return "Host is required";
-      if (/[\s/@]/.test(c.host.trim())) return "Enter only the host name, e.g. db.example.com (no scheme, user or path)";
-      if (!Number.isInteger(c.port) || c.port < 1 || c.port > 65535) return "Port must be a whole number from 1 to 65535";
-      return blank(c.database, "Database is required") ?? blank(c.user, "User is required");
+      if (c.host.trim() === "") return issue("dataSource.hostRequired", undefined, "host");
+      if (/[\s/@]/.test(c.host.trim())) return issue("dataSource.hostOnly", undefined, "host");
+      if (!Number.isInteger(c.port) || c.port < 1 || c.port > 65535) return issue("dataSource.portRange", undefined, "port");
+      return blank(c.database, "dataSource.databaseRequired", "database") ?? blank(c.user, "dataSource.userRequired", "user");
   }
 };
 
 const validate = (name: string, config: WarehouseConfig, exposureSql: string) => {
-  const problem = blank(name, "Name is required") ?? checkConfig(config) ?? blank(exposureSql, "Exposure SQL is required");
-  return problem === null ? Effect.void : invalid(problem);
+  const problem = blank(name, "common.nameRequired", "name") ?? checkConfig(config) ?? blank(exposureSql, "dataSource.exposureSqlRequired", "sql");
+  return problem === null ? Effect.void : Effect.fail(new ValidationError(problem));
 };
 
 const configJson = Schema.encodeSync(WarehouseConfig);
@@ -95,7 +92,7 @@ export const DataSourceServiceLive = Layer.effect(
         .run("dataSources.get", (db) => db.query.dataSources.findFirst({ where: { id } }))
         .pipe(
           Effect.flatMap((row) =>
-            row ? Effect.succeed(toDataSource(row)) : Effect.fail(new NotFoundError({ entity: "data source", id })),
+            row ? Effect.succeed(toDataSource(row)) : Effect.fail(new NotFoundError({ entity: "dataSource", id })),
           ),
         );
 
@@ -109,7 +106,7 @@ export const DataSourceServiceLive = Layer.effect(
       create: Effect.fn("DataSourceService.create")(function* (input, actor) {
         yield* validate(input.name, input.config, input.exposureSql);
         const credentialsError = checkCredentials(input.config._tag, input.credentials);
-        if (credentialsError !== null) return yield* invalid(credentialsError);
+        if (credentialsError !== null) return yield* new ValidationError(credentialsError);
         const credentials = yield* cipher.encrypt(input.credentials);
         const now = new Date();
         const source = DataSource.make({
@@ -144,16 +141,16 @@ export const DataSourceServiceLive = Layer.effect(
         const before = yield* load(input.id);
         const now = new Date();
         if (before.type === "builtin") {
-          if (input.name.trim() === "") return yield* invalid("Name is required");
+          if (input.name.trim() === "") return yield* invalid("common.nameRequired", undefined, "name");
         } else {
-          if (input.config === null) return yield* invalid("Connection settings are required");
+          if (input.config === null) return yield* invalid("dataSource.configRequired");
           if (input.config._tag !== before.type) {
-            return yield* invalid("A data source cannot change its type. Create a new data source instead");
+            return yield* invalid("dataSource.typeFixed");
           }
           yield* validate(input.name, input.config, input.exposureSql);
           if (input.credentials !== null) {
             const credentialsError = checkCredentials(before.type, input.credentials);
-            if (credentialsError !== null) return yield* invalid(credentialsError);
+            if (credentialsError !== null) return yield* new ValidationError(credentialsError);
           }
         }
         const credentials =
@@ -197,15 +194,15 @@ export const DataSourceServiceLive = Layer.effect(
       delete: Effect.fn("DataSourceService.delete")(function* (id, actor) {
         const before = yield* load(id);
         if (before.id === BUILTIN_DATA_SOURCE_ID || before.type === "builtin") {
-          return yield* new ConflictError({ message: "The built-in event store cannot be deleted" });
+          return yield* new ConflictError(issue("dataSource.builtinFixed"));
         }
         const metric = yield* database.run("metrics.byDataSource", (db) => db.query.metrics.findFirst({ where: { dataSourceId: id } }));
-        if (metric !== undefined) return yield* new ConflictError({ message: `The metric "${metric.name}" uses this data source` });
+        if (metric !== undefined) return yield* new ConflictError(issue("dataSource.usedByMetric", { metric: metric.name }));
         const experiment = yield* database.run("experiments.byDataSource", (db) =>
           db.query.experiments.findFirst({ where: { dataSourceId: id } }),
         );
         if (experiment !== undefined) {
-          return yield* new ConflictError({ message: `The experiment "${experiment.name}" uses this data source` });
+          return yield* new ConflictError(issue("dataSource.usedByExperiment", { experiment: experiment.name }));
         }
         yield* database.run("dataSources.delete", (db) =>
           batch(db, [

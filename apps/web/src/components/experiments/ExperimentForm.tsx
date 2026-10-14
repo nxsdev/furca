@@ -55,8 +55,7 @@ export function CreateExperimentForm({
       try {
         created = await client.experiments.create({ key: value.key, ...toInput(draft, metrics.find((m) => m.id === value.primaryMetricId)) });
       } catch (error) {
-        // "An experiment with key … already exists" belongs under the key field
-        setServerError(formApi, error, /already exists/i.test(errorMessage(error)) ? "key" : undefined);
+        setServerError(formApi, error);
         return;
       }
       void queryClient.invalidateQueries({ queryKey: orpc.experiments.key() });
