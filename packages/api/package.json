@@ -16,6 +16,8 @@
     "@furca/persistence": "workspace:*",
     "@orpc/contract": "catalog:",
     "@orpc/experimental-effect": "catalog:",
+    "@orpc/json-schema": "catalog:",
+    "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",

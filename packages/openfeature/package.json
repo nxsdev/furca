@@ -1,0 +1,34 @@
+{
+  "name": "@furca/openfeature",
+  "version": "0.1.0",
+  "description": "OpenFeature providers (web and server) for furca",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./web": "./src/web.ts",
+    "./server": "./src/server.ts"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "peerDependencies": {
+    "@furca/sdk": "workspace:*",
+    "@openfeature/web-sdk": "^1.10.0",
+    "@openfeature/server-sdk": "^1.23.0"
+  },
+  "peerDependenciesMeta": {
+    "@openfeature/web-sdk": {
+      "optional": true
+    },
+    "@openfeature/server-sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@furca/sdk": "workspace:*",
+    "@openfeature/core": "catalog:",
+    "@openfeature/server-sdk": "catalog:",
+    "@openfeature/web-sdk": "catalog:"
+  }
+}

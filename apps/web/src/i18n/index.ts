@@ -1,5 +1,13 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import enSavedGroups from "./locales/en/savedGroups.json";
+import enNamespaces from "./locales/en/namespaces.json";
+import enPlatform from "./locales/en/platform.json";
+import enCharts from "./locales/en/charts.json";
+import jaSavedGroups from "./locales/ja/savedGroups.json";
+import jaNamespaces from "./locales/ja/namespaces.json";
+import jaPlatform from "./locales/ja/platform.json";
+import jaCharts from "./locales/ja/charts.json";
 import enCommon from "./locales/en/common.json";
 import enShell from "./locales/en/shell.json";
 import enFlags from "./locales/en/flags.json";
@@ -30,8 +38,8 @@ export type Locale = (typeof LOCALES)[number];
 
 /** Namespaces map 1:1 to UI areas, so each area's copy lives in its own file */
 export const resources = {
-  en: { common: enCommon, shell: enShell, flags: enFlags, targeting: enTargeting, experiments: enExperiments, results: enResults, metrics: enMetrics, datasources: enDatasources, environments: enEnvironments, audit: enAudit, settings: enSettings, overview: enOverview },
-  ja: { common: jaCommon, shell: jaShell, flags: jaFlags, targeting: jaTargeting, experiments: jaExperiments, results: jaResults, metrics: jaMetrics, datasources: jaDatasources, environments: jaEnvironments, audit: jaAudit, settings: jaSettings, overview: jaOverview },
+  en: { common: enCommon, shell: enShell, flags: enFlags, targeting: enTargeting, experiments: enExperiments, results: enResults, metrics: enMetrics, datasources: enDatasources, environments: enEnvironments, audit: enAudit, settings: enSettings, overview: enOverview, savedGroups: enSavedGroups, namespaces: enNamespaces, platform: enPlatform, charts: enCharts },
+  ja: { common: jaCommon, shell: jaShell, flags: jaFlags, targeting: jaTargeting, experiments: jaExperiments, results: jaResults, metrics: jaMetrics, datasources: jaDatasources, environments: jaEnvironments, audit: jaAudit, settings: jaSettings, overview: jaOverview, savedGroups: jaSavedGroups, namespaces: jaNamespaces, platform: jaPlatform, charts: jaCharts },
 } as const;
 
 const STORAGE_KEY = "furca-locale";
