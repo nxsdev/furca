@@ -20,7 +20,11 @@ import {
 import { type Feature, FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
 import type { Invitation, Member } from "@furca/core/members/Member";
 import { type Metric, MetricCapping, MetricDefinition, MetricType } from "@furca/core/metrics/Metric";
-import type { ResultSnapshot } from "@furca/core/results/ExperimentResult";
+import { NamespaceAllocation, type Namespace } from "@furca/core/experiments/Namespace";
+import { ApiKeyRole, type ApiKey } from "@furca/core/platform/ApiKey";
+import { type Webhook, WebhookEvent, WebhookFormat } from "@furca/core/platform/Webhook";
+import type { DimensionResult, ResultSnapshot } from "@furca/core/results/ExperimentResult";
+import { type SavedGroup, SavedGroupType } from "@furca/core/targeting/SavedGroup";
 import { Condition } from "@furca/core/targeting/Condition";
 import { oc, type } from "@orpc/contract";
 import { toStandardSchema } from "@orpc/experimental-effect";
@@ -59,6 +63,32 @@ export interface EventNameStat {
   readonly lastSeenAt: Date;
 }
 
+export interface EventPropertyStat {
+  readonly property: string;
+  /** Events in the last 30 days that carry this property */
+  readonly count: number;
+  /** Up to 10 most frequent values, for the filter value picker */
+  readonly sampleValues: ReadonlyArray<string>;
+}
+
+export interface NamespaceListItem {
+  readonly namespace: Namespace;
+  /** Draft and running experiments holding a slice, in start order */
+  readonly allocations: ReadonlyArray<{
+    readonly experimentId: string;
+    readonly experimentName: string;
+    readonly status: "draft" | "running" | "stopped";
+    readonly start: number;
+    readonly end: number;
+  }>;
+}
+
+export interface WebhookTestResult {
+  /** HTTP status returned by the endpoint, null if it could not be reached */
+  readonly status: number | null;
+  readonly error: string | null;
+}
+
 export interface VolumeBucket {
   /** Start of the UTC hour */
   readonly hour: Date;
@@ -84,6 +114,18 @@ export const ExperimentDraftFields = {
   guardrailMetricIds: Schema.Array(Schema.String),
   stats: StatsSettings,
   plan: ExperimentPlan,
+  /** Attribute names recorded with exposures for breakdowns, at most 5 */
+  dimensions: Schema.Array(Schema.String).check(Schema.isMaxLength(5)),
+  namespace: Schema.NullOr(NamespaceAllocation),
+};
+
+export const SavedGroupFields = {
+  name: Schema.String,
+  description: Schema.String,
+  type: SavedGroupType,
+  conditions: Schema.Array(Condition),
+  attribute: Schema.String,
+  values: Schema.Array(Schema.String).check(Schema.isMaxLength(10_000)),
 };
 
 export const MetricFields = {
@@ -244,11 +286,19 @@ export const contract = {
     latest: oc.input(input({ experimentId: Schema.String })).output(type<ResultSnapshot | null>()),
     /** Runs the analysis now and stores a snapshot (analysis errors are stored in it, not thrown) */
     refresh: oc.input(input({ experimentId: Schema.String })).output(type<ResultSnapshot>()),
+    /** Current-phase results broken down by one of the experiment's dimensions (computed on demand) */
+    dimension: oc
+      .input(input({ experimentId: Schema.String, dimension: Schema.String }))
+      .output(type<DimensionResult>()),
   },
 
   events: {
     /** Distinct event names in the built-in store over the last 30 days, most frequent first */
     names: oc.input(input({ environmentId: Schema.String })).output(type<ReadonlyArray<EventNameStat>>()),
+    /** Property keys seen on an event in the last 30 days, most common first (for metric filters) */
+    properties: oc
+      .input(input({ environmentId: Schema.String, event: Schema.String }))
+      .output(type<ReadonlyArray<EventPropertyStat>>()),
     /** Hourly ingestion volume for the last 24 hours */
     volume: oc.input(input({ environmentId: Schema.String })).output(type<ReadonlyArray<VolumeBucket>>()),
   },
@@ -265,6 +315,54 @@ export const contract = {
         }),
       )
       .output(type<ReadonlyArray<AuditLog>>()),
+  },
+
+  savedGroups: {
+    list: oc.output(type<ReadonlyArray<SavedGroup>>()),
+    get: oc.input(input(Id)).output(type<SavedGroup>()),
+    create: oc.input(input({ key: Key, ...SavedGroupFields })).output(type<SavedGroup>()),
+    /** Republishes payloads: every flag and experiment referencing the group changes immediately */
+    update: oc.input(input({ ...Id, ...SavedGroupFields })).output(type<SavedGroup>()),
+    /** CONFLICT while any flag rule, experiment or other group references it */
+    delete: oc.input(input(Id)).output(type<void>()),
+  },
+
+  namespaces: {
+    list: oc.output(type<ReadonlyArray<NamespaceListItem>>()),
+    create: oc.input(input({ key: Key, name: Schema.String, description: Schema.String })).output(type<Namespace>()),
+    update: oc.input(input({ ...Id, name: Schema.String, description: Schema.String })).output(type<Namespace>()),
+    /** CONFLICT while experiments hold a slice */
+    delete: oc.input(input(Id)).output(type<void>()),
+  },
+
+  apiKeys: {
+    list: oc.output(type<ReadonlyArray<ApiKey>>()),
+    /** The secret is returned once and never again */
+    create: oc.input(input({ name: Schema.String, role: ApiKeyRole })).output(type<{ apiKey: ApiKey; secret: string }>()),
+    revoke: oc.input(input(Id)).output(type<ApiKey>()),
+  },
+
+  webhooks: {
+    list: oc.output(type<ReadonlyArray<Webhook>>()),
+    /** The signing secret is returned once (verify the `furca-signature` header with it) */
+    create: oc
+      .input(input({ name: Schema.String, url: Schema.String, format: WebhookFormat, events: Schema.Array(WebhookEvent) }))
+      .output(type<{ webhook: Webhook; secret: string }>()),
+    update: oc
+      .input(
+        input({
+          ...Id,
+          name: Schema.String,
+          url: Schema.String,
+          format: WebhookFormat,
+          events: Schema.Array(WebhookEvent),
+          enabled: Schema.Boolean,
+        }),
+      )
+      .output(type<Webhook>()),
+    delete: oc.input(input(Id)).output(type<void>()),
+    /** Sends a signed `ping` event now and records the outcome */
+    test: oc.input(input(Id)).output(type<WebhookTestResult>()),
   },
 
   members: {

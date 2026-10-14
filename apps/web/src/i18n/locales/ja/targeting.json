@@ -49,7 +49,9 @@
     "semver_lt": "バージョン <",
     "semver_lte": "バージョン ≤",
     "exists": "存在する",
-    "not_exists": "存在しない"
+    "not_exists": "存在しない",
+    "in_group": "保存済みグループに含まれる",
+    "not_in_group": "保存済みグループに含まれない"
   },
   "summary": {
     "everyone": "すべてのユーザー",
@@ -72,6 +74,8 @@
     "semver_lt": "{{attribute}} のバージョンが {{value}} より古い",
     "semver_lte": "{{attribute}} のバージョンが {{value}} 以下",
     "exists": "{{attribute}} が存在する",
-    "not_exists": "{{attribute}} が存在しない"
+    "not_exists": "{{attribute}} が存在しない",
+    "in_group": "保存済みグループ {{value}} に含まれる",
+    "not_in_group": "保存済みグループ {{value}} に含まれない"
   }
 }

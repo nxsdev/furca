@@ -62,7 +62,7 @@ const metric = await run(
         description: "",
         type: "proportion",
         dataSourceId: "builtin",
-        definition: EventMetricDefinition.make({ numerator: EventSource.make({ event: "purchase", aggregation: "count" }), denominator: null }),
+        definition: EventMetricDefinition.make({ numerator: EventSource.make({ event: "purchase", aggregation: "count", filters: [] }), denominator: null }),
         inverse: false,
         windowHours: null,
         delayHours: 0,
@@ -78,6 +78,8 @@ const createFlag = (key: string, valueType: "boolean" | "string" | "number" | "j
 
 const draft = (featureId: string, overrides: Partial<ExperimentDraft> = {}): ExperimentDraft => ({
   name: "Checkout test",
+  dimensions: [],
+  namespace: null,
   hypothesis: "Blue converts better",
   featureId,
   environmentIds: [PROD],

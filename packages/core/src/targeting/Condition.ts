@@ -21,6 +21,9 @@ export const ConditionOperator = Schema.Literals([
   "semver_lte",
   "exists",
   "not_exists",
+  /** values[0] is a saved group id; `attribute` is ignored (the group defines what it checks) */
+  "in_group",
+  "not_in_group",
 ]);
 export type ConditionOperator = typeof ConditionOperator.Type;
 

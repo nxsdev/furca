@@ -44,7 +44,7 @@ const exposure = (user: string, variation: string, at: number, env = PROD, key =
 const event = (user: string, name: string, value: number | null, ts: number, env = PROD) =>
   exec("INSERT INTO events (environment_id, user_id, name, value, ts) VALUES (?1, ?2, ?3, ?4, ?5)", env, user, name, value, ts);
 
-const purchase = (aggregation: "count" | "sum") => EventSource.make({ event: "purchase", aggregation });
+const purchase = (aggregation: "count" | "sum") => EventSource.make({ event: "purchase", aggregation, filters: [] });
 const metric = (fields: Partial<Metric> = {}) =>
   Metric.make({
     id: "m",
@@ -146,7 +146,7 @@ describe("D1 moments SQL", () => {
   });
 
   it("ratio: per-unit numerator and denominator sums with cross products", async () => {
-    const definition = EventMetricDefinition.make({ numerator: purchase("sum"), denominator: EventSource.make({ event: "visit", aggregation: "count" }) });
+    const definition = EventMetricDefinition.make({ numerator: purchase("sum"), denominator: EventSource.make({ event: "visit", aggregation: "count", filters: [] }) });
     expect(await moments(metric({ type: "ratio", definition }), true)).toEqual({
       "control 2026-10-01": { n: 2, sum_y: 15, sum_y2: 225, sum_d: 3, sum_d2: 5, sum_yd: 30, sum_x: 0, sum_x2: 0, sum_xy: 0, cap_value: null },
       "treatment 2026-10-01": { n: 1, sum_y: 20, sum_y2: 400, sum_d: 3, sum_d2: 9, sum_yd: 60, sum_x: 0, sum_x2: 0, sum_xy: 0, cap_value: null },
@@ -250,6 +250,8 @@ await insertMetric("purchase_again", "proportion", EventMetricDefinition.make({ 
 const insertExperiment = (id: string, fields: Partial<Experiment> = {}) => {
   const e = Experiment.make({
     id,
+    dimensions: [],
+    namespace: null,
     key: id,
     name: id,
     hypothesis: "",

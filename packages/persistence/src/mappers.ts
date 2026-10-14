@@ -12,6 +12,7 @@ import {
   StatsSettings,
   Variation,
 } from "@furca/core/experiments/Experiment";
+import { NamespaceAllocation } from "@furca/core/experiments/Namespace";
 import { Feature, FeatureEnvironmentConfig, FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
 import { Metric, MetricCapping, MetricDefinition, MetricType } from "@furca/core/metrics/Metric";
 import { Condition } from "@furca/core/targeting/Condition";
@@ -71,6 +72,8 @@ export const toExperiment = (row: Row<typeof schema.experiments>): Experiment =>
     guardrailMetricIds: strings(row.guardrailMetricIds),
     stats: decode(StatsSettings)(row.stats),
     plan: decode(ExperimentPlan)(row.plan),
+    dimensions: strings(row.dimensions),
+    namespace: row.namespace === null ? null : decode(NamespaceAllocation)(row.namespace),
     decision: row.decision === null ? null : decode(ExperimentDecision)(reviveDates(row.decision, ["decidedAt"])),
     archived: row.archivedAt !== null,
     createdAt: row.createdAt,
@@ -123,6 +126,8 @@ export const experimentJsonColumns = (e: Experiment) => ({
   guardrailMetricIds: [...e.guardrailMetricIds],
   stats: { ...e.stats },
   plan: { ...e.plan },
+  dimensions: [...e.dimensions],
+  namespace: e.namespace === null ? null : { ...e.namespace },
   decision: e.decision === null ? null : { ...e.decision, decidedAt: e.decision.decidedAt.toISOString() },
 });
 

@@ -73,6 +73,8 @@ const toValues = (x: Experiment | undefined, envId: string, featureId: string | 
     baselineRate: Number.NaN,
     baselineMean: Number.NaN,
     baselineStdDev: Number.NaN,
+    dimensions: x?.dimensions ?? [],
+    namespace: x?.namespace ?? null,
   };
 };
 
@@ -151,6 +153,8 @@ export function ExperimentForm({
         sampleSizePerVariation: plan.perVariation,
         dailyTraffic: Number.isFinite(v.dailyTraffic) ? v.dailyTraffic : null,
       },
+      dimensions: [...v.dimensions],
+      namespace: v.namespace === null ? null : { ...v.namespace },
     };
   };
 

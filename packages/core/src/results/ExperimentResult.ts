@@ -94,3 +94,29 @@ export class ResultSnapshot extends Schema.Class<ResultSnapshot>("ResultSnapshot
   health: Schema.NullOr(ExperimentHealth),
   metrics: Schema.Array(MetricResult),
 }) {}
+
+/** One metric inside one dimension value. Exploratory: never corrected for multiple comparisons */
+export class DimensionMetricResult extends Schema.Class<DimensionMetricResult>("DimensionMetricResult")({
+  metricId: Schema.String,
+  role: MetricRole,
+  variations: Schema.Array(VariationMetricSummary),
+  comparisons: Schema.Array(VariationComparison),
+  error: Schema.NullOr(Schema.String),
+}) {}
+
+export class DimensionSlice extends Schema.Class<DimensionSlice>("DimensionSlice")({
+  /** Attribute value; "(other)" merges values beyond the top 20; "(not set)" for missing */
+  value: Schema.String,
+  users: Schema.Int,
+  metrics: Schema.Array(DimensionMetricResult),
+}) {}
+
+/** Results of the current phase broken down by one recorded dimension, computed on demand */
+export class DimensionResult extends Schema.Class<DimensionResult>("DimensionResult")({
+  experimentId: Schema.String,
+  dimension: Schema.String,
+  computedAt: Schema.Date,
+  /** Largest first, at most 20 values plus "(other)" and "(not set)" */
+  slices: Schema.Array(DimensionSlice),
+  error: Schema.NullOr(Schema.String),
+}) {}

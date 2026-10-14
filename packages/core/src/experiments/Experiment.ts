@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { Condition } from "../targeting/Condition";
+import { NamespaceAllocation } from "./Namespace";
 
 export const ExperimentStatus = Schema.Literals(["draft", "running", "stopped"]);
 export type ExperimentStatus = typeof ExperimentStatus.Type;
@@ -96,6 +97,13 @@ export class Experiment extends Schema.Class<Experiment>("Experiment")({
   guardrailMetricIds: Schema.Array(Schema.String),
   stats: StatsSettings,
   plan: ExperimentPlan,
+  /**
+   * User attributes recorded with each exposure so results can be broken down by them
+   * (e.g. country, browser). At most 5; the SDK only sends these attributes
+   */
+  dimensions: Schema.Array(Schema.String),
+  /** Mutually exclusive slice of a namespace, or null to run independently */
+  namespace: Schema.NullOr(NamespaceAllocation),
   decision: Schema.NullOr(ExperimentDecision),
   archived: Schema.Boolean,
   createdAt: Schema.Date,

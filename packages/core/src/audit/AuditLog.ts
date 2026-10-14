@@ -7,6 +7,10 @@ export const AuditEntityType = Schema.Literals([
   "datasource",
   "environment",
   "member",
+  "savedGroup",
+  "namespace",
+  "apiKey",
+  "webhook",
 ]);
 export type AuditEntityType = typeof AuditEntityType.Type;
 

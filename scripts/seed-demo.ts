@@ -93,20 +93,20 @@ const setup = async () => {
     ...common,
     name: "Purchase conversion",
     type: "proportion",
-    definition: { _tag: "event", numerator: { event: "purchase", aggregation: "count" }, denominator: null },
+    definition: { _tag: "event", numerator: { event: "purchase", aggregation: "count", filters: [] }, denominator: null },
   });
   const revenue = await metric("revenue-per-user", {
     ...common,
     name: "Revenue per user",
     type: "mean",
     capping: { type: "percentile", value: 0.99 },
-    definition: { _tag: "event", numerator: { event: "purchase", aggregation: "sum" }, denominator: null },
+    definition: { _tag: "event", numerator: { event: "purchase", aggregation: "sum", filters: [] }, denominator: null },
   });
   const addToCart = await metric("add-to-cart", {
     ...common,
     name: "Add to cart",
     type: "proportion",
-    definition: { _tag: "event", numerator: { event: "add_to_cart", aggregation: "count" }, denominator: null },
+    definition: { _tag: "event", numerator: { event: "add_to_cart", aggregation: "count", filters: [] }, denominator: null },
   });
   const latency = await metric("page-load-ms", {
     ...common,
@@ -115,7 +115,7 @@ const setup = async () => {
     type: "ratio",
     inverse: true,
     windowHours: null,
-    definition: { _tag: "event", numerator: { event: "page_view", aggregation: "sum" }, denominator: { event: "page_view", aggregation: "count" } },
+    definition: { _tag: "event", numerator: { event: "page_view", aggregation: "sum", filters: [] }, denominator: { event: "page_view", aggregation: "count", filters: [] } },
   });
 
   const experiments = await rpc<Array<Entity & { status: string }>>("experiments/list", { includeArchived: true });
@@ -141,6 +141,8 @@ const setup = async () => {
       guardrailMetricIds: [latency.id],
       stats: { engine: "frequentist", sequential: true, sequentialTuning: 8000, alpha: 0.05, cuped: true, correction: "holm" },
       plan: { mde: 0.15, sampleSizePerVariation: 4000, dailyTraffic: 1200 },
+      dimensions: ["country"],
+      namespace: null,
     }),
   );
   if (experiment.status === "draft") await rpc("experiments/start", { id: experiment.id });

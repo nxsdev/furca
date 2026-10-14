@@ -14,7 +14,11 @@
     "metric": "指標",
     "datasource": "データソース",
     "environment": "環境",
-    "member": "メンバー"
+    "member": "メンバー",
+    "savedGroup": "保存済みグループ",
+    "namespace": "ネームスペース",
+    "apiKey": "API キー",
+    "webhook": "Webhook"
   },
   "actions": {
     "created": "作成",
@@ -28,12 +32,24 @@
     "stopped": "停止",
     "invited": "招待",
     "removed": "メンバーから削除",
-    "rules": { "updated": "ルールを更新" },
-    "phase": { "started": "新しいフェーズを開始" },
-    "traffic": { "updated": "トラフィックを更新" },
-    "sdkKey": { "rotated": "SDK キーを再発行" },
-    "credentials": { "updated": "認証情報を差し替え" },
-    "invitation": { "revoked": "招待を取り消し" }
+    "rules": {
+      "updated": "ルールを更新"
+    },
+    "phase": {
+      "started": "新しいフェーズを開始"
+    },
+    "traffic": {
+      "updated": "トラフィックを更新"
+    },
+    "sdkKey": {
+      "rotated": "SDK キーを再発行"
+    },
+    "credentials": {
+      "updated": "認証情報を差し替え"
+    },
+    "invitation": {
+      "revoked": "招待を取り消し"
+    }
   },
   "list": {
     "loadFailed": "監査ログを読み込めませんでした。{{message}}",

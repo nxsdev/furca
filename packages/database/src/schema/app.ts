@@ -83,6 +83,10 @@ export const experiments = sqliteTable(
     stats: json("stats"),
     plan: json("plan"),
     decision: text("decision", { mode: "json" }).$type<unknown>(),
+    /** Attribute names recorded with exposures for breakdowns */
+    dimensions: text("dimensions", { mode: "json" }).$type<unknown>().notNull().default(sql`'[]'`),
+    /** NamespaceAllocation JSON or null */
+    namespace: text("namespace", { mode: "json" }).$type<unknown>(),
     archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
@@ -138,6 +142,8 @@ export const exposures = sqliteTable(
     firstSeenAt: integer("first_seen_at").notNull(),
     /** Experiment phase index the SDK evaluated (a new phase re-randomizes) */
     phase: integer("phase").notNull().default(0),
+    /** Values of the experiment's dimension attributes at first exposure, JSON object */
+    dimensions: text("dimensions", { mode: "json" }).$type<unknown>(),
   },
   (t) => [
     primaryKey({ columns: [t.environmentId, t.experimentKey, t.phase, t.userId, t.variationKey] }),
@@ -156,6 +162,8 @@ export const events = sqliteTable(
     value: real("value"),
     /** epoch ms */
     ts: integer("ts").notNull(),
+    /** Flat properties passed to track(name, value, properties), JSON object */
+    properties: text("properties", { mode: "json" }).$type<unknown>(),
   },
   (t) => [
     index("events_name_user_ts_idx").on(t.environmentId, t.name, t.userId, t.ts),
@@ -212,3 +220,56 @@ export const invitations = sqliteTable(
   },
   (t) => [uniqueIndex("invitations_token_idx").on(t.token)],
 );
+
+/** Reusable audiences referenced by in_group / not_in_group conditions */
+export const savedGroups = sqliteTable("saved_groups", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  type: text("type").notNull(),
+  conditions: json("conditions"),
+  attribute: text("attribute").notNull().default(""),
+  values: json("values"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** Mutual-exclusion namespaces; allocations live on experiments.namespace */
+export const namespaces = sqliteTable("namespaces", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/** REST API keys. Only the SHA-256 of the secret is stored */
+export const apiKeys = sqliteTable("api_keys", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  prefix: text("prefix").notNull(),
+  secretHash: text("secret_hash").notNull().unique(),
+  role: text("role").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: createdAt(),
+  lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+  revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+});
+
+export const webhooks = sqliteTable("webhooks", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  format: text("format").notNull(),
+  events: json("events"),
+  /** HMAC signing secret, encrypted with CredentialCipher */
+  secret: text("secret").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+  lastDeliveredAt: integer("last_delivered_at", { mode: "timestamp_ms" }),
+  lastStatus: integer("last_status"),
+  lastError: text("last_error"),
+});

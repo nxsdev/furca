@@ -36,6 +36,9 @@ export interface ExperimentValues {
   baselineRate: number;
   baselineMean: number;
   baselineStdDev: number;
+  /** Attribute names recorded with exposures for breakdowns (max 5) */
+  dimensions: ReadonlyArray<string>;
+  namespace: { readonly namespaceId: string; readonly start: number; readonly end: number } | null;
 }
 
 type Split = Pick<ExperimentValues, "evenSplit" | "variations">;

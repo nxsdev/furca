@@ -23,6 +23,8 @@ export type ExperimentDraft = Pick<
   | "guardrailMetricIds"
   | "stats"
   | "plan"
+  | "dimensions"
+  | "namespace"
 >;
 
 export interface TrafficChange {

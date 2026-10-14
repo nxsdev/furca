@@ -12,10 +12,35 @@ export const EventAggregation = Schema.Literals(["count", "sum"]);
 export type EventAggregation = typeof EventAggregation.Type;
 
 /** Built-in event store source: events tracked with the SDK's track(name, value) */
+export const PropertyFilterOperator = Schema.Literals([
+  "eq",
+  "neq",
+  "in",
+  "not_in",
+  "contains",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "exists",
+  "not_exists",
+]);
+export type PropertyFilterOperator = typeof PropertyFilterOperator.Type;
+
+/** Keeps only events whose property matches, e.g. purchase where plan = pro. Filters are AND-ed */
+export class PropertyFilter extends Schema.Class<PropertyFilter>("PropertyFilter")({
+  /** Key of the properties object passed to track(name, value, properties) */
+  property: Schema.String,
+  operator: PropertyFilterOperator,
+  /** Compared as strings; gt/gte/lt/lte compare numerically */
+  values: Schema.Array(Schema.String),
+}) {}
+
 export class EventSource extends Schema.Class<EventSource>("EventSource")({
   event: Schema.String,
   /** count = number of events, sum = sum of event values. Ignored for proportion */
   aggregation: EventAggregation,
+  filters: Schema.Array(PropertyFilter),
 }) {}
 
 export class EventMetricDefinition extends Schema.TaggedClass<EventMetricDefinition>()("event", {

@@ -2,7 +2,7 @@ import { Button } from "@heroui/react";
 import type { AuditEntityType, AuditLog } from "@furca/core/audit/AuditLog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChartLine, ChevronRight, Database, Flag, FlaskConical, History, KeyRound, UserRound } from "lucide-react";
+import { ChartLine, ChevronRight, Database, Flag, FlaskConical, History, KeyRound, KeySquare, Layers, UserRound, UsersRound, Webhook } from "lucide-react";
 import { type ComponentType, Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatDateTime } from "~/components/results/format";
@@ -23,6 +23,10 @@ export const entityTypes: ReadonlyArray<{
   { type: "datasource", icon: Database },
   { type: "environment", icon: KeyRound },
   { type: "member", icon: UserRound },
+  { type: "savedGroup", icon: UsersRound },
+  { type: "namespace", icon: Layers },
+  { type: "apiKey", icon: KeySquare },
+  { type: "webhook", icon: Webhook },
 ];
 
 const snapshot = (json: string | null): Record<string, unknown> | null => {
@@ -119,11 +123,17 @@ function EntityLink({ entry }: { entry: AuditLog }) {
         </Link>
       );
     case "member":
+    case "apiKey":
+    case "webhook":
       return (
         <Link to="/settings" className={linkCls}>
           {label}
         </Link>
       );
+    // TODO(targeting): link saved groups and namespaces once their pages exist
+    case "savedGroup":
+    case "namespace":
+      return label;
   }
 }
 

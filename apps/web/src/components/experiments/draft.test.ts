@@ -26,6 +26,8 @@ const valid: ExperimentValues = {
   baselineRate: Number.NaN,
   baselineMean: Number.NaN,
   baselineStdDev: Number.NaN,
+  dimensions: [],
+  namespace: null,
 };
 
 const issues = (patch: Partial<ExperimentValues>, { isEdit = false, noFlag = false } = {}) =>

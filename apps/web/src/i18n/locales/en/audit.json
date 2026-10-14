@@ -14,7 +14,11 @@
     "metric": "Metrics",
     "datasource": "Data sources",
     "environment": "Environments",
-    "member": "Members"
+    "member": "Members",
+    "savedGroup": "Saved groups",
+    "namespace": "Namespaces",
+    "apiKey": "API keys",
+    "webhook": "Webhooks"
   },
   "actions": {
     "created": "created",
@@ -28,12 +32,24 @@
     "stopped": "stopped",
     "invited": "invited",
     "removed": "removed",
-    "rules": { "updated": "updated rules" },
-    "phase": { "started": "started a new phase" },
-    "traffic": { "updated": "updated traffic" },
-    "sdkKey": { "rotated": "rotated SDK key" },
-    "credentials": { "updated": "replaced credentials" },
-    "invitation": { "revoked": "revoked invitation" }
+    "rules": {
+      "updated": "updated rules"
+    },
+    "phase": {
+      "started": "started a new phase"
+    },
+    "traffic": {
+      "updated": "updated traffic"
+    },
+    "sdkKey": {
+      "rotated": "rotated SDK key"
+    },
+    "credentials": {
+      "updated": "replaced credentials"
+    },
+    "invitation": {
+      "revoked": "revoked invitation"
+    }
   },
   "list": {
     "loadFailed": "Couldn't load the audit log. {{message}}",

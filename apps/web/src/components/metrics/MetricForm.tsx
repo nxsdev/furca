@@ -91,8 +91,9 @@ const toInput = (d: Values, isSql: boolean): MetricInput => ({
     ? { _tag: "sql", numeratorSql: d.numSql, denominatorSql: d.type === "ratio" ? d.denSql : null }
     : {
         _tag: "event",
-        numerator: { event: d.num.event.trim(), aggregation: d.type === "proportion" ? "count" : d.num.aggregation },
-        denominator: d.type === "ratio" ? { event: d.den.event.trim(), aggregation: d.den.aggregation } : null,
+        // TODO(analytics): property filters editor
+        numerator: { event: d.num.event.trim(), aggregation: d.type === "proportion" ? "count" : d.num.aggregation, filters: [] },
+        denominator: d.type === "ratio" ? { event: d.den.event.trim(), aggregation: d.den.aggregation, filters: [] } : null,
       },
   inverse: d.inverse,
   windowHours: windowHoursOf(d),

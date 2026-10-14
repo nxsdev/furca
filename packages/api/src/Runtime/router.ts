@@ -1,3 +1,7 @@
+import { savedGroupsRouter } from "../Handlers/savedGroups";
+import { namespacesRouter } from "../Handlers/namespaces";
+import { apiKeysRouter } from "../Handlers/apiKeys";
+import { webhooksRouter } from "../Handlers/webhooks";
 import { publicRouter } from "../Handlers/public";
 import { sessionRouter } from "../Handlers/session";
 import { environmentsRouter } from "../Handlers/environments";
@@ -23,5 +27,9 @@ export const router = pub.router({
   results: resultsRouter,
   events: eventsRouter,
   audit: auditRouter,
+  savedGroups: savedGroupsRouter,
+  namespaces: namespacesRouter,
+  apiKeys: apiKeysRouter,
+  webhooks: webhooksRouter,
   members: membersRouter,
 });
