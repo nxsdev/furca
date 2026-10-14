@@ -152,6 +152,33 @@ const d1Filter = (f: PropertyFilter, p: (v: string | number) => string) => {
   }
 };
 
+/**
+ * Pre-experiment baseline of one event source (power planner prefill). Units: users with any event or
+ * exposure in the environment since `sinceMs`; y = their count / sum of matching events (0 without
+ * one). Columns: n, converted (units with a matching event), sum_y, sum_y2, first_ts
+ */
+export const d1BaselineSql = (q: { readonly environmentId: string; readonly sinceMs: number; readonly source: EventSource }): D1Query => {
+  const { params, p } = sqliteParams();
+  const env = p(q.environmentId);
+  const since = p(q.sinceMs);
+  const filters = q.source.filters.map((f) => ` AND ${d1Filter(f, p)}`).join("");
+  const y = q.source.aggregation === "count" ? "COALESCE(m.c, 0)" : "COALESCE(m.s, 0)";
+  // ponytail: no capping, so a heavy-tailed sum gives a wide stdDev (a longer, safer plan); cap here if plans look too long
+  const sql = `WITH units AS (
+    SELECT user_id FROM events WHERE environment_id = ${env} AND ts >= ${since}
+    UNION SELECT user_id FROM exposures WHERE environment_id = ${env} AND first_seen_at >= ${since}
+  ),
+  m AS (
+    SELECT e.user_id, COUNT(*) AS c, TOTAL(e.value) AS s FROM events e
+    WHERE e.environment_id = ${env} AND e.name = ${p(q.source.event)} AND e.ts >= ${since}${filters}
+    GROUP BY e.user_id
+  )
+SELECT COUNT(*) AS n, COUNT(m.user_id) AS converted, TOTAL(${y}) AS sum_y, TOTAL(${y} * ${y}) AS sum_y2,
+  (SELECT MIN(ts) FROM events WHERE environment_id = ${env} AND ts >= ${since}) AS first_ts
+FROM units u LEFT JOIN m ON m.user_id = u.user_id`;
+  return { sql, params };
+};
+
 export const d1MomentsSql = (
   q: MomentsOptions & D1Scope & { readonly numerator: EventSource; readonly denominator: EventSource | null },
 ): D1Query => {

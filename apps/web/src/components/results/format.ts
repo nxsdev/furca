@@ -1,4 +1,4 @@
-import type { MetricType } from "@furca/core/metrics/Metric";
+import type { Metric, MetricType } from "@furca/core/metrics/Metric";
 import { i18n, intlLocale } from "~/i18n";
 
 const MINUS = "−";
@@ -37,6 +37,14 @@ export const formatMetricValue = (type: MetricType, mean: number): string => {
   const abs = Math.abs(mean);
   const digits = abs >= 100 ? 0 : abs >= 10 ? 1 : abs >= 1 ? 2 : 3;
   return new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(mean);
+};
+
+/** Unit after a per-variation value: "/user" for means, "/<denominator event>" for event ratios; rates already carry % */
+export const metricUnit = (metric: Metric | undefined): string => {
+  if (metric === undefined || metric.type === "proportion") return "";
+  if (metric.type === "mean") return i18n.t("results:units.perUser");
+  const denominator = metric.definition._tag === "event" ? metric.definition.denominator?.event : undefined;
+  return denominator === undefined ? "" : i18n.t("results:units.per", { unit: denominator });
 };
 
 /** "3 days", "1 day", "<1 day" between two dates */

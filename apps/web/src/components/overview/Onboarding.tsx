@@ -7,7 +7,7 @@ export interface OnboardingStep {
   readonly id: string;
   readonly title: string;
   readonly description: ReactNode;
-  /** Shown only while this is the next step to do */
+  /** Shown until the step is done, even before earlier steps (e.g. SDK setup before the first flag) */
   readonly body?: ReactNode;
   /** Rendered as the primary button on the next step, secondary on later ones */
   readonly action?: (variant: "primary" | "secondary") => ReactNode;
@@ -58,11 +58,14 @@ export function Onboarding({ steps }: { steps: ReadonlyArray<OnboardingStep> }) 
                   <h3 className={`text-body font-medium ${s.done ? "text-muted" : ""}`}>{s.title}</h3>
                   {!isNext && !s.done && s.action?.("secondary")}
                 </div>
-                <p className="max-w-[72ch] text-label text-muted">{s.description}</p>
-                {isNext && (s.body !== undefined || s.action !== undefined) && (
+                {/* Live: a step can complete while the page is open (the SDK step polls for its first event) */}
+                <p className="max-w-[72ch] text-label text-muted" aria-live="polite">
+                  {s.description}
+                </p>
+                {!s.done && (s.body !== undefined || (isNext && s.action !== undefined)) && (
                   <div className="mt-2 flex min-w-0 flex-col items-start gap-3">
                     {s.body}
-                    {s.action?.("primary")}
+                    {isNext && s.action?.("primary")}
                   </div>
                 )}
               </div>

@@ -20,11 +20,13 @@
       "action": "フラグを作成"
     },
     "sdk": {
-      "title": "SDK をインストール",
-      "doneDescription": "{{name}} で SDK トラフィックを受信しています。",
-      "description": "{{name}} の SDK キーを使って、アプリに @furca/sdk を追加します。SDK はペイロードを一度だけダウンロードしてフラグをローカルで評価するため、評価のたびにリクエストが発生することはありません。",
-      "copyInstall": "インストールコマンドをコピー",
-      "otherRuntimes": "Cloudflare Workers、Node などのランタイム"
+      "title": "SDK を接続",
+      "description": "下のコードをアプリに追加します（{{name}} の SDK キー入り）。SDK はフラグを一度だけダウンロードしてローカルで評価するため、評価のたびにリクエストが発生することはありません。",
+      "otherRuntimes": "Cloudflare Workers、Node などのランタイム",
+      "waiting": "{{name}} で SDK からの最初のデータを待っています…（5秒ごとに確認）",
+      "received": "{{name}} で SDK からのデータを受信しました。",
+      "receivedAt": "{{name}} で SDK からのデータを受信しました（<time/>）。",
+      "checkFailed": "受信状況を確認できませんでした。ページを再読み込みしてください。"
     },
     "metric": {
       "title": "イベントを送信して指標を定義",

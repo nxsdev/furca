@@ -49,12 +49,24 @@
     }
   },
   "create": {
-    "description": "Pick a key you'll reference in code, its type, and the value served when no rule matches.",
+    "description": "Create a flag your code checks. It starts off in every environment, so it's safe to deploy right away.",
     "created": "Created {{key}}",
     "enterKey": "Enter a key",
     "keyInvalid": "Use lowercase letters, digits, - and _ (max 64)",
     "keyHelp": "Lowercase, digits, - and _. Can't be changed later.",
-    "defaultValueHelp": "Served when the flag is on and no rule matches."
+    "defaultValueHelp": "Served when the flag is on and no rule matches.",
+    "breadcrumb": "New",
+    "name": "Name",
+    "nameHelp": "What the flag switches. Shown under the key in lists and on the flag page.",
+    "keyHintTyped": "Type the key your code will use, in lowercase letters and digits (e.g. new-checkout). It can't change later.",
+    "typeHelp": "Usually Boolean (on/off). Use string, number or JSON to serve different values to different users.",
+    "options": "Advanced (optional)",
+    "optionsWhy": "Fine as is. Change these to serve a different value when no rule matches, or to organize flags with tags.",
+    "defaultValueSummary": "Default value {{value}}",
+    "offEverywhere": "Off in every environment",
+    "noTags": "No tags",
+    "tagCount_one": "{{count}} tag",
+    "tagCount_other": "{{count}} tags"
   },
   "detail": {
     "notFoundTitle": "Flag not found",
@@ -106,9 +118,8 @@
   "environments": {
     "title": "Environments",
     "description": "When a flag is off, it's left out of that environment's payload and SDKs return the fallback you pass in code.",
-    "noRules": "No rules",
-    "ruleCount_one": "{{count}} rule",
-    "ruleCount_other": "{{count}} rules"
+    "unusedRules_one": "{{count}} rule is never used",
+    "unusedRules_other": "{{count}} rules are never used"
   },
   "defaultRow": {
     "saved": "Default value saved",
@@ -154,7 +165,10 @@
     },
     "ofMatchingUsers": "<pct>{{percent}}</pct> of matching users",
     "variations_one": "{{count}} variation",
-    "variations_other": "{{count}} variations"
+    "variations_other": "{{count}} variations",
+    "experimentLabel": "experiment {{name}}",
+    "everyoneGets": "everyone gets {{value}}",
+    "shadowed": "Never used: rule {{number}} above ({{label}}) already matches everyone"
   },
   "ruleEditor": {
     "who": "Who",
@@ -234,7 +248,12 @@
       "disabled": "<actor>{{actor}}</actor> turned the flag off",
       "archived": "<actor>{{actor}}</actor> archived the flag",
       "unarchived": "<actor>{{actor}}</actor> restored the flag",
-      "deleted": "<actor>{{actor}}</actor> deleted the flag"
+      "deleted": "<actor>{{actor}}</actor> deleted the flag",
+      "reviewRequested": "<actor>{{actor}}</actor> requested a review",
+      "reviewApproved": "<actor>{{actor}}</actor> approved a review",
+      "reviewSelfApproved": "<actor>{{actor}}</actor> approved their own request as the only admin",
+      "reviewRejected": "<actor>{{actor}}</actor> rejected a review",
+      "reviewCancelled": "<actor>{{actor}}</actor> cancelled a review request"
     },
     "loadError": "Could not load history. {{error}}",
     "emptyTitle": "No changes recorded",
@@ -273,6 +292,17 @@
     "turnedOff": "{{key}} is off in {{environment}}",
     "turnedOnDescription": "SDKs pick it up on their next payload fetch.",
     "turnedOffDescription": "SDKs now return the fallback from your code.",
-    "undo": "Undo"
-  }
+    "undo": "Undo",
+    "turnedOnServing": "{{serving}}. {{next}}"
+  },
+  "serving": {
+    "off": "SDKs return the fallback value in your code",
+    "everyone": "Everyone gets {{value}}",
+    "rules": "Users matching a rule get {{ruleValue}}, everyone else {{value}}",
+    "mixed": "Users matching a rule get that rule's value, everyone else {{value}}",
+    "withState": "{{state}} · {{serving}}",
+    "onlyFalseHint": "Everyone gets false. To serve true to some users, add a rule; to serve it to everyone, set the default value to true."
+  },
+  "concurrentExperiments_one": "{{count}} experiment on this flag is running in {{environment}} ({{names}}).",
+  "concurrentExperiments_other": "{{count}} experiments on this flag run at once in {{environment}} ({{names}}). Users enter a lower one only when the one above passes them over, so it gets fewer users than planned."
 }

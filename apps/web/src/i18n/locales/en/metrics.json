@@ -136,12 +136,11 @@
       "basics": "Basics",
       "measure": "What to measure",
       "window": "Conversion window",
-      "windowDescription": "Counted from each user's first exposure to the experiment. Shorter windows give faster, cleaner reads.",
-      "analysis": "Analysis"
+      "windowDescription": "An exposure is when a user is assigned a variation of the experiment. The window counts from each user's first exposure; shorter windows give faster, cleaner reads."
     },
     "name": {
       "label": "Name",
-      "placeholder": "Checkout conversion"
+      "help": "Shown in experiment results and lists."
     },
     "key": {
       "label": "Key",
@@ -150,7 +149,7 @@
     },
     "description": {
       "label": "Description",
-      "placeholder": "Optional. What this metric tells you and when to use it."
+      "help": "What this metric tells you and when to use it."
     },
     "type": {
       "label": "Type",
@@ -178,7 +177,8 @@
       "thisEnvironment": "this environment",
       "unavailable": "Event suggestions are unavailable right now. Type the event name you send with track().",
       "suggestions": "Suggestions are events received in {{environment}} over the last 30 days. You can also type a name that hasn't arrived yet.",
-      "none": "No events received in {{environment}} yet. Type the name you will send with furca.track(\"purchase\")."
+      "none": "No events received in {{environment}} yet. Type the name you will send with furca.track(\"purchase\").",
+      "received": "Received:"
     },
     "aggregation": {
       "label": "Aggregate",
@@ -205,7 +205,8 @@
       "percentileLabel": "Cap each user at percentile",
       "percentileSuffix": "th",
       "absoluteHelp": "In the metric's own unit, e.g. 50000 for revenue in cents.",
-      "percentileHelp": "Computed across all variations at each analysis. 99 is a good default."
+      "percentileHelp": "Computed across all variations at each analysis. 99 is a good default.",
+      "short": "Keeps one extreme user from swinging the average."
     },
     "errors": {
       "name": "Give the metric a name",
@@ -248,6 +249,43 @@
         "value": "Enter a value for every filter",
         "number": "Greater / less than compare numbers: enter a number"
       }
+    },
+    "templates": {
+      "label": "What do you want to measure?",
+      "conversion": {
+        "label": "Conversion rate",
+        "description": "Share of users who did it at least once (purchase, sign-up…)",
+        "name": "{{event}} conversion rate"
+      },
+      "revenue": {
+        "label": "Revenue per user",
+        "description": "Average per-user total of the amount sent with track(name, amount)",
+        "name": "Revenue per user ({{event}})"
+      },
+      "lowerIsBetter": {
+        "label": "Lower is better (e.g. load time)",
+        "description": "Average value per event sent with track(name, value). A decrease wins",
+        "name": "Average {{event}}"
+      },
+      "custom": {
+        "label": "Custom",
+        "description": "Choose the type and aggregation yourself",
+        "name": "{{event}}"
+      }
+    },
+    "advanced": {
+      "title": "Advanced (optional)",
+      "why": "Most metrics work as is. Change these to use warehouse SQL, a different window, cap outliers or count only some events.",
+      "window": "{{window}} after first exposure",
+      "windowNone": "No window",
+      "delay": " (from {{delay}})",
+      "capNone": "no cap",
+      "filtersNone": "no filters",
+      "filters_one": "{{count}} filter",
+      "filters_other": "{{count}} filters",
+      "filtersLabel": "Filter events",
+      "numFilters": "Filter numerator events",
+      "denFilters": "Filter denominator events"
     }
   }
 }

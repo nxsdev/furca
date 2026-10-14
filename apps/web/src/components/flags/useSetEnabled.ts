@@ -1,9 +1,11 @@
 import type { Environment } from "@furca/core/environments/Environment";
+import type { Experiment } from "@furca/core/experiments/Experiment";
 import type { Feature } from "@furca/core/features/Feature";
 import { toast } from "@heroui/react";
 import { type QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { client, errorMessage, orpc } from "~/lib/rpc";
+import { servesOnlyFalse, servingText } from "./serving";
 
 const withEnabled = (feature: Feature, environmentId: string, enabled: boolean): Feature => {
   const has = feature.environments.some((e) => e.environmentId === environmentId);
@@ -50,8 +52,20 @@ export function useSetEnabled() {
       void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
       if (isUndo === true) return;
       const vars = { key: feature.key, environment: environment.name };
+      // Say what SDKs now get: "on" alone hides that a false default still serves false to everyone
+      const experiments = new Map(
+        queryClient
+          .getQueriesData<ReadonlyArray<Experiment>>({ queryKey: orpc.experiments.list.key() })
+          .flatMap(([, list]) => list ?? [])
+          .map((x) => [x.id, x]),
+      );
+      const serving = servingText(saved, environment.id, experiments);
       const id = toast(enabled ? t("toggle.turnedOn", vars) : t("toggle.turnedOff", vars), {
-        description: enabled ? t("toggle.turnedOnDescription") : t("toggle.turnedOffDescription"),
+        description: !enabled
+          ? t("toggle.turnedOffDescription")
+          : servesOnlyFalse(saved, environment.id)
+            ? t("serving.onlyFalseHint")
+            : t("toggle.turnedOnServing", { serving, next: t("toggle.turnedOnDescription") }),
         actionProps: {
           children: t("toggle.undo"),
           variant: "tertiary",

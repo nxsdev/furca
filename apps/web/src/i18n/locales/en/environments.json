@@ -55,12 +55,15 @@
     "description": "Install the SDK, evaluate flags locally, and send events for metrics.",
     "environmentLabel": "Environment for the snippet",
     "environment": "Environment",
-    "install": "1. Install",
     "copyInstall": "Copy install command",
-    "connect": "2. Connect to {{name}}",
+    "connect": "Connect to {{name}}",
     "runtime": "Runtime",
-    "browser": "Browser",
-    "footer": "Exposures are sent automatically when a user is bucketed into an experiment. Events from <code>track()</code> land in the built-in event store and can be used by metrics right away."
+    "footer": "Exposures are sent automatically when a user is bucketed into an experiment. Events from <code>track()</code> land in the built-in event store and can be used by metrics right away.",
+    "analytics": {
+      "title": "Send to an analytics tool (optional)",
+      "summary": "Also send exposures to GA4 or similar, for warehouse analysis",
+      "help": "Only needed to analyze in a warehouse such as BigQuery. The parameter names match the GA4 exposure SQL template on the data source page."
+    }
   },
   "codeBlock": {
     "copy": "Copy code"
@@ -69,12 +72,14 @@
     "label": "{{events}} events and {{exposures}} exposures in the last 24 hours"
   },
   "review": {
-    "help": "Require review: flag on/off and rule changes in that environment wait in Reviews until another admin approves them.",
+    "help": "Require review: flag on/off and rule changes, and experiment starts, traffic changes and stops in that environment wait in Reviews until another admin approves them.",
     "switchLabel": "Require review in {{name}}",
     "required": "Required",
     "notRequired": "Off",
     "turnedOn": "{{name}} now requires review",
     "turnedOff": "{{name}} no longer requires review",
-    "failed": "Couldn't change review settings"
+    "failed": "Couldn't change review settings",
+    "soleAdmin": "You're the only admin who can approve reviews. Invite another admin so changes get a second pair of eyes; until then you can approve your own requests with a reason, which is kept in the audit log.",
+    "inviteAdmin": "Invite an admin"
   }
 }

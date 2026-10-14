@@ -63,7 +63,114 @@
   },
   "new": {
     "title": "New experiment",
-    "description": "Register the hypothesis and success metric before any data arrives. Nothing goes live until you start it."
+    "description": "Name it, pick the flag and the metric that decides. Everything else starts from sensible defaults you can adjust on the next page. Nothing goes live until you start it."
+  },
+  "create": {
+    "name": "Name",
+    "nameHelp": "What you're testing, in plain words. Shown in lists and results.",
+    "primaryHelp": "The metric that decides ship or roll back. Needed to start; you can also set it later.",
+    "note": "Creates a draft. Nothing changes for users until you start it, and every default can be changed on the next page.",
+    "submit": "Create draft",
+    "defaultsBoolean": "Defaults: control serves <code>{{control}}</code> and treatment <code>{{treatment}}</code>, split evenly across everyone in {{environments}}. All of it can be changed on the next page.",
+    "defaultsOther": "Defaults: control serves the flag's default <code>{{control}}</code>, split evenly with one treatment across everyone in {{environments}}. You set the treatment's value on the next page."
+  },
+  "newMetric": {
+    "open": "New metric",
+    "title": "New metric",
+    "description": "Counts an event your app already sends with track(). Filters, windows and capping can be refined on the metric's page later.",
+    "event": "Event",
+    "eventHelp": "The name sent with track(). Recent events are suggested.",
+    "eventHelpSum": "The name sent with track(name, value); values are summed per user.",
+    "eventHelpValue": "The name sent with track(name, value); values are averaged per event.",
+    "noEvents": "No events in the last 30 days. Type the name your app will send.",
+    "name": "Name",
+    "nameHelp": "Filled in from the event. The key follows the name.",
+    "create": "Create metric"
+  },
+  "draft": {
+    "sections": {
+      "hypothesis": "Hypothesis",
+      "variations": "Variations",
+      "targeting": "Who's in",
+      "metrics": "Metrics",
+      "plan": "Plan",
+      "advanced": "Advanced (optional)",
+      "advancedDescription": "The defaults suit most experiments. Change one only when its note applies.",
+      "breakdowns": "Breakdowns",
+      "namespace": "Mutual exclusion",
+      "stats": "Statistics"
+    },
+    "changeSection": "Change {{section}}",
+    "needsAttention": "Needs attention",
+    "variations": {
+      "control": "Control (baseline)",
+      "name": "Name",
+      "key": "Key",
+      "weight": "Weight"
+    },
+    "summary": {
+      "even": "(even split)",
+      "everyone": "Everyone",
+      "primary": "Primary: {{name}}",
+      "primaryMissing": "Primary: not set (needed to start)",
+      "noGuardrails": "no guardrails (adding one is recommended)",
+      "guardrails": "guardrails: {{names}}",
+      "secondary": "secondary: {{names}}",
+      "guardrailsHint": "A guardrail catches a treatment that wins on the primary but breaks something else.",
+      "noHypothesis": "Not written yet",
+      "hypothesisHint": "Writing down what you expect before the data arrives keeps the result from changing the question.",
+      "planUnset": "Not planned",
+      "planHint": "Estimates how long to run from the baseline and daily users, filled in from real data where possible.",
+      "mde": "detects a {{mde}} lift",
+      "perVariation": "{{n}} users per variation",
+      "days_one": "~{{count}} day",
+      "days_other": "~{{count}} days",
+      "holmOn": "Holm correction",
+      "holmOff": "no correction",
+      "breakdownsDefault": "Default: overall results only",
+      "breakdownsHint": "Set when you want results split by an attribute such as country or plan. Locks at start.",
+      "namespaceDefault": "Default: users can also be in other experiments",
+      "namespaceHint": "Set when another experiment changes the same screen at the same time, so nobody sees both.",
+      "statsDefault": "Default: {{settings}}",
+      "statsHint": "Fine for most experiments. Change only to follow a team policy (e.g. 99% confidence). Locks at start."
+    },
+    "help": {
+      "primary": "The single metric that decides ship or roll back, chosen before the data arrives so the decision can't be cherry-picked.",
+      "guardrail": "A metric that must not get worse, such as errors, latency or unsubscribes. A significant regression is flagged next to any winning result.",
+      "metrics": "The primary decides, guardrails protect, secondary metrics explain. Only the primary is required.",
+      "hashAttribute": "The user attribute hashed to pick a variation, usually the user id. Use a device or company id to keep a whole device or account in one variation.",
+      "plan": "Power analysis: how many users each variation needs to detect the minimum detectable effect (MDE) with 80% power. Smaller effects need more users.",
+      "namespace": "Experiments in the same namespace take separate slices of users, so nobody is in two of them at once."
+    },
+    "plan": {
+      "noPrimary": "Choose a primary metric to plan against.",
+      "loading": "Reading the last 28 days of data…",
+      "fromData_one": "Filled in from the last {{count}} day in {{environment}} ({{users}} users). Adjust if you expect different traffic.",
+      "fromData_other": "Filled in from the last {{count}} days in {{environment}} ({{users}} users). Adjust if you expect different traffic.",
+      "noData": "No events in {{environment}} yet; enter today's values.",
+      "warehouse": "Warehouse metrics aren't read automatically; enter today's values.",
+      "ratio": "Ratio metrics aren't read automatically; enter the mean and standard deviation.",
+      "long_one": "This plan needs about {{count}} day, more than 6 weeks.",
+      "long_other": "This plan needs about {{count}} days, more than 6 weeks.",
+      "longSuggest": "Long experiments drift with seasonality and returning users. Aim for a larger effect to finish sooner:",
+      "longNoSuggest": "Long experiments drift with seasonality and returning users. Raise the coverage or the MDE to finish sooner.",
+      "useMde": "{{mde}} MDE · {{weeks}} weeks"
+    },
+    "checks": {
+      "title": "Before you start",
+      "ready": "Ready to start",
+      "blocked": "To start, fix:",
+      "adviceTitle": "Recommended (never blocks starting)",
+      "adviceDone": "All done",
+      "primary": "Set a primary metric",
+      "sameValue": "A treatment serves the same value as control. Change it unless this is an A/A test",
+      "flagOff": "The flag is off in {{environments}}: nobody there is assigned",
+      "guardrail": "Add a guardrail metric to catch side effects",
+      "hypothesis": "Write down the hypothesis",
+      "plan": "Plan the sample size",
+      "longPlan_one": "The plan needs ~{{count}} day (over 6 weeks)",
+      "longPlan_other": "The plan needs ~{{count}} days (over 6 weeks)"
+    }
   },
   "detail": {
     "title": "Experiment",
@@ -78,8 +185,6 @@
       "archiveFailed": "Could not archive",
       "saved": "Draft saved"
     },
-    "editTitle": "Edit {{name}}",
-    "editDescription": "Drafts can change freely; nothing is live until you start.",
     "actions": {
       "deleteDraft": "Delete draft",
       "start": "Start",
@@ -103,7 +208,7 @@
       "body_other": "The experiment rule on <code>{{flag}}</code> goes live in {{count}} environments ({{environments}}). Matching users are assigned to {{variations}} from now on.",
       "locks": "Variations and statistics settings lock so the result can't be tuned after the fact.",
       "flagOff": "<code>{{flag}}</code> is off in {{environments}}: nobody there is assigned until you turn the flag on.",
-      "needsPrimary": "Set a primary metric first: Edit → Metrics. Starting without one is not allowed.",
+      "needsPrimary": "Set a primary metric first (Setup → Metrics). Starting without one is not allowed.",
       "confirm": "Start experiment"
     },
     "delete": {
@@ -118,8 +223,6 @@
       "treatmentN": "Treatment {{n}}"
     },
     "checks": {
-      "label": "Checklist",
-      "done": "Done",
       "required": "Required",
       "recommended": "Recommended",
       "name": "Name",
@@ -130,18 +233,12 @@
       "weights": "Weights total 100%",
       "targeting": "Targeting complete",
       "envs": "At least one environment",
-      "hash": "Hash attribute",
-      "primary": "Primary metric (needed to start)",
-      "plan": "Sample size planned"
+      "hash": "Hash attribute"
     },
     "hypothesis": {
-      "title": "Hypothesis",
-      "description": "What you change, what you expect, and why.",
       "name": "Name",
-      "namePlaceholder": "One-page checkout",
       "nameError": "Give the experiment a name.",
       "key": "Key",
-      "keyLocked": "Keys can't change after creation.",
       "keyHelp": "Sent with every exposure. Can't change later.",
       "keyError": "Use lowercase letters, digits, - and _.",
       "hypothesis": "Hypothesis",
@@ -149,19 +246,14 @@
       "hypothesisHelp": "Written before the data arrives, so the result can't change what you were testing."
     },
     "flag": {
-      "title": "Flag & variations",
-      "description": "The experiment takes over this flag's rule; each variation serves its own value.",
       "label": "Flag",
       "loading": "Loading flags…",
-      "search": "Search flags",
       "noMatch": "No flags match.",
       "noFlags": "No flags yet. <link>Create a flag</link> first; the experiment serves its values.",
       "error": "Choose the flag this experiment runs on.",
+      "help": "The experiment adds a rule to this flag and serves one of its values per variation.",
       "variations": "Variations",
       "evenSplit": "Even split",
-      "variationName": "Variation {{n}} name",
-      "variationKey": "Variation {{n}} key",
-      "variationWeight": "Variation {{n}} weight",
       "keyUsed": "Key already used",
       "keyFormat": "Lowercase letters, digits, - and _",
       "remove": "Remove {{name}}",
@@ -175,8 +267,6 @@
       "totalInvalid": "Total {{percent}}% · must be 100%"
     },
     "traffic": {
-      "title": "Targeting & traffic",
-      "description": "Who can enter, how many of them, and where the experiment runs.",
       "whoCanEnter": "Who can enter",
       "coverageHelp": "Share of matching users who enter; the rest get the flag's other rules. You can raise it later without restarting.",
       "environments": "Environments",
@@ -185,33 +275,28 @@
       "analyzeFrom": "Analyze exposures from",
       "analyzeHelp": "Usually production; other environments are for QA.",
       "assignBy": "Assign by attribute",
-      "assignByHelp": "Users with the same value always get the same variation.",
-      "flagOff": "<code>{{flag}}</code> is off in {{environments}}. Turn it on before starting, or nobody there is assigned."
+      "assignByHelp": "Users with the same value always get the same variation."
     },
     "metrics": {
-      "title": "Metrics",
-      "description": "Decide up front what counts as success, so the result can't be cherry-picked later.",
-      "newMetric": "New metric",
+      "newMetric": "Create on the metrics page",
       "primary": "Primary metric",
       "loading": "Loading metrics…",
-      "search": "Search metrics",
       "noMatch": "No metrics match.",
       "types": {
         "proportion": "conversion",
         "mean": "mean",
         "ratio": "ratio"
       },
-      "noMetrics": "No metrics yet. Create one in a new tab; this list refreshes when you come back.",
       "primaryHelp": "The one metric that decides ship or roll back. Required to start.",
+      "noMetricsInline": "No metrics yet. Create one below without leaving this page.",
+      "addPlaceholder": "Search by name or key",
+      "remove": "Remove {{name}}",
       "secondary": "Secondary metrics",
       "secondaryHelp": "Explain why the primary moved.",
       "guardrails": "Guardrails",
-      "guardrailsHelp": "Must not get worse, e.g. errors or latency.",
-      "noOthers": "No other metrics from this data source."
+      "guardrailsHelp": "Must not get worse, e.g. errors or latency."
     },
     "plan": {
-      "title": "Plan",
-      "description": "How many users you need to detect the effect you care about, and how long that takes.",
       "baselineRate": "Baseline conversion rate",
       "baselineRateHelp": "Today's rate of the primary metric.",
       "baselineRateOf": "Today's {{metric}}.",
@@ -235,13 +320,11 @@
       "assumptions": "80% power, fixed horizon. The planned total also tunes the sequential test."
     },
     "stats": {
-      "title": "Advanced: statistics",
       "bayesian": "Bayesian",
       "sequential": "Sequential frequentist",
       "fixed": "Fixed-horizon frequentist",
       "cupedOn": "CUPED on",
       "cupedOff": "CUPED off",
-      "lockedOnStart": "locked when the experiment starts",
       "engine": "Engine",
       "frequentist": "Frequentist",
       "frequentistHelp": "p-values and confidence intervals.",
@@ -256,28 +339,8 @@
       "confidence": "Confidence level",
       "confidenceHelp": "A higher level means fewer false wins but needs more users."
     },
-    "summary": {
-      "title": "Summary",
-      "untitled": "Untitled experiment",
-      "flag": "Flag",
-      "split": "Split",
-      "traffic": "Traffic",
-      "ofEveryone": "{{percent}} of everyone",
-      "ofMatching": "{{percent}} of matching users",
-      "runsIn": "Runs in",
-      "primary": "Primary",
-      "plan": "Plan",
-      "perVariation": "{{n}}/variation",
-      "days_one": "~{{count}} day",
-      "days_other": "~{{count}} days",
-      "save": "Save changes",
-      "create": "Create draft",
-      "editNote": "Still a draft: nothing is live until you start it.",
-      "createNote": "Drafts don't change what users see."
-    },
     "breakdowns": {
       "title": "Breakdowns",
-      "placeholder": "country, plan, platform",
       "suggested": "Used in targeting:",
       "description": "Attributes to split results by. The SDK sends their values with each exposure, so only users exposed after the experiment starts are covered. Choose them now: they lock once it starts.",
       "warehouse": "With a warehouse data source, the exposure SQL needs a column with the same name instead."

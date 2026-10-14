@@ -133,12 +133,11 @@
       "basics": "基本情報",
       "measure": "計測する内容",
       "window": "計測期間",
-      "windowDescription": "各ユーザーが実験に初めて露出した時点から数えます。期間を短くすると、結果が早く出てノイズも少なくなります。",
-      "analysis": "分析"
+      "windowDescription": "露出とは、ユーザーが実験のバリエーションに割り当てられた時点です。計測期間は各ユーザーの初回露出から数えます。短くすると結果が早く出て、ノイズも減ります。"
     },
     "name": {
       "label": "名前",
-      "placeholder": "購入完了率"
+      "help": "実験の結果や一覧に表示されます。"
     },
     "key": {
       "label": "キー",
@@ -147,7 +146,7 @@
     },
     "description": {
       "label": "説明",
-      "placeholder": "任意。この指標で何がわかるか、どんなときに使うかを記入します。"
+      "help": "この指標で何がわかるか、どんなときに使うか。"
     },
     "type": {
       "label": "種類",
@@ -175,7 +174,8 @@
       "thisEnvironment": "この環境",
       "unavailable": "イベントの候補を現在取得できません。track() で送信するイベント名を入力してください。",
       "suggestions": "候補は {{environment}} で過去30日間に受信したイベントです。まだ届いていないイベント名も入力できます。",
-      "none": "{{environment}} ではまだイベントを受信していません。furca.track(\"purchase\") で送信する予定のイベント名を入力してください。"
+      "none": "{{environment}} ではまだイベントを受信していません。furca.track(\"purchase\") で送信する予定のイベント名を入力してください。",
+      "received": "受信したイベント:"
     },
     "aggregation": {
       "label": "集計方法",
@@ -202,7 +202,8 @@
       "percentileLabel": "ユーザーごとの上限",
       "percentileSuffix": "パーセンタイル",
       "absoluteHelp": "指標と同じ単位で指定します（例：セント単位の売上なら 50000）。",
-      "percentileHelp": "分析のたびに全バリエーションを通して算出します。通常は 99 がおすすめです。"
+      "percentileHelp": "分析のたびに全バリエーションを通して算出します。通常は 99 がおすすめです。",
+      "short": "1人の極端なユーザーが平均を大きく動かすのを防ぎます。"
     },
     "errors": {
       "name": "指標の名前を入力してください",
@@ -244,6 +245,42 @@
         "value": "すべてのフィルターに値を入力してください",
         "number": "大小の比較は数値で行います。数値を入力してください"
       }
+    },
+    "templates": {
+      "label": "何を計測しますか？",
+      "conversion": {
+        "label": "購入率",
+        "description": "購入や登録などを1回以上行ったユーザーの割合",
+        "name": "{{event}} のコンバージョン率"
+      },
+      "revenue": {
+        "label": "ユーザーあたりの売上",
+        "description": "track(name, 金額) で送った金額の、ユーザーごとの合計の平均",
+        "name": "ユーザーあたりの売上（{{event}}）"
+      },
+      "lowerIsBetter": {
+        "label": "表示速度など低いほど良い値",
+        "description": "track(name, 値) で送った値の1回あたりの平均。下がると優勢と判定します",
+        "name": "{{event}} の平均値"
+      },
+      "custom": {
+        "label": "カスタム",
+        "description": "種類と集計方法を自分で選びます",
+        "name": "{{event}}"
+      }
+    },
+    "advanced": {
+      "title": "詳細設定（任意）",
+      "why": "ほとんどの指標はこのままで使えます。ウェアハウスの SQL を使う、計測期間を変える、外れ値を抑える、一部のイベントだけを数えるときに変更します。",
+      "window": "初回露出から{{window}}",
+      "windowNone": "期間なし",
+      "delay": "（{{delay}}後から）",
+      "capNone": "上限なし",
+      "filtersNone": "フィルタなし",
+      "filters_other": "フィルタ {{count}}件",
+      "filtersLabel": "イベントの絞り込み",
+      "numFilters": "分子のイベントの絞り込み",
+      "denFilters": "分母のイベントの絞り込み"
     }
   }
 }

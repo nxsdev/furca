@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, ChartLine, Code2, Flag, FlaskConical, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { DecisionBadge, StatusBadge } from "~/components/experiments/parts";
+import { StatusBadge } from "~/components/experiments/parts";
 import { formatCount, formatDuration, formatLift } from "~/components/results/format";
 import { headlineComparison, isHealthy, regressedGuardrails, verdictLabel, verdictStyle } from "~/components/results/verdict";
 import { Panel, PageHeader, QueryError } from "~/components/ui/primitives";
@@ -151,8 +151,9 @@ function Row({ experiment: x, flagKey, metricName }: { experiment: Experiment; f
 
   return (
     <tr className={tbl.tr}>
-      <td className={`${tbl.td} w-full max-w-0 sm:w-[30%]`}>
-        <Link to="/experiments/$experimentId" params={{ experimentId: x.id }} className={`${tbl.rowLink} block sm:truncate`}>
+      {/* min-w keeps the name readable when other cells are wide; max-w-0 lets it take the remaining width and truncate */}
+      <td className={`${tbl.td} w-full max-w-0 min-w-44 sm:w-[30%] lg:min-w-56`}>
+        <Link to="/experiments/$experimentId" params={{ experimentId: x.id }} className={`${tbl.rowLink} block sm:truncate`} title={x.name}>
           {x.name}
         </Link>
         <div className="mt-0.5 flex min-w-0 items-center gap-2 text-meta text-muted">
@@ -162,8 +163,10 @@ function Row({ experiment: x, flagKey, metricName }: { experiment: Experiment; f
           <span className="truncate font-mono">{x.key}</span>
         </div>
       </td>
-      <td className={`${tbl.td} hidden sm:table-cell`}>
+      <td className={`${tbl.td} hidden max-w-48 sm:table-cell`}>
         <StatusBadge status={x.status} />
+        {/* The decision sits under "Stopped" as plain text: as a badge in its own column it pushed the name column to ~60px */}
+        {x.status === "stopped" && x.decision !== null && <DecisionText experiment={x} />}
       </td>
       <td className={`${tbl.td} hidden max-w-40 truncate font-mono text-meta lg:table-cell`}>
         {flagKey === undefined ? <span className="text-muted">–</span> : flagKey}
@@ -179,10 +182,8 @@ function Row({ experiment: x, flagKey, metricName }: { experiment: Experiment; f
         )}
       </td>
       <td className={`${tbl.td} hidden whitespace-nowrap md:table-cell`}>
-        {x.status === "stopped" ? (
-          <DecisionBadge experiment={x} />
-        ) : x.status === "running" && x.startedAt !== null ? (
-          <span className="tabular">{formatDuration(x.startedAt, new Date())}</span>
+        {x.startedAt !== null ? (
+          <span className="tabular">{formatDuration(x.startedAt, x.stoppedAt ?? new Date())}</span>
         ) : (
           <span className="text-muted">–</span>
         )}
@@ -191,6 +192,24 @@ function Row({ experiment: x, flagKey, metricName }: { experiment: Experiment; f
         {users === null ? <span className="text-muted">–</span> : formatCount(users)}
       </td>
     </tr>
+  );
+}
+
+/** "Shipped Treatment" / "Rolled back" / "Inconclusive" as one truncating line */
+function DecisionText({ experiment: x }: { experiment: Experiment }) {
+  const { t } = useTranslation("experiments");
+  const d = x.decision;
+  if (d === null) return null;
+  const label =
+    d.outcome === "ship"
+      ? t("decision.shipped", { name: x.variations.find((v) => v.key === d.variationKey)?.name ?? d.variationKey ?? "" }).trim()
+      : d.outcome === "rollback"
+        ? t("decision.rolledBack")
+        : t("decision.inconclusive");
+  return (
+    <p className="mt-0.5 truncate text-meta text-muted" title={label}>
+      {label}
+    </p>
   );
 }
 

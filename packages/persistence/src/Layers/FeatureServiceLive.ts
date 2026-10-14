@@ -90,8 +90,9 @@ export const FeatureServiceLive = Layer.effect(
     /**
      * On/off and rules of an environment that requires approval change only through an approved
      * change request (ChangeRequestServiceLive). Not covered by reviews: edits that affect every
-     * environment at once (archive, delete, default value, description, tags) and rules that
-     * experiments add or replace when they are created, started or stopped
+     * environment at once (archive, delete, default value, description, tags) and the rule a draft
+     * experiment adds (it serves nobody). Starting, re-targeting and stopping experiments are
+     * reviewed in ExperimentServiceLive (requireNoReview)
      */
     const requireDirectEdit = (environmentId: string) =>
       database

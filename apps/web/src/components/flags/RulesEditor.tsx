@@ -3,13 +3,15 @@ import type { Experiment } from "@furca/core/experiments/Experiment";
 import type { FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
 import { Button, Dropdown, Input, Label, NumberField, Separator, Slider, TextField } from "@heroui/react";
 import { Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, Ellipsis, FlaskConical, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Ellipsis, FlaskConical, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { ruleNote } from "~/components/experiments/parts";
 import { withForm } from "~/components/form/form";
 import { ConditionBuilder, conditionIssue, useConditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { i18n } from "~/i18n";
 import { FlagSwitch } from "./FlagSwitch";
+import { shadowedRules, short } from "./serving";
 import { defaultValueFor, ValueInput, ValuePreview, valueIssue } from "./ValueInput";
 
 /** A rule as sent to features.saveRules (Effect Schema TaggedClass encoding) */
@@ -92,6 +94,14 @@ export const RulesList = withForm({
       <form.AppField name={`envs[${envIndex}].rules`}>
         {(field) => {
           const rules = field.state.value;
+          // Rules below one that already serves everyone never run: say so while editing, before saving
+          const blockers = shadowedRules(rules, experimentsById);
+          const ruleLabel = (rule: Rule) =>
+            rule._tag === "experiment"
+              ? t("rules.experimentLabel", { name: experimentsById.get(rule.experimentId)?.name ?? "…" })
+              : rule.description.trim() !== ""
+                ? rule.description.trim()
+                : t("rules.everyoneGets", { value: short(rule.value) });
           return (
             <ol aria-label={t("shared.rulesIn", { environment: environment.name })}>
               {rules.length === 0 && (
@@ -104,6 +114,7 @@ export const RulesList = withForm({
                 const matched = matchedRuleId === rule.id;
                 const issue = ruleIssue(rule, valueType);
                 const experiment = rule._tag === "experiment" ? experimentsById.get(rule.experimentId) : undefined;
+                const blocker = blockers[i] ?? null;
                 return (
                   <li
                     key={rule.id}
@@ -144,7 +155,7 @@ export const RulesList = withForm({
                           {matched && <span className="text-meta font-medium text-focus">{t("shared.matchesTestUser")}</span>}
                         </div>
                         {rule._tag !== "experiment" && rule.description !== "" && (
-                          <p className="mt-0.5 truncate text-meta text-muted">{rule.description}</p>
+                          <p className="mt-0.5 truncate text-meta text-muted">{ruleNote(rule.description)}</p>
                         )}
                         {rule._tag === "experiment" && experiment !== undefined && <ExperimentFacts experiment={experiment} />}
                         {rule._tag !== "experiment" && (
@@ -168,6 +179,12 @@ export const RulesList = withForm({
                           </div>
                         )}
                         {issue !== null && !editing && <p className="mt-1 text-meta text-danger">{issue}</p>}
+                        {blocker !== null && (
+                          <p className="mt-1 flex items-start gap-1.5 text-meta">
+                            <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-health" aria-hidden="true" />
+                            {t("rules.shadowed", { number: blocker + 1, label: ruleLabel(rules[blocker]!) })}
+                          </p>
+                        )}
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
                         <FlagSwitch

@@ -3,7 +3,7 @@ import { type EnvironmentListItem, Key } from "@furca/api/contract";
 import type { Environment } from "@furca/core/environments/Environment";
 import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileJson, KeyRound, MoreHorizontal, Plus, RotateCw, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { CopyButton, EmptyState, ListSkeleton, PageHeader, Panel, QueryError } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { useMembers } from "~/lib/members";
 import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
@@ -187,12 +188,17 @@ function RequireReviewSwitch({ env }: { env: Environment }) {
   const { t } = useTranslation("environments");
   const queryClient = useQueryClient();
   const { isAdmin } = usePermissions();
+  const { adminCount } = useMembers();
   const update = useMutation(
     orpc.environments.setRequireApproval.mutationOptions({
       onSuccess: (saved) => {
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast(saved.requireApproval ? t("review.turnedOn", { name: saved.name }) : t("review.turnedOff", { name: saved.name }));
+        if (saved.requireApproval && adminCount !== null && adminCount < 2) {
+          toast.warning(t("review.turnedOn", { name: saved.name }), { description: t("review.soleAdmin"), timeout: 0 });
+        } else {
+          toast(saved.requireApproval ? t("review.turnedOn", { name: saved.name }) : t("review.turnedOff", { name: saved.name }));
+        }
       },
       onError: (e) => toast.danger(t("review.failed"), { description: errorMessage(e) }),
     }),
@@ -281,6 +287,7 @@ function Page() {
   const { t } = useTranslation("environments");
   const queryClient = useQueryClient();
   const { isAdmin } = usePermissions();
+  const { adminCount } = useMembers();
   const list = useQuery(orpc.environments.list.queryOptions());
   const [creating, setCreating] = useState(false);
   const [payloadEnv, setPayloadEnv] = useState<Environment | null>(null);
@@ -370,6 +377,15 @@ function Page() {
               <ShieldCheck className="mt-px size-3.5 shrink-0" aria-hidden="true" />
               {t("review.help")}
             </p>
+            {isAdmin && adminCount !== null && adminCount < 2 && list.data.some((item) => item.environment.requireApproval) && (
+              <p className="flex flex-wrap items-start gap-x-2 gap-y-1 border-t border-border px-5 py-3 text-meta">
+                <TriangleAlert className="mt-px size-3.5 shrink-0 text-health" aria-hidden="true" />
+                <span className="min-w-0 flex-1">{t("review.soleAdmin")}</span>
+                <Link to="/settings" className="rounded-sm font-medium underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-focus">
+                  {t("review.inviteAdmin")}
+                </Link>
+              </p>
+            )}
           </Panel>
         )}
         <Quickstart />

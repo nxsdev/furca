@@ -1,3 +1,4 @@
+import { EventStatsService } from "@furca/core/analysis/Analysis";
 import { MetricService } from "@furca/core/metrics/MetricService";
 import { authed } from "../Runtime/orpc";
 
@@ -16,5 +17,11 @@ export const metricsRouter = {
   }),
   archive: authed.metrics.archive.effect(function* ({ context }, input) {
     return yield* (yield* MetricService).archive(input, context.user);
+  }),
+  baseline: authed.metrics.baseline.effect(function* (_opts, { metricId, environmentId, days }) {
+    const metric = yield* (yield* MetricService).get(metricId);
+    // Warehouse metrics keep manual input: querying a warehouse on every planner open costs money
+    if (metric.definition._tag !== "event" || metric.type === "ratio") return null;
+    return yield* (yield* EventStatsService).baseline(environmentId, { type: metric.type, source: metric.definition.numerator }, days);
   }),
 };

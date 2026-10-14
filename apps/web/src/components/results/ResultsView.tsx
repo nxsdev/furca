@@ -4,7 +4,8 @@ import type { Metric } from "@furca/core/metrics/Metric";
 import type { ExperimentHealth, MetricResult, ResultSnapshot } from "@furca/core/results/ExperimentResult";
 import { Button, Label, ListBox, Select, Skeleton, toast } from "@heroui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CircleCheck, CircleDashed, RefreshCw, ShieldAlert } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { AlertTriangle, CircleCheck, CircleDashed, Hourglass, RefreshCw, ShieldAlert } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { VariationSwatch, weightLabel } from "~/components/experiments/parts";
@@ -15,10 +16,11 @@ import { usePermissions } from "~/lib/permissions";
 import { i18n } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
 import { DimensionBreakdown } from "./DimensionBreakdown";
-import { formatCount, formatLift, formatList, formatPercent, pText } from "./format";
+import { assess, progressOf } from "./decision";
+import { formatCount, formatLift, formatList, formatPercent, formatPValue, pText } from "./format";
 import { LiftChart } from "./LiftChart";
 import { MetricsTable } from "./MetricsTable";
-import { headlineComparison, isHealthy, regressedGuardrails, verdictStyle } from "./verdict";
+import { effectText, isHealthy, progressText, verdictStyle, verdictText } from "./verdict";
 
 /** Results tab: verdict first, then health, then the evidence */
 export function ResultsView({ experiment, feature }: { experiment: Experiment; feature: Feature | undefined }) {
@@ -73,11 +75,10 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
     );
   }
 
-  const primary = snapshot.metrics.find((m) => m.role === "primary");
   return (
     <div className="flex flex-col gap-4">
       {refreshBar}
-      <VerdictBanner experiment={experiment} snapshot={snapshot} primary={primary} metrics={metrics} />
+      <VerdictBanner experiment={experiment} snapshot={snapshot} metrics={metrics} />
       {snapshot.health !== null && <HealthStrip experiment={experiment} health={snapshot.health} />}
       <Panel>
         <PanelHeader
@@ -168,7 +169,7 @@ const methodText = (experiment: Experiment, primaryComparisons: number, secondar
   return [...parts, s.cuped ? i18n.t("results:method.cuped") : null].filter((p) => p !== null).join(" · ");
 };
 
-function healthProblem(experiment: Experiment, health: ExperimentHealth): string {
+export function healthProblem(experiment: Experiment, health: ExperimentHealth): string {
   if (!health.srm.ok) {
     const total = health.srm.observed.reduce((a, b) => a + b, 0);
     const weightSum = health.srm.expectedWeights.reduce((a, b) => a + b, 0) || 1;
@@ -188,98 +189,73 @@ const multipleShare = (h: ExperimentHealth) =>
 function VerdictBanner({
   experiment,
   snapshot,
-  primary,
   metrics,
 }: {
   experiment: Experiment;
   snapshot: ResultSnapshot;
-  primary: MetricResult | undefined;
   metrics: ReadonlyMap<string, Metric>;
 }) {
   const { t } = useTranslation("results");
   const health = snapshot.health;
+  const a = assess(snapshot);
+  const primary = a.primary;
+  const comparison = a.comparison;
   const primaryComparisons = primary?.comparisons.length ?? 0;
   const secondaryComparisons = snapshot.metrics
     .filter((m) => m.role === "secondary")
     .reduce((n, m) => n + m.comparisons.length, 0);
-  const regressions = regressedGuardrails(snapshot.metrics);
-  const plannedTotal =
-    experiment.plan.sampleSizePerVariation === null ? null : experiment.plan.sampleSizePerVariation * experiment.variations.length;
-  const progress = plannedTotal === null || health === null ? null : health.totalUsers / plannedTotal;
+  const progress = progressOf(experiment, health?.totalUsers ?? 0, snapshot.computedAt, new Date());
+  const finished = experiment.status === "stopped" || (progress.fraction ?? 0) >= 1;
+  const { headline, guardrails } = verdictText(a, experiment, metrics, finished);
   const metricName = (primary === undefined ? undefined : metrics.get(primary.metricId)?.name) ?? t("banner.primaryFallback");
   const level = `${Math.round((1 - experiment.stats.alpha) * 100)}%`;
-
-  let tone: "win" | "lose" | "health" | "neutral" = "neutral";
-  let icon: ReactNode = <CircleDashed className="size-5" />;
-  let title: string;
-  let detail: ReactNode = null;
-
-  const comparison = primary === undefined ? null : headlineComparison(primary);
-  const name = experiment.variations.find((v) => v.key === comparison?.variationKey)?.name ?? t("banner.treatmentFallback");
   const control = experiment.variations[0]?.name ?? t("banner.controlFallback");
+  const bayesian = experiment.stats.engine === "bayesian";
+  // Under a day of data nothing is colored as a win or loss: it would invite an early call
+  const early = progress.early && a.kind !== "unhealthy" && a.kind !== "noData";
 
-  if (health !== null && !isHealthy(health)) {
-    tone = "health";
-    icon = <ShieldAlert className="size-5" />;
-    title = t("banner.untrustworthy");
-    detail = t("banner.untrustworthyDetail", { problem: healthProblem(experiment, health) });
-  } else if (primary === undefined || comparison === null) {
-    title = t("banner.noPrimary");
-    detail = primary?.error ?? t("banner.noPrimaryDetail");
-  } else if (primary.error !== null) {
-    tone = "lose";
-    icon = <AlertTriangle className="size-5" />;
-    title = t("banner.notAnalyzed", { metric: metricName });
-    detail = primary.error;
-  } else {
-    const lift = comparison.lift === null ? null : formatLift(comparison.lift);
-    const ci =
-      comparison.ci === null
-        ? null
-        : t(experiment.stats.engine === "bayesian" ? "banner.ciBayesian" : "banner.ciFrequentist", {
-            level,
-            lo: formatLift(comparison.ci[0]),
-            hi: formatLift(comparison.ci[1]),
-          });
-    const evidence =
-      experiment.stats.engine === "bayesian" && comparison.chanceToWin !== null
+  const tone: "win" | "lose" | "health" | "neutral" =
+    a.kind === "unhealthy"
+      ? "health"
+      : early
+        ? "neutral"
+        : a.kind === "winning"
+          ? a.regressions.length > 0
+            ? "health"
+            : "win"
+          : a.kind === "losing" || a.kind === "error"
+            ? "lose"
+            : "neutral";
+  const Icon =
+    a.kind === "unhealthy"
+      ? ShieldAlert
+      : a.kind === "error"
+        ? AlertTriangle
+        : a.kind === "winning" || a.kind === "losing"
+          ? verdictStyle[a.kind].icon
+          : CircleDashed;
+
+  const evidence =
+    comparison === null
+      ? null
+      : bayesian && comparison.chanceToWin !== null
         ? t("banner.chanceToBeat", { percent: formatPercent(comparison.chanceToWin), control })
-        : comparison.pValue !== null
-          ? pText(comparison.pValue)
+        : a.kind === "winning" || a.kind === "losing"
+          ? t("banner.significant", { alpha: formatPercent(experiment.stats.alpha, 0) })
           : null;
-    const figure = (
-      <>
-        <span className={`text-figure font-semibold tracking-tight tabular ${comparison.verdict === "winning" ? "text-win" : comparison.verdict === "losing" ? "text-lose" : ""}`}>
-          {lift ?? "–"}
-        </span>{" "}
-        <span className="text-body">{metricName}</span>
-        <span className="block text-label text-muted">{[ci, evidence].filter(Boolean).join(" · ")}</span>
-      </>
-    );
-    switch (comparison.verdict) {
-      case "winning":
-        // A guardrail regression turns a clear win into a trade-off the team has to weigh
-        tone = regressions.length > 0 ? "health" : "win";
-        icon = <verdictStyle.winning.icon className="size-5" />;
-        title = regressions.length > 0 ? t("banner.winningWithRegression", { name }) : t("banner.winning", { name });
-        detail = figure;
-        break;
-      case "losing":
-        tone = "lose";
-        icon = <verdictStyle.losing.icon className="size-5" />;
-        title = t("banner.losing", { name });
-        detail = figure;
-        break;
-      case "neutral":
-        title = progress !== null && progress >= 1 ? t("banner.noDifference") : t("banner.noDifferenceYet");
-        detail = figure;
-        break;
-      default:
-        title = t("banner.notEnoughData");
-        detail = comparison.message ?? t("banner.notEnoughDataDetail");
-    }
-  }
-
+  const detail =
+    a.kind === "unhealthy" && health !== null
+      ? t("banner.untrustworthyDetail", { problem: healthProblem(experiment, health) })
+      : a.kind === "noPrimary"
+        ? (primary?.error ?? t("banner.noPrimaryDetail"))
+        : a.kind === "error"
+          ? primary?.error
+          : a.kind === "inconclusive"
+            ? (comparison?.message ?? t("banner.notEnoughDataDetail"))
+            : a.kind === "neutral" && comparison !== null && comparison.lift !== null
+              ? // The point estimate stays small and grey: it is not a result
+                [t("banner.estimate", { effect: effectText(comparison) }), evidence].filter(Boolean).join(" ")
+              : evidence;
   const toneClass = {
     win: "border-win/40 [&_.verdict-icon]:text-win",
     lose: "border-lose/40 [&_.verdict-icon]:text-lose",
@@ -291,41 +267,63 @@ function VerdictBanner({
     <section aria-label={t("banner.label")} className={`rounded-[10px] border bg-surface ${toneClass}`}>
       <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 gap-3">
-          <span className="verdict-icon mt-0.5 shrink-0">{icon}</span>
+          <span className="verdict-icon mt-0.5 shrink-0">
+            <Icon className="size-5" />
+          </span>
           <div className="min-w-0">
-            <p className="text-meta text-muted">{t("banner.primaryMetric")}</p>
-            <h2 className="text-section font-semibold">{title}</h2>
-            {detail !== null && <div className="mt-1 text-body text-muted [&_.text-body]:text-foreground">{detail}</div>}
+            <p className="text-meta text-muted">
+              {t("banner.primaryMetric")} · {metricName}
+            </p>
+            {early && (
+              <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-meta font-medium">
+                <Hourglass className="size-3.5 text-muted" aria-hidden="true" />
+                {t("banner.early")}
+              </p>
+            )}
+            <h2 className="mt-1 text-section font-semibold text-balance [word-break:auto-phrase]">{headline}</h2>
+            {/* Regressions are listed with their numbers below the verdict */}
+            {guardrails !== null && a.regressions.length === 0 && (
+              <p className="mt-1 flex items-center gap-1.5 text-label text-muted">
+                <CircleCheck className="size-3.5 shrink-0" aria-hidden="true" />
+                {guardrails}
+              </p>
+            )}
+            {detail != null && detail !== "" && <p className="mt-1 text-label text-muted">{detail}</p>}
+            {early && <p className="mt-1 text-label text-muted">{t("banner.earlyDetail")}</p>}
           </div>
         </div>
         {health !== null && (
-          <div className="shrink-0 sm:w-52 sm:text-right">
+          <div className="shrink-0 sm:w-56 sm:text-right">
             <p className="text-body font-medium tabular">{t("users", { count: health.totalUsers, users: formatCount(health.totalUsers) })}</p>
-            {progress !== null && plannedTotal !== null ? (
-              <>
-                <div
-                  className="mt-1.5 h-1 overflow-hidden rounded-full bg-default"
-                  role="progressbar"
-                  aria-label={t("banner.progressLabel")}
-                  aria-valuenow={Math.round(Math.min(progress, 1) * 100)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div className="h-full rounded-full bg-foreground/70" style={{ width: `${Math.min(progress, 1) * 100}%` }} />
-                </div>
-                <p className="mt-1 text-meta text-muted">
-                  {t("banner.progress", { percent: formatPercent(progress, 0), total: formatCount(plannedTotal) })}
-                </p>
-              </>
-            ) : (
-              <p className="text-meta text-muted">{t("banner.noPlan")}</p>
+            {progress.fraction !== null && (
+              <div
+                className="mt-1.5 h-1 overflow-hidden rounded-full bg-default"
+                role="progressbar"
+                aria-label={t("banner.progressLabel")}
+                aria-valuenow={Math.round(Math.min(progress.fraction, 1) * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div className="h-full rounded-full bg-foreground/70" style={{ width: `${Math.min(progress.fraction, 1) * 100}%` }} />
+              </div>
+            )}
+            <p className="mt-1 text-meta text-muted tabular">{progressText(progress, experiment.status === "running")}</p>
+            {progress.fraction === null && experiment.status === "running" && (
+              <Link
+                to="/experiments/$experimentId"
+                params={{ experimentId: experiment.id }}
+                search={{ tab: "setup" }}
+                className="text-meta text-focus hover:underline"
+              >
+                {t("banner.noPlan")}
+              </Link>
             )}
           </div>
         )}
       </div>
-      {isHealthy(health) && regressions.length > 0 && (
+      {a.regressions.length > 0 && (
         <ul className="flex flex-col gap-1 border-t border-border px-5 py-3 text-label">
-          {regressions.map((m) => {
+          {a.regressions.map((m) => {
             const worst = m.comparisons.find((c) => c.verdict === "losing");
             const ci = worst?.ci ?? null;
             return (
@@ -345,7 +343,23 @@ function VerdictBanner({
           })}
         </ul>
       )}
-      <p className="border-t border-border px-5 py-2 text-meta text-muted">{methodText(experiment, primaryComparisons, secondaryComparisons)}</p>
+      {/* Raw statistics for whoever wants to check the work; the verdict above never needs them */}
+      <details className="group border-t border-border px-5 py-2 text-meta text-muted">
+        <summary className="w-fit cursor-pointer select-none rounded-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-focus">
+          {t("banner.details")}
+        </summary>
+        <p className="mt-1.5 tabular">
+          {[
+            comparison?.ci == null
+              ? null
+              : t(bayesian ? "banner.ciBayesian" : "banner.ciFrequentist", { level, lo: formatLift(comparison.ci[0]), hi: formatLift(comparison.ci[1]) }),
+            comparison?.pValue == null ? null : t("banner.pValue", { p: formatPValue(comparison.pValue) }),
+            methodText(experiment, primaryComparisons, secondaryComparisons),
+          ]
+            .filter((p) => p !== null)
+            .join(" · ")}
+        </p>
+      </details>
     </section>
   );
 }

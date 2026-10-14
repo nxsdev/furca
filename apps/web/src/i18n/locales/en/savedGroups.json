@@ -34,13 +34,11 @@
   "form": {
     "basics": "Basics",
     "name": "Name",
-    "namePlaceholder": "Beta testers",
     "key": "Key",
     "keyHelp": "Lowercase letters, digits, - and _. Can't be changed later",
     "keyLocked": "Keys can't change",
     "keyInvalid": "Use lowercase letters, digits, - and _ (max 64)",
     "description": "Description",
-    "descriptionPlaceholder": "Who is in this group and why",
     "members": "Members",
     "type": "Defined by",
     "typeList": "Users whose attribute is one of the IDs you paste",
@@ -59,7 +57,10 @@
     "conditionsRequired": "Add at least one condition",
     "save": "Save changes",
     "create": "Create saved group",
-    "liveNote": "Changes apply immediately to every flag and experiment that targets this group."
+    "liveNote": "Changes apply immediately to every flag and experiment that targets this group.",
+    "nameHelp": "Shown when picking the group in rules and experiments.",
+    "optional": "(optional)",
+    "descriptionHelp": "Who is in this group and why."
   },
   "detail": {
     "fallbackTitle": "Saved group",

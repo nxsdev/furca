@@ -298,13 +298,12 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
       onError: (e) => toast.danger(t("invitations.revokeFailed"), { description: errorMessage(e) }),
     }),
   );
-  const pending = invitations.filter((i) => i.id !== created?.id);
   return (
     <Panel>
       <PanelHeader title={t("invitations.title")} description={t("invitations.description")} />
       <InviteForm onCreated={setCreated} />
       {created !== null && <CreatedInvite invitation={created} onDismiss={() => setCreated(null)} />}
-      {pending.length === 0 ? (
+      {invitations.length === 0 ? (
         <p className="px-5 py-5 text-body text-muted">{t("invitations.empty")}</p>
       ) : (
         <div className="overflow-x-auto">
@@ -320,7 +319,7 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
               </tr>
             </thead>
             <tbody>
-              {pending.map((inv) => {
+              {invitations.map((inv) => {
                 const expired = new Date(inv.expiresAt).getTime() < Date.now();
                 const relative = { relative: <RelativeTime date={inv.expiresAt} /> };
                 return (

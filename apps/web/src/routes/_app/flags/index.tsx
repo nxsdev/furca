@@ -1,5 +1,5 @@
 import type { Feature, FeatureValueType } from "@furca/core/features/Feature";
-import { Button, Checkbox, ListBox, SearchField, Select } from "@heroui/react";
+import { Breadcrumbs, Button, Checkbox, ListBox, SearchField, Select } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Flag, FlaskConical, Plus, ShieldCheck } from "lucide-react";
@@ -8,6 +8,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { CodeBlock } from "~/components/flags/CodeBlock";
 import { CreateFlagForm, valueTypes } from "~/components/flags/CreateFlagForm";
 import { FlagSwitch } from "~/components/flags/FlagSwitch";
+import { stateAndServing } from "~/components/flags/serving";
 import { useSetEnabled } from "~/components/flags/useSetEnabled";
 import { environmentHue } from "~/components/shell/Sidebar";
 import { CopyButton, EmptyState, ListSkeleton, PageHeader, Panel, QueryError, RelativeTime } from "~/components/ui/primitives";
@@ -65,6 +66,26 @@ function FlagsPage() {
   const filtering = q !== "" || type !== "all";
   const isEmpty = features.data !== undefined && features.data.length === 0 && !showArchived;
 
+  // Creating is its own page, like metrics and saved groups
+  if (creating)
+    return (
+      <>
+        <PageHeader
+          breadcrumb={
+            <Breadcrumbs className="mb-1 text-label">
+              <Breadcrumbs.Item href="/flags">{t("shared.flags")}</Breadcrumbs.Item>
+              <Breadcrumbs.Item>{t("create.breadcrumb")}</Breadcrumbs.Item>
+            </Breadcrumbs>
+          }
+          title={t("shared.createFlag")}
+          description={t("create.description")}
+        />
+        <div className="max-w-3xl">
+          <CreateFlagForm onCancel={() => setCreating(false)} />
+        </div>
+      </>
+    );
+
   return (
     <>
       <PageHeader
@@ -72,7 +93,6 @@ function FlagsPage() {
         description={t("list.description")}
         actions={
           canEdit &&
-          !creating &&
           !isEmpty && (
             <Button size="sm" onPress={() => setCreating(true)}>
               <Plus className="size-4" />
@@ -81,11 +101,10 @@ function FlagsPage() {
           )
         }
       />
-      {creating && <CreateFlagForm onCancel={() => setCreating(false)} />}
 
       {features.error !== null ? (
         <QueryError message={t("list.loadError", { error: errorMessage(features.error) })} onRetry={() => features.refetch()} />
-      ) : isEmpty && !creating ? (
+      ) : isEmpty ? (
         <EmptyState
           icon={<Flag />}
           title={t("list.emptyTitle")}
@@ -104,7 +123,7 @@ function FlagsPage() {
             </div>
           }
         />
-      ) : isEmpty ? null : (
+      ) : (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <SearchField aria-label={t("list.search")} value={query} onChange={setQuery} className="w-full sm:w-72">
@@ -199,6 +218,8 @@ function FlagsTable({
   const navigate = useNavigate();
   const setEnabled = useSetEnabled();
   const { canEdit } = usePermissions();
+  const experiments = useQuery({ ...orpc.experiments.list.queryOptions({ input: { includeArchived: false } }), retry: false });
+  const experimentsById = useMemo(() => new Map((experiments.data ?? []).map((x) => [x.id, x])), [experiments.data]);
   const current = environments.find((e) => e.id === currentEnvironmentId);
   const openRow = (e: MouseEvent, id: string) => {
     if ((e.target as HTMLElement).closest("a,button,input,label,[role=switch]")) return;
@@ -290,6 +311,7 @@ function FlagsTable({
                     <td key={env.id} className={`${td} ${env.id === currentEnvironmentId ? "" : "hidden sm:table-cell"}`}>
                       <FlagSwitch
                         aria-label={t("shared.switchLabel", { key: f.key, environment: env.name })}
+                        description={stateAndServing(f, env.id, experimentsById)}
                         isSelected={enabled}
                         isDisabled={f.archived || !canEdit || env.requireApproval}
                         onChange={(next) => setEnabled.mutate({ feature: f, environment: env, enabled: next })}

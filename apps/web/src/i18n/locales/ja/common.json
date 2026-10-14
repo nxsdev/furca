@@ -16,7 +16,8 @@
     "restore": "元に戻す",
     "learnMore": "詳しく見る",
     "showMore": "もっと見る",
-    "loadOlder": "さらに読み込む"
+    "loadOlder": "さらに読み込む",
+    "change": "変更"
   },
   "states": {
     "loading": "読み込み中",
@@ -34,6 +35,11 @@
     "required": "入力してください",
     "minLength_other": "{{count}}文字以上で入力してください",
     "email": "有効なメールアドレスを入力してください",
-    "invalid": "値を確認してください"
+    "invalid": "値を確認してください",
+    "keyFromName": "名前から作成されます",
+    "changeLabel": "{{label}}を変更"
+  },
+  "help": {
+    "about": "{{term}}とは"
   }
 }

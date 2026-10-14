@@ -1,11 +1,12 @@
-import type { ChangeRequest } from "@furca/core/approvals/ChangeRequest";
+import { type ChangeRequest, type ExperimentChange, isExperimentChange } from "@furca/core/approvals/ChangeRequest";
 import type { Environment } from "@furca/core/environments/Environment";
+import { type Experiment, trafficChangeNeedsNewPhase } from "@furca/core/experiments/Experiment";
 import type { FeatureValueType } from "@furca/core/features/Feature";
 import { Button, toast } from "@heroui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import type { Rule } from "~/components/flags/RulesEditor";
 import { ValuePreview } from "~/components/flags/ValueInput";
@@ -13,6 +14,7 @@ import { submitHandler, setServerError, useAppForm } from "~/components/form/for
 import { environmentHue } from "~/components/shell/Sidebar";
 import { useConditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { RelativeTime } from "~/components/ui/primitives";
+import { MemberName, useMembers } from "~/lib/members";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 import { usePermissions } from "~/lib/permissions";
 import { type DiffKind, ruleDiff } from "./ruleDiff";
@@ -52,9 +54,18 @@ const kindStyle: Record<DiffKind, string> = {
 };
 
 /** What approving changes: on/off, or the rules with each one marked new / changed / moved / removed */
-export function ChangeDiff({ request, valueType }: { request: ChangeRequest; valueType: FeatureValueType }) {
+export function ChangeDiff({
+  request,
+  valueType,
+  experiment,
+}: {
+  request: ChangeRequest;
+  valueType: FeatureValueType;
+  experiment?: Experiment | undefined;
+}) {
   const { t } = useTranslation("reviews");
   const { change, base } = request;
+  if (isExperimentChange(change)) return <ExperimentChangeDiff change={change} experiment={experiment} request={request} valueType={valueType} />;
   if (change.type === "toggle") {
     return (
       <p className="flex items-center gap-2 text-label">
@@ -93,18 +104,119 @@ export function ChangeDiff({ request, valueType }: { request: ChangeRequest; val
   );
 }
 
+const weightsText = (weights: ReadonlyArray<number>) => weights.map(pct).join(" / ");
+
+/** One line of what an experiment request does, e.g. "Stop Checkout redesign and ship Treatment" */
+const useExperimentWhat = () => {
+  const { t } = useTranslation("reviews");
+  return (change: ExperimentChange, experiment: Experiment | undefined) => {
+    const name = experiment?.name ?? "…";
+    switch (change.type) {
+      case "experiment.start":
+        return t("experiment.start", { name });
+      case "experiment.traffic":
+        return t("experiment.traffic", { name });
+      case "experiment.stop":
+        return change.outcome === "ship"
+          ? t("experiment.ship", { name, variation: experiment?.variations.find((v) => v.key === change.variationKey)?.name ?? change.variationKey ?? "" })
+          : t(`experiment.${change.outcome}`, { name });
+    }
+  };
+};
+
+/** What approving an experiment request does to traffic or to what the flag serves */
+function ExperimentChangeDiff({
+  change,
+  experiment,
+  request,
+  valueType,
+}: {
+  change: ExperimentChange;
+  experiment: Experiment | undefined;
+  request: ChangeRequest;
+  valueType: FeatureValueType;
+}) {
+  const { t } = useTranslation("reviews");
+  if (experiment === undefined) return <p className="text-label text-muted">…</p>;
+  const reason = change.type === "experiment.start" ? "" : change.reason.trim();
+  const arrow = (from: string, to: string) => (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="font-mono tabular text-muted">{from}</span>
+      <ArrowRight className="size-3.5 text-muted" aria-label={t("change.becomes")} />
+      <span className="font-mono tabular font-medium">{to}</span>
+    </span>
+  );
+  const lines: Array<ReactNode> = [];
+  switch (change.type) {
+    case "experiment.start":
+      lines.push(
+        t("experiment.startDetail", {
+          coverage: pct(experiment.coverage),
+          variations: experiment.variations.map((v) => v.name).join(" / "),
+          weights: weightsText(experiment.weights),
+        }),
+      );
+      break;
+    case "experiment.traffic":
+      if (change.coverage !== experiment.coverage) lines.push(<>{t("experiment.coverage")} {arrow(pct(experiment.coverage), pct(change.coverage))}</>);
+      if (weightsText(change.weights) !== weightsText(experiment.weights)) {
+        lines.push(<>{t("experiment.weights")} {arrow(weightsText(experiment.weights), weightsText(change.weights))}</>);
+      }
+      if (JSON.stringify(change.conditions) !== JSON.stringify(experiment.conditions)) lines.push(t("experiment.conditionsChanged"));
+      if (trafficChangeNeedsNewPhase(experiment, change)) lines.push(t("experiment.newPhase"));
+      break;
+    case "experiment.stop": {
+      const variation = experiment.variations.find((v) => v.key === change.variationKey);
+      lines.push(
+        change.outcome === "ship" && variation !== undefined ? (
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            <Trans t={t} i18nKey="experiment.shipDetail" components={{ value: <ValuePreview valueType={valueType} value={variation.value} /> }} />
+          </span>
+        ) : (
+          t("experiment.removeDetail")
+        ),
+      );
+      break;
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1 text-label">
+      {lines.map((line, i) => (
+        <p key={i} className="flex flex-wrap items-center gap-x-1.5">
+          {line}
+        </p>
+      ))}
+      {reason !== "" && <p className="max-w-[72ch] text-muted">{t("experiment.reason", { reason })}</p>}
+      {experiment.updatedAt.getTime() > request.createdAt.getTime() && request.status === "open" && (
+        <p className="text-meta text-danger">{t("experiment.stale")}</p>
+      )}
+      <Link
+        to="/experiments/$experimentId"
+        params={{ experimentId: experiment.id }}
+        className="w-fit rounded-sm text-meta text-muted underline decoration-border underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+      >
+        {t("experiment.open")}
+      </Link>
+    </div>
+  );
+}
+
 /** Approve / Reject (admins, not the author) with an optional comment; Cancel for the author or an admin */
 function ReviewActions({ request }: { request: ChangeRequest }) {
   const { t } = useTranslation(["reviews", "common"]);
   const queryClient = useQueryClient();
   const { me, isAdmin } = usePermissions();
+  const { adminCount } = useMembers();
   const [mode, setMode] = useState<"approve" | "reject" | null>(null);
   const isAuthor = me?.id === request.authorId;
+  // With nobody else to ask, the only admin may approve their own request, saying why (audited)
+  const selfApproval = isAdmin && isAuthor && adminCount === 1;
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
     void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
     void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
     void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+    void queryClient.invalidateQueries({ queryKey: orpc.experiments.key() });
   };
   const form = useAppForm({
     defaultValues: { comment: "" },
@@ -137,15 +249,27 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
   if (mode !== null) {
     return (
       <form noValidate onSubmit={submitHandler(form)} className="flex flex-col gap-2 pt-1">
-        <form.AppField name="comment">
-          {(field) => <field.TextAreaField label={t("actions.commentLabel")} placeholder={t("actions.commentPlaceholder")} rows={2} className="max-w-lg" />}
+        <form.AppField
+          name="comment"
+          validators={{ onSubmit: ({ value }) => (selfApproval && mode === "approve" && value.trim() === "" ? t("actions.reasonRequired") : undefined) }}
+        >
+          {(field) =>
+            selfApproval && mode === "approve" ? (
+              <field.TextAreaField label={t("actions.reasonLabel")} placeholder={t("actions.reasonPlaceholder")} rows={2} className="max-w-lg" />
+            ) : (
+              <field.TextAreaField label={t("actions.commentLabel")} placeholder={t("actions.commentPlaceholder")} rows={2} className="max-w-lg" />
+            )
+          }
         </form.AppField>
         <form.AppForm>
           <form.FormError />
         </form.AppForm>
         <div className="flex gap-2">
           <form.AppForm>
-            <form.SubmitButton size="sm" label={mode === "approve" ? t("actions.confirmApprove") : t("actions.confirmReject")} />
+            <form.SubmitButton
+              size="sm"
+              label={mode === "approve" ? (selfApproval ? t("actions.confirmSelfApprove") : t("actions.confirmApprove")) : t("actions.confirmReject")}
+            />
           </form.AppForm>
           <Button size="sm" variant="tertiary" onPress={() => setMode(null)}>
             {t("common:actions.back")}
@@ -157,9 +281,9 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
   if (!isAdmin && !isAuthor) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 pt-1">
-      {isAdmin && !isAuthor && (
-        <Button size="sm" onPress={() => { form.reset(); setMode("approve"); }}>
-          {t("actions.approve")}
+      {isAdmin && (!isAuthor || selfApproval) && (
+        <Button size="sm" variant={selfApproval ? "outline" : "primary"} onPress={() => { form.reset(); setMode("approve"); }}>
+          {selfApproval ? t("actions.selfApprove") : t("actions.approve")}
         </Button>
       )}
       {isAdmin && !isAuthor && (
@@ -170,7 +294,7 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
       <Button size="sm" variant="ghost" className="text-muted" isPending={cancel.isPending} onPress={() => cancel.mutate()}>
         {t("actions.cancel")}
       </Button>
-      {isAuthor && <span className="text-meta text-muted">{t("actions.waitingForAdmin")}</span>}
+      {isAuthor && <span className="text-meta text-muted">{selfApproval ? t("actions.onlyAdmin") : t("actions.waitingForAdmin")}</span>}
     </div>
   );
 }
@@ -188,8 +312,19 @@ export function ChangeRequestItem({
   showFlag?: boolean;
 }) {
   const { t } = useTranslation("reviews");
-  const what =
-    request.change.type === "rules" ? t("change.rules") : request.change.enabled ? t("change.turnOn") : t("change.turnOff");
+  const experimentWhat = useExperimentWhat();
+  const change = request.change;
+  const experiment = useQuery({
+    ...orpc.experiments.get.queryOptions({ input: { id: isExperimentChange(change) ? change.experimentId : "" } }),
+    enabled: isExperimentChange(change),
+  }).data;
+  const what = isExperimentChange(change)
+    ? experimentWhat(change, experiment)
+    : change.type === "toggle"
+      ? change.enabled
+        ? t("change.turnOn")
+        : t("change.turnOff")
+      : t("change.rules");
   return (
     <article className="flex flex-col gap-2 px-4 py-4 sm:px-5">
       <header className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-label">
@@ -210,10 +345,14 @@ export function ChangeRequestItem({
         <span>{what}</span>
       </header>
       <p className="text-meta text-muted">
-        <Trans t={t} i18nKey="item.requestedBy" values={{ email: request.authorEmail }} components={{ relative: <RelativeTime date={request.createdAt} /> }} />
+        <Trans
+          t={t}
+          i18nKey="item.requestedBy"
+          components={{ author: <MemberName email={request.authorEmail} className="text-foreground" />, relative: <RelativeTime date={request.createdAt} /> }}
+        />
       </p>
       {request.comment !== "" && <p className="max-w-[72ch] border-l-2 border-border pl-2.5 text-label whitespace-pre-wrap">{request.comment}</p>}
-      <ChangeDiff request={request} valueType={valueType} />
+      <ChangeDiff request={request} valueType={valueType} experiment={experiment} />
       <ReviewActions request={request} />
     </article>
   );

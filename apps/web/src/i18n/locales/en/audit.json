@@ -59,7 +59,8 @@
       "rejected": "rejected review",
       "cancelled": "cancelled review",
       "required": "turned on Require review",
-      "notRequired": "turned off Require review"
+      "notRequired": "turned off Require review",
+      "selfApproved": "approved own request (only admin)"
     }
   },
   "list": {

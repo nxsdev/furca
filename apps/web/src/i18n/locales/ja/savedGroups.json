@@ -31,13 +31,11 @@
   "form": {
     "basics": "基本情報",
     "name": "名前",
-    "namePlaceholder": "ベータテスター",
     "key": "キー",
     "keyHelp": "小文字の英字、数字、- と _。あとから変更できません",
     "keyLocked": "キーは変更できません",
     "keyInvalid": "小文字の英字、数字、- と _ を使ってください（最大64文字）",
     "description": "説明",
-    "descriptionPlaceholder": "このグループに含まれる人とその理由",
     "members": "メンバー",
     "type": "定義方法",
     "typeList": "属性が貼り付けた ID のいずれかに一致するユーザー",
@@ -54,7 +52,10 @@
     "conditionsRequired": "条件を1つ以上追加してください",
     "save": "変更を保存",
     "create": "保存済みグループを作成",
-    "liveNote": "変更は、このグループを対象にしているすべてのフラグと実験にすぐ反映されます。"
+    "liveNote": "変更は、このグループを対象にしているすべてのフラグと実験にすぐ反映されます。",
+    "nameHelp": "ルールや実験でグループを選ぶときに表示されます。",
+    "optional": "（任意）",
+    "descriptionHelp": "このグループに含まれる人とその理由。"
   },
   "detail": {
     "fallbackTitle": "保存済みグループ",

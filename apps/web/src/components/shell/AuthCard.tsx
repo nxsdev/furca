@@ -12,6 +12,8 @@ export interface AuthField {
   readonly defaultValue?: string;
   readonly isReadOnly?: boolean;
   readonly minLength?: number;
+  /** Shown under the field from the start, e.g. the password rule */
+  readonly description?: string;
 }
 
 /** Centered sign-in / sign-up card used by /login and /invite */
@@ -65,6 +67,7 @@ export function AuthCard({
                   type={f.type ?? "text"}
                   autoComplete={f.autoComplete}
                   isReadOnly={f.isReadOnly}
+                  description={f.description}
                 />
               )}
             </form.AppField>

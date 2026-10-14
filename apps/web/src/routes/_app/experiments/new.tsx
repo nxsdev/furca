@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { ExperimentForm } from "~/components/experiments/ExperimentForm";
+import { CreateExperimentForm } from "~/components/experiments/ExperimentForm";
 import { PageHeader } from "~/components/ui/primitives";
 import { i18n } from "~/i18n";
 
@@ -26,9 +26,9 @@ function Page() {
         title={t("new.title")}
         description={t("new.description")}
       />
-      <ExperimentForm
+      <CreateExperimentForm
         initialFeatureId={featureId ?? null}
-        onSaved={(x) => navigate({ to: "/experiments/$experimentId", params: { experimentId: x.id } })}
+        onCreated={(x) => navigate({ to: "/experiments/$experimentId", params: { experimentId: x.id } })}
         onCancel={() => navigate({ to: "/experiments" })}
       />
     </>

@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ChangeRequestItem } from "~/components/reviews/ChangeRequestItem";
 import { EmptyState, ListSkeleton, PageHeader, Panel, QueryError } from "~/components/ui/primitives";
-import { i18n } from "~/i18n";
+import { i18n, intlLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
@@ -19,6 +19,7 @@ function Page() {
   const features = useQuery(orpc.features.list.queryOptions({ input: { includeArchived: true } }));
   const { environments } = useEnvironment();
   const valueType = (featureId: string) => features.data?.find((f) => f.id === featureId)?.valueType ?? "json";
+  const reviewed = environments.filter((e) => e.requireApproval).map((e) => e.name);
   return (
     <>
       <PageHeader title={t("page.title")} description={t("page.description")} />
@@ -32,11 +33,17 @@ function Page() {
         <EmptyState
           icon={<ShieldCheck />}
           title={t("page.emptyTitle")}
-          description={t("page.emptyDescription")}
+          description={
+            reviewed.length === 0
+              ? t("page.emptyDescription")
+              : t("page.emptyDescriptionOn", { environments: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(reviewed) })
+          }
           action={
-            <Link to="/environments" className="button button--sm button--outline">
-              {t("page.emptyAction")}
-            </Link>
+            reviewed.length === 0 && (
+              <Link to="/environments" className="button button--sm button--outline">
+                {t("page.emptyAction")}
+              </Link>
+            )
           }
         />
       ) : (

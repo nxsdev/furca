@@ -27,7 +27,7 @@ import {
 } from "@heroui/react";
 import { type AnyFieldApi, type AnyFormApi, createFormHook, createFormHookContexts } from "@tanstack/react-form";
 import { Schema } from "effect";
-import { type FormEvent, type ReactNode, useEffect } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { i18n } from "~/i18n";
 import { errorMessage } from "~/lib/rpc";
@@ -108,6 +108,68 @@ function TextField({
     >
       <Label>{label}</Label>
       <Input placeholder={placeholder} className={mono ? "font-mono" : undefined} />
+      {description !== undefined && <Description>{description}</Description>}
+      <FieldError>{error}</FieldError>
+    </HeroTextField>
+  );
+}
+
+/**
+ * A key that follows the name: one line ("Key: checkout · Change") until the user opens it, types
+ * in it or it has an error; the full field after that. `expanded` opens it from the start, e.g.
+ * when the name has no ASCII spelling and the user has to type the key
+ */
+function KeyField({
+  label,
+  description,
+  placeholder,
+  isReadOnly,
+  expanded = false,
+  format,
+  className,
+}: CommonProps & {
+  readonly label: string;
+  readonly placeholder?: string;
+  readonly expanded?: boolean;
+  /** Applied while typing, e.g. lowercasing */
+  readonly format?: (value: string) => string;
+}) {
+  const field = useFieldContext<string>();
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  useRevalidateOnLanguageChange(field);
+  const error = visibleError(field);
+  if (!open && !expanded && !isReadOnly && !field.state.meta.isDirty && error === null)
+    return (
+      <p className={`min-w-0 text-label text-muted ${className ?? ""}`}>
+        {label}:{" "}
+        {field.state.value === "" ? t("form.keyFromName") : <code className="font-mono break-all text-foreground">{field.state.value}</code>}
+        <span aria-hidden="true"> · </span>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label={t("form.changeLabel", { label })}
+          className="rounded-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          {t("actions.change")}
+        </button>
+      </p>
+    );
+  return (
+    <HeroTextField
+      name={field.name}
+      value={field.state.value}
+      onChange={(v) => field.handleChange(format === undefined ? v : format(v))}
+      onBlur={field.handleBlur}
+      isInvalid={error !== null}
+      isReadOnly={isReadOnly}
+      validationBehavior="aria"
+      // Moves focus from the "Change" button that was just replaced by this field
+      autoFocus={open}
+      className={className}
+    >
+      <Label>{label}</Label>
+      <Input placeholder={placeholder} spellCheck={false} autoComplete="off" className="font-mono" />
       {description !== undefined && <Description>{description}</Description>}
       <FieldError>{error}</FieldError>
     </HeroTextField>
@@ -319,7 +381,7 @@ function FormError({ className = "" }: { readonly className?: string }) {
 export const { useAppForm, withForm } = createFormHook({
   fieldContext,
   formContext,
-  fieldComponents: { TextField, TextAreaField, NumberField, SelectField, SwitchField },
+  fieldComponents: { TextField, KeyField, TextAreaField, NumberField, SelectField, SwitchField },
   formComponents: { SubmitButton, FormError },
 });
 

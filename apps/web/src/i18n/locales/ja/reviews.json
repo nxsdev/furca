@@ -2,17 +2,18 @@
   "pageTitle": "レビュー · furca",
   "page": {
     "title": "レビュー",
-    "description": "レビュー必須の環境で、管理者の承認を待っているフラグの変更です。新しい順に表示します。",
+    "description": "レビュー必須の環境で、管理者の承認を待っているフラグと実験の変更です。新しい順に表示します。",
     "loadFailed": "レビューを読み込めませんでした。{{message}}",
     "emptyTitle": "レビュー待ちの変更はありません",
-    "emptyDescription": "本番などの環境で「レビュー必須」をオンにすると、その環境でのフラグの変更は、別の管理者が承認するまでここで待機します。",
-    "emptyAction": "SDK と環境を開く"
+    "emptyDescription": "本番などの環境で「レビュー必須」をオンにすると、その環境でのフラグの変更と、実験の開始・トラフィック変更・停止は、別の管理者が承認するまでここで待機します。",
+    "emptyAction": "SDK と環境を開く",
+    "emptyDescriptionOn": "{{environments}} での変更は、別の管理者が承認するまでここで待機します。いま承認を待っている変更はありません。"
   },
   "banner": {
     "title_other": "レビュー待ちの変更が {{count}} 件あります"
   },
   "item": {
-    "requestedBy": "{{email}} が<relative/>にリクエスト"
+    "requestedBy": "<author/> がリクエスト · <relative/>"
   },
   "change": {
     "turnOn": "オンにする",
@@ -44,7 +45,13 @@
     "rejected": "{{key}} の変更を却下しました",
     "cancelled": "リクエストを取り消しました",
     "failed": "リクエストを更新できませんでした",
-    "waitingForAdmin": "自分のリクエストは別の管理者が承認します。"
+    "waitingForAdmin": "自分のリクエストは別の管理者が承認します。",
+    "reasonRequired": "自分のリクエストを承認する理由を入力してください",
+    "reasonLabel": "理由（必須）",
+    "reasonPlaceholder": "自己承認として監査ログとフラグの履歴に残ります",
+    "confirmSelfApprove": "自分で承認して適用",
+    "selfApprove": "自分で承認",
+    "onlyAdmin": "承認できる管理者があなただけのため、理由を書けば自分で承認できます。"
   },
   "request": {
     "badge": "レビュー必須",
@@ -58,5 +65,22 @@
     "saveAndRequest": "保存してレビューをリクエスト",
     "requested": "レビューをリクエストしました",
     "requestedDescription": "管理者はこのフラグのページか「レビュー」から承認できます。"
+  },
+  "experiment": {
+    "start": "実験「{{name}}」を開始",
+    "traffic": "実験「{{name}}」のトラフィックを変更",
+    "ship": "実験「{{name}}」を停止して {{variation}} を採用",
+    "rollback": "実験「{{name}}」を停止してロールバック",
+    "inconclusive": "実験「{{name}}」を停止（結論なし）",
+    "startDetail": "一致するユーザーの {{coverage}} を {{variations}} に {{weights}} で振り分け始めます。",
+    "coverage": "トラフィック",
+    "weights": "配分",
+    "conditionsChanged": "参加できるユーザーの条件を変更します。",
+    "newPhase": "新しいフェーズを開始してユーザーを振り分け直します。それまでの結果は前のフェーズに残ります。",
+    "shipDetail": "実験の対象だったユーザー全員に <value/> を配信します。",
+    "removeDetail": "実験のルールを削除します。ユーザーには残りのルールとデフォルト値が配信されます。",
+    "reason": "理由：{{reason}}",
+    "stale": "リクエストの後に実験が変更されたため、承認できません。新しいリクエストを作成してください。",
+    "open": "実験を開く"
   }
 }

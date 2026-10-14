@@ -14,7 +14,7 @@ export const Route = createFileRoute("/invite/$token")({
 });
 
 function InvitePage() {
-  const { t } = useTranslation("shell");
+  const { t } = useTranslation(["shell", "settings"]);
   const { token } = Route.useParams();
   const navigate = useNavigate();
   const invitation = useQuery({ ...orpc.public.invitation.queryOptions({ input: { token } }), retry: false });
@@ -39,7 +39,12 @@ function InvitePage() {
   return (
     <AuthCard
       title={t("auth.invite.title")}
-      description={t("auth.invite.description", { email: invitation.data.email })}
+      description={
+        <>
+          {t("auth.invite.description", { email: invitation.data.email, role: t(`settings:roles.${invitation.data.role}`) })}
+          <span className="mt-1 block">{t(`settings:roles.${invitation.data.role}Help`)}</span>
+        </>
+      }
       submitLabel={t("auth.invite.submit")}
       fields={[
         { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email", defaultValue: invitation.data.email, isReadOnly: true },

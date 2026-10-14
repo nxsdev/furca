@@ -59,7 +59,8 @@
       "rejected": "レビューを却下",
       "cancelled": "レビューを取り消し",
       "required": "レビュー必須をオン",
-      "notRequired": "レビュー必須をオフ"
+      "notRequired": "レビュー必須をオフ",
+      "selfApproved": "自分のリクエストを承認（唯一の管理者）"
     }
   },
   "list": {

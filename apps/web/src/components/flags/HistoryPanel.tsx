@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { EmptyState, ListSkeleton, Panel, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { useEnvironment } from "~/lib/environment";
+import { MemberName } from "~/lib/members";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 const PAGE = 50;
@@ -20,7 +21,21 @@ const sentences = {
   archived: "history.verbs.archived",
   unarchived: "history.verbs.unarchived",
   deleted: "history.verbs.deleted",
+  "review.requested": "history.verbs.reviewRequested",
+  "review.approved": "history.verbs.reviewApproved",
+  "review.selfApproved": "history.verbs.reviewSelfApproved",
+  "review.rejected": "history.verbs.reviewRejected",
+  "review.cancelled": "history.verbs.reviewCancelled",
 } as const;
+
+/** The author's note or the reviewer's comment, kept in the change request snapshot of review rows */
+const reviewNote = (entry: AuditLog): string => {
+  if (!entry.action.startsWith("review.")) return "";
+  const after = parse(entry.after);
+  if (!isObject(after)) return "";
+  const note = entry.action === "review.requested" ? after.comment : after.reviewComment;
+  return typeof note === "string" ? note.trim() : "";
+};
 const sentenceKey = (action: string) => (Object.hasOwn(sentences, action) ? sentences[action as keyof typeof sentences] : undefined);
 
 const IGNORED = new Set(["updatedAt", "createdAt"]);
@@ -125,6 +140,7 @@ function HistoryItem({ entry, names, isLast }: { entry: AuditLog; names: Readonl
   const diff = open ? changes(entry, names) : [];
   const hasSnapshot = entry.before !== null || entry.after !== null;
   const sentence = sentenceKey(entry.action);
+  const note = reviewNote(entry);
   return (
     <li className="relative py-2.5 pl-6">
       <span className="absolute top-[17px] left-[3px] size-[7px] rounded-full bg-muted/60" aria-hidden="true" />
@@ -133,16 +149,22 @@ function HistoryItem({ entry, names, isLast }: { entry: AuditLog; names: Readonl
         <span className="text-muted">
           {sentence === undefined ? (
             <>
-              <span className="font-medium text-foreground">{entry.actorEmail}</span> {entry.action.replace(/[._]/g, " ")}
+              <MemberName email={entry.actorEmail} className="font-medium text-foreground" /> {entry.action.replace(/[._]/g, " ")}
             </>
           ) : (
-            <Trans t={t} i18nKey={sentence} values={{ actor: entry.actorEmail }} components={{ actor: <span className="font-medium text-foreground" /> }} />
+            <Trans
+              t={t}
+              i18nKey={sentence}
+              values={{ actor: "" }}
+              components={{ actor: <MemberName email={entry.actorEmail} className="font-medium text-foreground" /> }}
+            />
           )}
         </span>
         <span className="ml-auto pl-2 text-meta text-muted">
           <RelativeTime date={entry.createdAt} />
         </span>
       </div>
+      {note !== "" && <p className="mt-1 max-w-[72ch] border-l-2 border-border pl-2.5 text-label whitespace-pre-wrap">{note}</p>}
       {hasSnapshot && (
         <button
           type="button"

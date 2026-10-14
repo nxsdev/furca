@@ -7,7 +7,7 @@ import { Schema } from "effect";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
-import { slugify } from "~/components/metrics/slugify";
+import { suggestKey } from "~/components/metrics/slugify";
 import { formatCount } from "~/components/results/format";
 import { ConditionBuilder, type ConditionValue, conditionIssue } from "~/components/targeting/ConditionBuilder";
 import { Segmented } from "~/components/ui/Segmented";
@@ -51,7 +51,8 @@ const isKey = Schema.is(Key);
 const validate = (v: Values, isEdit: boolean): Record<string, string> => {
   const out: Record<string, string> = {};
   if (v.name.trim() === "") out.name = i18n.t("common:form.required");
-  if (!isEdit && !isKey(v.key)) out.key = v.key === "" ? i18n.t("common:form.required") : i18n.t("savedGroups:form.keyInvalid");
+  // An empty name already has its error; the key follows the name
+  if (!isEdit && v.name.trim() !== "" && !isKey(v.key)) out.key = v.key === "" ? i18n.t("common:form.required") : i18n.t("savedGroups:form.keyInvalid");
   if (v.type === "list") {
     if (v.attribute.trim() === "") out.attribute = i18n.t("common:form.required");
     const { values } = parseIds(v.ids);
@@ -124,27 +125,41 @@ export function SavedGroupForm({
   return (
     <form noValidate onSubmit={submitHandler(form)} className="min-w-0 rounded-[10px] border border-border bg-surface">
       <Section title={t("form.basics")}>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-3">
           <form.AppField
             name="name"
             listeners={{
+              // The key follows the name until the user edits it
               onChange: ({ value }) => {
-                // Follow the name until the key is edited; names without a Latin spelling leave the key alone
-                const slug = slugify(value);
-                if (!isEdit && slug !== "" && form.getFieldMeta("key")?.isDirty !== true) form.setFieldValue("key", slug, { dontUpdateMeta: true });
+                if (!isEdit && form.getFieldMeta("key")?.isDirty !== true) form.setFieldValue("key", suggestKey(value, "group"), { dontUpdateMeta: true });
               },
             }}
           >
-            {(field) => <field.TextField label={t("form.name")} placeholder={t("form.namePlaceholder")} />}
+            {(field) => <field.TextField label={t("form.name")} description={t("form.nameHelp")} className="sm:max-w-md" />}
           </form.AppField>
           <form.AppField name="key">
             {(field) => (
-              <field.TextField label={t("form.key")} placeholder="beta-testers" description={isEdit ? t("form.keyLocked") : t("form.keyHelp")} isReadOnly={isEdit} mono />
+              <field.KeyField
+                label={t("form.key")}
+                description={isEdit ? t("form.keyLocked") : t("form.keyHelp")}
+                isReadOnly={isEdit}
+                className="sm:max-w-md"
+              />
             )}
           </form.AppField>
         </div>
         <form.AppField name="description">
-          {(field) => <field.TextAreaField label={t("form.description")} rows={2} placeholder={t("form.descriptionPlaceholder")} />}
+          {(field) => (
+            <field.TextAreaField
+              label={
+                <>
+                  {t("form.description")} <span className="font-normal text-muted">{t("form.optional")}</span>
+                </>
+              }
+              description={t("form.descriptionHelp")}
+              rows={2}
+            />
+          )}
         </form.AppField>
       </Section>
 
@@ -165,7 +180,7 @@ export function SavedGroupForm({
         {d.type === "list" ? (
           <>
             <form.AppField name="attribute">
-              {(field) => <field.TextField label={t("form.attribute")} description={t("form.attributeHelp")} placeholder="id" mono className="sm:max-w-xs" />}
+              {(field) => <field.TextField label={t("form.attribute")} description={t("form.attributeHelp")} mono className="sm:max-w-xs" />}
             </form.AppField>
             <form.AppField name="ids">
               {(field) => {
@@ -178,7 +193,6 @@ export function SavedGroupForm({
                       spellCheck={false}
                       autoCorrect="off"
                       autoCapitalize="off"
-                      placeholder={"user_123\nuser_456"}
                       className="resize-y font-mono text-label leading-5"
                     />
                     <Description>
@@ -211,14 +225,14 @@ export function SavedGroupForm({
         <form.AppForm>
           <form.FormError />
         </form.AppForm>
-        <div className="flex flex-wrap items-center gap-2">
-          <form.AppForm>
-            <form.SubmitButton label={isEdit ? t("form.save") : t("form.create")} size="sm" />
-          </form.AppForm>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {isEdit && <p className="text-meta text-muted sm:mr-auto">{t("form.liveNote")}</p>}
           <Button size="sm" variant="tertiary" onPress={() => (isEdit ? form.reset() : onCancel?.())}>
             {isEdit ? t("common:actions.discard") : t("common:actions.cancel")}
           </Button>
-          {isEdit && <p className="text-meta text-muted">{t("form.liveNote")}</p>}
+          <form.AppForm>
+            <form.SubmitButton label={isEdit ? t("form.save") : t("form.create")} size="sm" />
+          </form.AppForm>
         </div>
       </div>
     </form>

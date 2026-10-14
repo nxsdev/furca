@@ -1,17 +1,16 @@
+import type { ChangeRequest } from "@furca/core/approvals/ChangeRequest";
 import type { Experiment } from "@furca/core/experiments/Experiment";
 import { AlertDialog, Button, Skeleton, Tabs, toast } from "@heroui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Archive, ArchiveRestore, Flag, Pencil, Play, SlidersHorizontal, Square, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Flag, Play, ShieldCheck, SlidersHorizontal, Square, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { StopPanel, TrafficEditor } from "~/components/experiments/actions";
-import { ExperimentForm } from "~/components/experiments/ExperimentForm";
+import { StopPanel, TrafficEditor, useReviewRequest } from "~/components/experiments/actions";
 import { DecisionBadge, StatusBadge } from "~/components/experiments/parts";
 import { HistoryView, PhasesView, SetupView } from "~/components/experiments/tabs";
 import { formatDuration, formatList } from "~/components/results/format";
 import { ResultsView } from "~/components/results/ResultsView";
-import { headlineComparison, isHealthy, regressedGuardrails } from "~/components/results/verdict";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { Code, PageHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { i18n } from "~/i18n";
@@ -64,10 +63,10 @@ function Page() {
   return <Detail experiment={query.data} />;
 }
 
-type Mode = "view" | "edit" | "traffic" | "stop";
+type Mode = "view" | "traffic" | "stop";
 
 function Detail({ experiment: x }: { experiment: Experiment }) {
-  const { t } = useTranslation(["experiments", "common"]);
+  const { t } = useTranslation(["experiments", "common", "results"]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { environments } = useEnvironment();
@@ -120,57 +119,33 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
 
   const envs = environments.filter((e) => x.environmentIds.includes(e.id));
   const offIn = envs.filter((e) => feature !== undefined && feature.environments.find((c) => c.environmentId === e.id)?.enabled !== true);
-  const primary = latest?.metrics.find((m) => m.role === "primary");
-  const head = primary === undefined ? null : headlineComparison(primary);
-  const suggestion =
-    latest == null || latest.status !== "ok" || !isHealthy(latest.health) || head === null
-      ? null
-      : head.verdict === "winning"
-        ? // Never pre-select shipping over a guardrail regression; the team decides that trade-off
-          regressedGuardrails(latest.metrics).length > 0
-          ? null
-          : `ship:${head.variationKey}`
-        : head.verdict === "losing"
-          ? "rollback"
-          : null;
-
-  if (mode === "edit")
-    return (
-      <>
-        <PageHeader breadcrumb={breadcrumb} title={t("detail.editTitle", { name: x.name })} description={t("detail.editDescription")} />
-        <ExperimentForm
-          experiment={x}
-          onSaved={(next) => {
-            saved(next);
-            setMode("view");
-            toast.success(t("detail.toast.saved"));
-          }}
-          onCancel={() => setMode("view")}
-        />
-      </>
-    );
+  // In an environment that requires review, starting files a change request instead
+  const review = useReviewRequest(x, () => setConfirm(null));
+  const requestStart = useMutation({ mutationFn: () => review.request({ type: "experiment.start", experimentId: x.id }, "") });
+  const starting = review.environment === null ? start : requestStart;
+  // One open request at a time: further start / traffic / stop actions would only file duplicates
+  const pending = (useQuery(orpc.changeRequests.list.queryOptions({ input: { status: "open", featureId: x.featureId } })).data ?? []).filter(
+    (r) => "experimentId" in r.change && r.change.experimentId === x.id,
+  );
+  const blocked = pending.length > 0;
 
   const actions = !canEdit ? undefined : x.status === "draft" ? (
       <>
         <Button size="sm" variant="ghost" onPress={() => setConfirm("delete")} aria-label={t("detail.actions.deleteDraft")} isIconOnly className="text-muted">
           <Trash2 className="size-4" />
         </Button>
-        <Button size="sm" variant="outline" onPress={() => setMode("edit")}>
-          <Pencil className="size-3.5" />
-          {t("common:actions.edit")}
-        </Button>
-        <Button size="sm" onPress={() => setConfirm("start")}>
+        <Button size="sm" onPress={() => setConfirm("start")} isDisabled={blocked}>
           <Play className="size-3.5" />
           {t("detail.actions.start")}
         </Button>
       </>
     ) : x.status === "running" ? (
       <>
-        <Button size="sm" variant="outline" onPress={() => setMode(mode === "traffic" ? "view" : "traffic")} isDisabled={mode === "stop"}>
+        <Button size="sm" variant="outline" onPress={() => setMode(mode === "traffic" ? "view" : "traffic")} isDisabled={mode === "stop" || blocked}>
           <SlidersHorizontal className="size-3.5" />
           {t("detail.actions.changeTraffic")}
         </Button>
-        <Button size="sm" onPress={() => setMode(mode === "stop" ? "view" : "stop")} isDisabled={mode === "traffic"}>
+        <Button size="sm" onPress={() => setMode(mode === "stop" ? "view" : "stop")} isDisabled={mode === "traffic" || blocked}>
           <Square className="size-3.5" />
           {t("detail.actions.stopAndDecide")}
         </Button>
@@ -217,13 +192,15 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       />
 
       {x.status === "stopped" && x.decision !== null && x.decision.reason !== "" && (
-        <p className="-mt-2 mb-6 max-w-[80ch] border-l-2 border-border pl-3 text-body text-muted">
+        <p className="-mt-2 mb-6 max-w-[80ch] border-l-2 border-border pl-3 text-body whitespace-pre-line text-muted">
           {x.decision.reason}
           <span className="ml-2 text-meta whitespace-nowrap">
             <Trans t={t} i18nKey="detail.decided" components={{ time: <RelativeTime date={x.decision.decidedAt} /> }} />
           </span>
         </p>
       )}
+
+      <PendingReviews experiment={x} requests={pending} />
 
       {mode === "traffic" && (
         <div className="mb-6">
@@ -232,7 +209,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       )}
       {mode === "stop" && (
         <div className="mb-6">
-          <StopPanel experiment={x} feature={feature} suggestion={suggestion} onDone={() => setMode("view")} />
+          <StopPanel experiment={x} feature={feature} snapshot={latest} onDone={() => setMode("view")} />
         </div>
       )}
 
@@ -311,18 +288,24 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
                 </p>
               )}
               {x.primaryMetricId === null && <p className="text-foreground">{t("detail.start.needsPrimary")}</p>}
-              {start.error !== null && (
+              {review.environment !== null && <p>{t("results:decision.reviewNote", { environment: review.environment.name })}</p>}
+              {starting.error !== null && (
                 <p role="alert" className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-label text-danger">
-                  {errorMessage(start.error)}
+                  {errorMessage(starting.error)}
                 </p>
               )}
             </AlertDialog.Body>
             <AlertDialog.Footer>
-              <Button slot="close" variant="tertiary" size="sm" isDisabled={start.isPending}>
+              <Button slot="close" variant="tertiary" size="sm" isDisabled={starting.isPending}>
                 {t("common:actions.cancel")}
               </Button>
-              <Button size="sm" isPending={start.isPending} isDisabled={x.primaryMetricId === null} onPress={() => start.mutate({ id: x.id })}>
-                {t("detail.start.confirm")}
+              <Button
+                size="sm"
+                isPending={starting.isPending}
+                isDisabled={x.primaryMetricId === null}
+                onPress={() => (review.environment === null ? start.mutate({ id: x.id }) : requestStart.mutate())}
+              >
+                {review.environment === null ? t("detail.start.confirm") : t("results:decision.requestReview")}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -348,5 +331,76 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
         </p>
       </ConfirmDialog>
     </>
+  );
+}
+
+const pendingAction = (change: ChangeRequest["change"], experiment: Experiment): string => {
+  switch (change.type) {
+    case "experiment.start":
+      return i18n.t("results:decision.pending.start");
+    case "experiment.traffic":
+      return i18n.t("results:decision.pending.traffic");
+    case "experiment.stop":
+      return change.outcome === "ship"
+        ? i18n.t("results:decision.pending.stopShip", { name: experiment.variations.find((v) => v.key === change.variationKey)?.name ?? change.variationKey ?? "" })
+        : change.outcome === "rollback"
+          ? i18n.t("results:decision.pending.stopRollback")
+          : i18n.t("results:decision.pending.stopInconclusive");
+    default:
+      return "";
+  }
+};
+
+/** Start / traffic / stop requests for this experiment waiting for an admin in an environment that requires review */
+function PendingReviews({ experiment, requests }: { experiment: Experiment; requests: ReadonlyArray<ChangeRequest> }) {
+  const { t } = useTranslation("results");
+  const queryClient = useQueryClient();
+  const { environments } = useEnvironment();
+  const { me, isAdmin } = usePermissions();
+  const cancel = useMutation(
+    orpc.changeRequests.cancel.mutationOptions({
+      onSuccess: () => {
+        toast(i18n.t("results:decision.pending.cancelled"));
+        void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
+        void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
+      },
+      onError: (error) => toast.danger(i18n.t("results:decision.pending.cancelFailed"), { description: errorMessage(error) }),
+    }),
+  );
+  if (requests.length === 0) return null;
+  return (
+    <section aria-label={t("decision.pending.blocked")} className="mb-6 rounded-[10px] border border-focus/40 bg-focus/[0.04]">
+      <ul className="divide-y divide-focus/15">
+        {requests.map((r) => (
+          <li key={r.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div className="flex min-w-0 items-start gap-2">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-focus" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-label font-medium">{t("decision.pending.title", { action: pendingAction(r.change, experiment) })}</p>
+                <p className="text-meta text-muted">
+                  <Trans
+                    t={t}
+                    i18nKey="decision.pending.by"
+                    values={{ email: r.authorEmail, environment: environments.find((e) => e.id === r.environmentId)?.name ?? "" }}
+                    components={{ time: <RelativeTime date={r.createdAt} /> }}
+                  />
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
+              <Link to="/reviews" className="text-label text-focus hover:underline">
+                {t("decision.pending.open")}
+              </Link>
+              {(me?.id === r.authorId || isAdmin) && (
+                <Button size="sm" variant="tertiary" onPress={() => cancel.mutate({ id: r.id })} isPending={cancel.isPending && cancel.variables?.id === r.id}>
+                  {t("decision.pending.cancel")}
+                </Button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="border-t border-focus/15 px-4 py-2 text-meta text-muted sm:px-5">{t("decision.pending.blocked")}</p>
+    </section>
   );
 }

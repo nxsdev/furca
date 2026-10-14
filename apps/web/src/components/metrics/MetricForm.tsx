@@ -2,6 +2,7 @@ import {
   Button,
   ComboBox,
   Description,
+  Disclosure,
   FieldError,
   Input,
   Label,
@@ -12,149 +13,35 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { type EventNameStat, Key } from "@furca/api/contract";
+import type { EventNameStat } from "@furca/api/contract";
 import { BUILTIN_DATA_SOURCE_ID, WAREHOUSE_LABELS, type WarehouseConfig, type WarehouseType } from "@furca/core/datasources/DataSource";
-import type { EventAggregation, EventSource, Metric, MetricType } from "@furca/core/metrics/Metric";
-import { type AnyFieldApi, type DeepKeys, useStore } from "@tanstack/react-form";
+import type { EventAggregation, Metric } from "@furca/core/metrics/Metric";
+import { type AnyFieldApi, useStore } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Schema } from "effect";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { dataSourceName, SQL_TYPES } from "~/components/datasources/name";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
 import { formatCount } from "~/components/results/format";
+import { HelpTip } from "~/components/ui/HelpTip";
 import { RelativeTime } from "~/components/ui/primitives";
 import { Segmented } from "~/components/ui/Segmented";
-import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 import { Direction, formatHours, metricTypeLabel, MetricSentence } from "./describe";
-import { type FilterValues, filterIssue, filterValues, PropertyFilters } from "./PropertyFilters";
-import { slugify } from "./slugify";
-
-type MetricInput = Omit<Parameters<typeof client.metrics.create>[0], "key">;
-type WindowChoice = "24" | "72" | "168" | "none" | "custom";
-type CapType = Metric["capping"]["type"];
-
-interface Values {
-  name: string;
-  key: string;
-  description: string;
-  type: MetricType;
-  dataSourceId: string;
-  num: SourceValues;
-  den: SourceValues;
-  numSql: string;
-  denSql: string;
-  inverse: boolean;
-  window: WindowChoice;
-  customWindow: number;
-  delayHours: number;
-  capType: CapType;
-  capAbsolute: number;
-  capPercentile: number;
-}
-
-interface SourceValues {
-  event: string;
-  aggregation: EventAggregation;
-  filters: FilterValues[];
-}
-
-const presetWindows: ReadonlyArray<WindowChoice> = ["24", "72", "168"];
-
-const sourceValues = (s: EventSource | null | undefined): SourceValues => ({
-  event: s?.event ?? "",
-  aggregation: s?.aggregation ?? "count",
-  filters: (s?.filters ?? []).map((f) => ({ property: f.property, operator: f.operator, values: [...f.values] })),
-});
-
-const filtersInput = (filters: ReadonlyArray<FilterValues>) =>
-  filters.map((f) => ({ property: f.property.trim(), operator: f.operator, values: filterValues(f) }));
-
-const toValues = (m: Metric | undefined): Values => {
-  const d = m?.definition;
-  const w = m?.windowHours ?? null;
-  return {
-    name: m?.name ?? "",
-    key: m?.key ?? "",
-    description: m?.description ?? "",
-    type: m?.type ?? "proportion",
-    dataSourceId: m?.dataSourceId ?? BUILTIN_DATA_SOURCE_ID,
-    num: sourceValues(d?._tag === "event" ? d.numerator : null),
-    den: sourceValues(d?._tag === "event" ? d.denominator : null),
-    numSql: d?._tag === "sql" ? d.numeratorSql : "",
-    denSql: d?._tag === "sql" ? (d.denominatorSql ?? "") : "",
-    inverse: m?.inverse ?? false,
-    window: m === undefined ? "72" : w === null ? "none" : presetWindows.includes(String(w) as WindowChoice) ? (String(w) as WindowChoice) : "custom",
-    customWindow: w ?? 48,
-    delayHours: m?.delayHours ?? 0,
-    capType: m?.capping.type ?? "none",
-    capAbsolute: m?.capping.type === "absolute" ? m.capping.value : 100,
-    capPercentile: m?.capping.type === "percentile" ? Number((m.capping.value * 100).toFixed(2)) : 99,
-  };
-};
-
-const windowHoursOf = (d: Values): number | null =>
-  d.window === "none" ? null : d.window === "custom" ? d.customWindow : Number(d.window);
-
-const toInput = (d: Values, isSql: boolean): MetricInput => ({
-  name: d.name.trim(),
-  description: d.description.trim(),
-  type: d.type,
-  dataSourceId: d.dataSourceId,
-  definition: isSql
-    ? { _tag: "sql", numeratorSql: d.numSql, denominatorSql: d.type === "ratio" ? d.denSql : null }
-    : {
-        _tag: "event",
-        numerator: {
-          event: d.num.event.trim(),
-          aggregation: d.type === "proportion" ? "count" : d.num.aggregation,
-          filters: filtersInput(d.num.filters),
-        },
-        denominator:
-          d.type === "ratio" ? { event: d.den.event.trim(), aggregation: d.den.aggregation, filters: filtersInput(d.den.filters) } : null,
-      },
-  inverse: d.inverse,
-  windowHours: windowHoursOf(d),
-  delayHours: d.delayHours,
-  capping:
-    d.type === "proportion" || d.capType === "none"
-      ? { type: "none" }
-      : d.capType === "absolute"
-        ? { type: "absolute", value: d.capAbsolute }
-        : { type: "percentile", value: d.capPercentile / 100 },
-});
-
-type FieldErrors = Partial<Record<DeepKeys<Values>, string>>;
-
-/** Whole-form rules (they cross fields: type, source, window and delay), run as a form-level validator */
-const validate = (d: Values, isSql: boolean, isEdit: boolean): FieldErrors => {
-  const e: FieldErrors = {};
-  if (d.name.trim() === "") e.name = i18n.t("metrics:form.errors.name");
-  if (!isEdit && !Schema.is(Key)(d.key)) e.key = i18n.t("metrics:form.errors.key");
-  if (isSql) {
-    if (d.numSql.trim() === "") e.numSql = i18n.t("metrics:form.errors.numSql");
-    if (d.type === "ratio" && d.denSql.trim() === "") e.denSql = i18n.t("metrics:form.errors.denSql");
-  } else {
-    if (d.num.event.trim() === "") e["num.event"] = i18n.t("metrics:form.errors.numEvent");
-    if (d.type === "ratio" && d.den.event.trim() === "") e["den.event"] = i18n.t("metrics:form.errors.denEvent");
-    const numFilters = d.num.filters.map(filterIssue).find((issue) => issue !== null);
-    if (numFilters) e["num.filters"] = numFilters;
-    const denFilters = d.type === "ratio" ? d.den.filters.map(filterIssue).find((issue) => issue !== null) : null;
-    if (denFilters) e["den.filters"] = denFilters;
-  }
-  const w = windowHoursOf(d);
-  if (w !== null && !(w > 0)) e.customWindow = i18n.t("metrics:form.errors.window");
-  if (!(d.delayHours >= 0)) e.delayHours = i18n.t("metrics:form.errors.delayNegative");
-  else if (w !== null && d.delayHours >= w) e.delayHours = i18n.t("metrics:form.errors.delayTooLong");
-  if (d.type !== "proportion") {
-    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.capAbsolute = i18n.t("metrics:form.errors.capAbsolute");
-    if (d.capType === "percentile" && !(d.capPercentile >= 50 && d.capPercentile < 100))
-      e.capPercentile = i18n.t("metrics:form.errors.capPercentile");
-  }
-  return e;
-};
+import {
+  ADVANCED_FIELDS,
+  advancedSummary,
+  METRIC_TEMPLATES,
+  presetWindows,
+  suggestedName,
+  templateFields,
+  toInput,
+  toValues,
+  validate,
+} from "./metricValues";
+import { PropertyFilters } from "./PropertyFilters";
+import { suggestKey } from "./slugify";
 
 /** The kit's rule for custom inputs: show the error once the field was touched or a submit was tried */
 const shown = (field: AnyFieldApi): string | undefined =>
@@ -227,7 +114,7 @@ function EventField({
     >
       <Label>{label}</Label>
       <ComboBox.InputGroup>
-        <Input placeholder="purchase" spellCheck={false} autoComplete="off" className="font-mono" />
+        <Input spellCheck={false} autoComplete="off" className="font-mono" />
         <ComboBox.Trigger />
       </ComboBox.InputGroup>
       <ComboBox.Popover className="min-w-[min(420px,calc(100vw-32px))]">
@@ -299,7 +186,6 @@ function SqlField({
         spellCheck={false}
         autoCorrect="off"
         autoCapitalize="off"
-        placeholder="SELECT user_id, timestamp, value FROM …"
         className="w-full resize-y font-mono text-[0.8125rem] leading-5"
       />
       <Description>
@@ -310,7 +196,10 @@ function SqlField({
   );
 }
 
-/** Create or edit a metric. Explains each choice in plain words and previews the result as a sentence */
+/**
+ * Create or edit a metric. Creating starts from a template, so the only real question is which
+ * event; everything with a safe default sits in a collapsed "Advanced" section that summarizes itself
+ */
 export function MetricForm({
   metric,
   onSaved,
@@ -324,6 +213,7 @@ export function MetricForm({
   const isEdit = metric !== undefined;
   const queryClient = useQueryClient();
   const { current: env } = useEnvironment();
+  const [advancedOpen, setAdvancedOpen] = useState(isEdit);
 
   const sources = useQuery(orpc.dataSources.list.queryOptions());
   const names = useQuery({
@@ -347,8 +237,13 @@ export function MetricForm({
       onSubmit: () => undefined,
     },
     // A blocked submit skips the form-level rules, so errors of fields mounted since the last change
-    // (e.g. the denominator after switching to Ratio) would stay hidden: rerun them to show every error
-    onSubmitInvalid: ({ formApi }) => void formApi.validate("change"),
+    // (e.g. the denominator after switching to Ratio) would stay hidden: rerun them to show every error,
+    // and open the advanced section when the problem is in there
+    onSubmitInvalid: ({ value, formApi }) => {
+      void formApi.validate("change");
+      const errors = validate(value, isSqlSource(value.dataSourceId), isEdit);
+      if (ADVANCED_FIELDS.some((f) => errors[f] !== undefined)) setAdvancedOpen(true);
+    },
     onSubmit: async ({ value, formApi }) => {
       const input = toInput(value, isSqlSource(value.dataSourceId));
       try {
@@ -369,112 +264,110 @@ export function MetricForm({
   const source = sourceList.find((s) => s.id === d.dataSourceId);
   const isSql = isSqlSource(d.dataSourceId);
   const warehouse = source?.config?._tag ?? "bigquery";
+  const sourceLabel = source === undefined ? t("builtinEvents") : dataSourceName(source);
   const input = toInput(d, isSql);
+  const isCustom = d.template === "custom";
+  /** "Lower is better" averages one event, so only custom ratios ask for a second one */
+  const asksDenominator = d.type === "ratio" && isCustom;
 
-  // Follow the name until the user edits the key; a name with no ASCII slug (e.g. Japanese) leaves the key alone
-  const suggestKey = (name: string) => {
-    const slug = slugify(name);
-    if (slug !== "" && form.getFieldMeta("key")?.isDirty !== true) form.setFieldValue("key", slug, { dontUpdateMeta: true });
+  // The key follows the name, and a new metric's name follows its template and event, until the user edits them
+  const followName = (name: string) => {
+    if (!isEdit && form.getFieldMeta("key")?.isDirty !== true) form.setFieldValue("key", suggestKey(name, "metric"), { dontUpdateMeta: true });
   };
+  const suggestName = () => {
+    if (isEdit || form.getFieldMeta("name")?.isDirty === true) return;
+    const { template, num } = form.state.values;
+    const name = suggestedName(template, num.event);
+    form.setFieldValue("name", name, { dontUpdateMeta: true });
+    followName(name);
+  };
+
+  const eventField = (name: "num.event" | "den.event", label: string) => (
+    <form.AppField name={name} listeners={name === "num.event" ? { onChange: suggestName } : undefined}>
+      {(field) => (
+        <EventField
+          label={label}
+          value={field.state.value}
+          onChange={field.handleChange}
+          onBlur={field.handleBlur}
+          names={eventNames}
+          error={shown(field)}
+        />
+      )}
+    </form.AppField>
+  );
+  const filtersField = (name: "num.filters" | "den.filters", event: string) => (
+    <form.AppField name={name}>
+      {(field) => (
+        <PropertyFilters
+          value={field.state.value}
+          onChange={field.handleChange}
+          environmentId={env?.id ?? null}
+          event={knownEvent(event)}
+          // Like targeting conditions: incomplete rows are reported once a save was tried
+          error={field.form.state.submissionAttempts > 0 ? shown(field) : undefined}
+        />
+      )}
+    </form.AppField>
+  );
 
   return (
     <form noValidate onSubmit={submitHandler(form)} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
       <section className="min-w-0 rounded-[10px] border border-border bg-surface">
-        <Section title={t("form.sections.basics")}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <form.AppField name="name" listeners={isEdit ? undefined : { onChange: ({ value }) => suggestKey(value) }}>
+        <Section title={isEdit ? t("form.sections.measure") : t("form.templates.label")}>
+          {!isEdit && (
+            <form.AppField
+              name="template"
+              listeners={{
+                onChange: ({ value }) => {
+                  const fixed = templateFields(value);
+                  if (fixed !== null) {
+                    form.setFieldValue("type", fixed.type);
+                    form.setFieldValue("num.aggregation", fixed.aggregation);
+                    form.setFieldValue("inverse", fixed.inverse);
+                  }
+                  suggestName();
+                },
+              }}
+            >
               {(field) => (
-                <TextField
+                <Segmented
+                  aria-label={t("form.templates.label")}
                   value={field.state.value}
                   onChange={field.handleChange}
-                  onBlur={field.handleBlur}
-                  isInvalid={shown(field) !== undefined}
-                  isRequired
-                  autoFocus={!isEdit}
-                >
-                  <Label>{t("form.name.label")}</Label>
-                  <Input placeholder={t("form.name.placeholder")} />
-                  <FieldError>{shown(field)}</FieldError>
-                </TextField>
+                  tilesClassName="grid-cols-2 xl:grid-cols-4"
+                  options={METRIC_TEMPLATES.map((id) => ({
+                    value: id,
+                    label: t(`form.templates.${id}.label`),
+                    description: t(`form.templates.${id}.description`),
+                  }))}
+                />
               )}
             </form.AppField>
-            <form.AppField name="key">
+          )}
+          {isCustom && (
+            <form.AppField
+              name="type"
+              listeners={{
+                onChange: ({ value }) => {
+                  if (value === "proportion") form.setFieldValue("num.aggregation", "count");
+                },
+              }}
+            >
               {(field) => (
-                <TextField
+                <Segmented
+                  label={t("form.type.label")}
                   value={field.state.value}
                   onChange={field.handleChange}
-                  onBlur={field.handleBlur}
-                  isInvalid={shown(field) !== undefined}
-                  isReadOnly={isEdit}
-                  isRequired={!isEdit}
-                >
-                  <Label>{t("form.key.label")}</Label>
-                  <Input placeholder="checkout-conversion" spellCheck={false} className="font-mono" />
-                  <Description>{isEdit ? t("form.key.readOnly") : t("form.key.help")}</Description>
-                  <FieldError>{shown(field)}</FieldError>
-                </TextField>
+                  options={(["proportion", "mean", "ratio"] as const).map((type) => ({
+                    value: type,
+                    label: metricTypeLabel(type),
+                    description: t(`form.type.${type}`),
+                  }))}
+                />
               )}
             </form.AppField>
-          </div>
-          <form.AppField name="description">
-            {(field) => <field.TextAreaField label={t("form.description.label")} rows={2} placeholder={t("form.description.placeholder")} />}
-          </form.AppField>
-        </Section>
-
-        <Section title={t("form.sections.measure")}>
-          <form.AppField
-            name="type"
-            listeners={{
-              onChange: ({ value }) => {
-                if (value === "proportion") form.setFieldValue("num.aggregation", "count");
-              },
-            }}
-          >
-            {(field) => (
-              <Segmented
-                label={t("form.type.label")}
-                value={field.state.value}
-                onChange={field.handleChange}
-                options={(["proportion", "mean", "ratio"] as const).map((type) => ({
-                  value: type,
-                  label: metricTypeLabel(type),
-                  description: t(`form.type.${type}`),
-                }))}
-              />
-            )}
-          </form.AppField>
-          <form.AppField name="dataSourceId">
-            {(field) => (
-              <Select
-                value={field.state.value}
-                onChange={(id) => typeof id === "string" && field.handleChange(id)}
-                className="sm:max-w-sm"
-              >
-                <Label>{t("form.dataSource.label")}</Label>
-                <Select.Trigger>
-                  <Select.Value>{({ selectedText }) => selectedText}</Select.Value>
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {(sourceList.length > 0
-                      ? sourceList
-                      : [{ id: BUILTIN_DATA_SOURCE_ID, name: t("builtinEvents"), type: "builtin" as const }]
-                    ).map((s) => (
-                      <ListBox.Item key={s.id} id={s.id} textValue={dataSourceName(s)}>
-                        <span className="flex-1 truncate">{dataSourceName(s)}</span>
-                        <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : WAREHOUSE_LABELS[s.type]}</span>
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-                <Description>
-                  {isSql ? t("form.dataSource.sqlHelp", { warehouse: WAREHOUSE_LABELS[warehouse] }) : t("form.dataSource.sdkHelp")}
-                </Description>
-              </Select>
-            )}
-          </form.AppField>
+          )}
 
           {isSql ? (
             <>
@@ -508,215 +401,278 @@ export function MetricForm({
               )}
             </>
           ) : (
-            <>
-              <div className="flex flex-col gap-4">
-                {d.type === "ratio" && <p className="-mb-2 text-label font-medium text-muted">{t("form.event.numerator")}</p>}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <form.AppField name="num.event">
-                    {(field) => (
-                      <EventField
-                        label={t("form.event.label")}
-                        value={field.state.value}
-                        onChange={field.handleChange}
-                        onBlur={field.handleBlur}
-                        names={eventNames}
-                        error={shown(field)}
-                      />
-                    )}
-                  </form.AppField>
-                  {d.type !== "proportion" && (
-                    <div className="sm:w-[260px]">
-                      <form.AppField name="num.aggregation">
-                        {(field) => <AggregationField value={field.state.value} onChange={field.handleChange} />}
-                      </form.AppField>
-                    </div>
-                  )}
-                </div>
-                <form.AppField name="num.filters">
-                  {(field) => (
-                    <PropertyFilters
-                      value={field.state.value}
-                      onChange={field.handleChange}
-                      environmentId={env?.id ?? null}
-                      event={knownEvent(d.num.event)}
-                      // Like targeting conditions: incomplete rows are reported once a save was tried
-                      error={field.form.state.submissionAttempts > 0 ? shown(field) : undefined}
-                    />
-                  )}
-                </form.AppField>
+            <div className="flex flex-col gap-4">
+              {asksDenominator && <p className="-mb-2 text-label font-medium text-muted">{t("form.event.numerator")}</p>}
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+                {eventField("num.event", t("form.event.label"))}
+                {isCustom && d.type !== "proportion" && (
+                  <div className="xl:w-[260px]">
+                    <form.AppField name="num.aggregation">
+                      {(field) => <AggregationField value={field.state.value} onChange={field.handleChange} />}
+                    </form.AppField>
+                  </div>
+                )}
               </div>
-              {d.type === "ratio" && (
+              {asksDenominator && (
                 <div className="flex flex-col gap-4 border-t border-border pt-4">
                   <p className="-mb-2 text-label font-medium text-muted">{t("form.event.denominator")}</p>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <form.AppField name="den.event">
-                      {(field) => (
-                        <EventField
-                          label={t("form.event.label")}
-                          value={field.state.value}
-                          onChange={field.handleChange}
-                          onBlur={field.handleBlur}
-                          names={eventNames}
-                          error={shown(field)}
-                        />
-                      )}
-                    </form.AppField>
-                    <div className="sm:w-[260px]">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
+                    {eventField("den.event", t("form.event.label"))}
+                    <div className="xl:w-[260px]">
                       <form.AppField name="den.aggregation">
                         {(field) => <AggregationField value={field.state.value} onChange={field.handleChange} />}
                       </form.AppField>
                     </div>
                   </div>
-                  <form.AppField name="den.filters">
-                    {(field) => (
-                      <PropertyFilters
-                        value={field.state.value}
-                        onChange={field.handleChange}
-                        environmentId={env?.id ?? null}
-                        event={knownEvent(d.den.event)}
-                        error={field.form.state.submissionAttempts > 0 ? shown(field) : undefined}
-                      />
-                    )}
-                  </form.AppField>
                 </div>
               )}
-              <p className="text-xs text-muted">
+              {!isEdit && eventNames.length > 0 && (
+                <div className="-mt-1 flex flex-wrap items-center gap-1.5" role="group" aria-label={t("form.event.received")}>
+                  <span className="text-meta text-muted">{t("form.event.received")}</span>
+                  {eventNames.slice(0, 6).map((n) => (
+                    <button
+                      key={n.name}
+                      type="button"
+                      aria-pressed={d.num.event === n.name}
+                      onClick={() => {
+                        form.setFieldValue("num.event", n.name);
+                        suggestName();
+                      }}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border px-2 text-meta outline-none transition-colors duration-150 hover:bg-surface-secondary focus-visible:ring-2 focus-visible:ring-focus aria-pressed:border-foreground"
+                    >
+                      <span className="font-mono">{n.name}</span>
+                      <span className="text-muted tabular">{formatCount(n.count)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <p className="text-meta text-muted">
                 {names.isError
                   ? t("form.event.unavailable")
                   : t(eventNames.length > 0 ? "form.event.suggestions" : "form.event.none", {
                       environment: env?.name ?? t("form.event.thisEnvironment"),
                     })}
               </p>
-            </>
+            </div>
           )}
         </Section>
 
-        <Section title={t("form.sections.window")} description={t("form.sections.windowDescription")}>
-          <form.AppField name="customWindow">
-            {(custom) => (
-              <>
-                <div className="flex flex-wrap items-end gap-4">
-                  <form.AppField name="window">
-                    {(field) => (
-                      <Segmented
-                        label={t("form.window.label")}
-                        value={field.state.value}
-                        onChange={field.handleChange}
-                        options={[
-                          ...presetWindows.map((w) => ({ value: w, label: formatHours(Number(w)) })),
-                          { value: "none", label: t("common:states.none") },
-                          { value: "custom", label: t("form.window.custom") },
-                        ]}
-                      />
-                    )}
-                  </form.AppField>
-                  {d.window === "custom" && (
-                    <NumberField
-                      value={custom.state.value}
-                      onChange={custom.handleChange}
-                      onBlur={custom.handleBlur}
-                      minValue={1}
-                      isInvalid={shown(custom) !== undefined}
-                      className="w-32"
-                      aria-label={t("form.window.customLabel")}
-                    >
-                      <NumberField.Group className="grid-cols-[1fr_auto]">
-                        <NumberField.Input className="tabular" />
-                        <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
-                      </NumberField.Group>
-                    </NumberField>
-                  )}
-                </div>
-                {shown(custom) !== undefined && <p className="-mt-2 text-xs text-danger">{shown(custom)}</p>}
-              </>
-            )}
+        <Section title={t("form.sections.basics")}>
+          <form.AppField name="name" listeners={isEdit ? undefined : { onChange: ({ value }) => followName(value) }}>
+            {(field) => <field.TextField label={t("form.name.label")} description={t("form.name.help")} className="sm:max-w-md" />}
           </form.AppField>
-          <form.AppField
-            name="delayHours"
-            listeners={{
-              // A cleared input means no delay
-              onChange: ({ value, fieldApi }) => {
-                if (Number.isNaN(value)) fieldApi.setValue(0);
-              },
-            }}
-          >
+          <form.AppField name="key">
             {(field) => (
-              <field.NumberField
-                label={t("form.window.delay")}
-                minValue={0}
-                suffix={t("form.window.hours")}
-                description={t("form.window.delayHelp")}
-                className="w-full sm:max-w-sm"
+              <field.KeyField
+                label={t("form.key.label")}
+                description={isEdit ? t("form.key.readOnly") : t("form.key.help")}
+                isReadOnly={isEdit}
+                className="sm:max-w-md"
               />
             )}
           </form.AppField>
         </Section>
 
-        <Section title={t("form.sections.analysis")}>
-          <form.AppField name="inverse">
-            {(field) => (
-              <Switch
-                isSelected={field.state.value}
-                onChange={field.handleChange}
-                className="[--switch-control-bg:oklch(0.9_0_0)] dark:[--switch-control-bg:var(--default)]"
-              >
-                <Switch.Content>
-                  <Switch.Control>
-                    <Switch.Thumb className={field.state.value ? "" : "dark:bg-[oklch(0.62_0_0)]"} />
-                  </Switch.Control>
-                  {t("direction.lowerIsBetter")}
-                </Switch.Content>
-                <Description>{t("form.inverseHelp")}</Description>
-              </Switch>
-            )}
-          </form.AppField>
-          {d.type !== "proportion" && (
-            <div className="flex flex-col gap-3">
-              <form.AppField name="capType">
+        <Disclosure isExpanded={advancedOpen} onExpandedChange={setAdvancedOpen} className="border-b border-border">
+          <Disclosure.Heading>
+            <Disclosure.Trigger className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+              <span className="min-w-0">
+                <span className="block text-body font-medium">{t("form.advanced.title")}</span>
+                <span className="block text-label font-normal text-muted">{advancedSummary(d, sourceLabel, isSql)}</span>
+              </span>
+              <Disclosure.Indicator />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body className="flex flex-col gap-6 border-t border-border px-5 py-5">
+              <p className="text-label text-muted">{t("form.advanced.why")}</p>
+
+              <form.AppField name="dataSourceId">
                 {(field) => (
-                  <Segmented
-                    label={t("form.capping.label")}
+                  <Select
                     value={field.state.value}
-                    onChange={field.handleChange}
-                    options={[
-                      { value: "none", label: t("common:states.none") },
-                      { value: "absolute", label: t("form.capping.absolute") },
-                      { value: "percentile", label: t("form.capping.percentile") },
-                    ]}
-                    description={t("form.capping.help")}
-                  />
+                    onChange={(id) => typeof id === "string" && field.handleChange(id)}
+                    className="sm:max-w-sm"
+                  >
+                    <Label>{t("form.dataSource.label")}</Label>
+                    <Select.Trigger>
+                      <Select.Value>{({ selectedText }) => selectedText}</Select.Value>
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {(sourceList.length > 0
+                          ? sourceList
+                          : [{ id: BUILTIN_DATA_SOURCE_ID, name: t("builtinEvents"), type: "builtin" as const }]
+                        ).map((s) => (
+                          <ListBox.Item key={s.id} id={s.id} textValue={dataSourceName(s)}>
+                            <span className="flex-1 truncate">{dataSourceName(s)}</span>
+                            <span className="text-meta text-muted">{s.type === "builtin" ? t("form.dataSource.sdkEvents") : WAREHOUSE_LABELS[s.type]}</span>
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                    <Description>
+                      {isSql ? t("form.dataSource.sqlHelp", { warehouse: WAREHOUSE_LABELS[warehouse] }) : t("form.dataSource.sdkHelp")}
+                    </Description>
+                  </Select>
                 )}
               </form.AppField>
-              {d.capType === "absolute" && (
-                <form.AppField name="capAbsolute">
+
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-1">
+                  <h3 className="text-body font-medium">{t("form.sections.window")}</h3>
+                  <HelpTip term={t("form.sections.window")}>{t("form.sections.windowDescription")}</HelpTip>
+                </div>
+                <form.AppField name="customWindow">
+                  {(custom) => (
+                    <>
+                      <div className="flex flex-wrap items-end gap-4">
+                        <form.AppField name="window">
+                          {(field) => (
+                            <Segmented
+                              aria-label={t("form.window.label")}
+                              value={field.state.value}
+                              onChange={field.handleChange}
+                              options={[
+                                ...presetWindows.map((w) => ({ value: w, label: formatHours(Number(w)) })),
+                                { value: "none", label: t("common:states.none") },
+                                { value: "custom", label: t("form.window.custom") },
+                              ]}
+                            />
+                          )}
+                        </form.AppField>
+                        {d.window === "custom" && (
+                          <NumberField
+                            value={custom.state.value}
+                            onChange={custom.handleChange}
+                            onBlur={custom.handleBlur}
+                            minValue={1}
+                            isInvalid={shown(custom) !== undefined}
+                            className="w-32"
+                            aria-label={t("form.window.customLabel")}
+                          >
+                            <NumberField.Group className="grid-cols-[1fr_auto]">
+                              <NumberField.Input className="tabular" />
+                              <span className="pr-3 text-label text-muted">{t("form.window.hours")}</span>
+                            </NumberField.Group>
+                          </NumberField>
+                        )}
+                      </div>
+                      {shown(custom) !== undefined && <p className="-mt-2 text-xs text-danger">{shown(custom)}</p>}
+                    </>
+                  )}
+                </form.AppField>
+                <form.AppField
+                  name="delayHours"
+                  listeners={{
+                    // A cleared input means no delay
+                    onChange: ({ value, fieldApi }) => {
+                      if (Number.isNaN(value)) fieldApi.setValue(0);
+                    },
+                  }}
+                >
                   {(field) => (
                     <field.NumberField
-                      label={t("form.capping.absoluteLabel")}
-                      description={t("form.capping.absoluteHelp")}
+                      label={t("form.window.delay")}
                       minValue={0}
-                      step={1}
+                      suffix={t("form.window.hours")}
+                      description={t("form.window.delayHelp")}
                       className="w-full sm:max-w-sm"
                     />
                   )}
                 </form.AppField>
-              )}
-              {d.capType === "percentile" && (
-                <form.AppField name="capPercentile">
-                  {(field) => (
-                    <field.NumberField
-                      label={t("form.capping.percentileLabel")}
-                      description={t("form.capping.percentileHelp")}
-                      minValue={0}
-                      step={0.1}
-                      suffix={t("form.capping.percentileSuffix")}
-                      className="w-full sm:max-w-sm"
-                    />
+              </div>
+
+              {!isSql && (
+                <div className="flex flex-col gap-3">
+                  <h3 className="text-body font-medium">{asksDenominator ? t("form.advanced.numFilters") : t("form.advanced.filtersLabel")}</h3>
+                  {filtersField("num.filters", d.num.event)}
+                  {asksDenominator && (
+                    <>
+                      <h3 className="mt-2 text-body font-medium">{t("form.advanced.denFilters")}</h3>
+                      {filtersField("den.filters", d.den.event)}
+                    </>
                   )}
-                </form.AppField>
+                </div>
               )}
-            </div>
-          )}
-        </Section>
+
+              <form.AppField name="inverse">
+                {(field) => (
+                  <Switch
+                    isSelected={field.state.value}
+                    onChange={field.handleChange}
+                    className="[--switch-control-bg:oklch(0.9_0_0)] dark:[--switch-control-bg:var(--default)]"
+                  >
+                    <Switch.Content>
+                      <Switch.Control>
+                        <Switch.Thumb className={field.state.value ? "" : "dark:bg-[oklch(0.62_0_0)]"} />
+                      </Switch.Control>
+                      {t("direction.lowerIsBetter")}
+                    </Switch.Content>
+                    <Description>{t("form.inverseHelp")}</Description>
+                  </Switch>
+                )}
+              </form.AppField>
+
+              {d.type !== "proportion" && (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-1">
+                    <h3 className="text-body font-medium">{t("form.capping.label")}</h3>
+                    <HelpTip term={t("form.capping.label")}>{t("form.capping.help")}</HelpTip>
+                  </div>
+                  <form.AppField name="capType">
+                    {(field) => (
+                      <Segmented
+                        aria-label={t("form.capping.label")}
+                        value={field.state.value}
+                        onChange={field.handleChange}
+                        options={[
+                          { value: "none", label: t("common:states.none") },
+                          { value: "absolute", label: t("form.capping.absolute") },
+                          { value: "percentile", label: t("form.capping.percentile") },
+                        ]}
+                        description={t("form.capping.short")}
+                      />
+                    )}
+                  </form.AppField>
+                  {d.capType === "absolute" && (
+                    <form.AppField name="capAbsolute">
+                      {(field) => (
+                        <field.NumberField
+                          label={t("form.capping.absoluteLabel")}
+                          description={t("form.capping.absoluteHelp")}
+                          minValue={0}
+                          step={1}
+                          className="w-full sm:max-w-sm"
+                        />
+                      )}
+                    </form.AppField>
+                  )}
+                  {d.capType === "percentile" && (
+                    <form.AppField name="capPercentile">
+                      {(field) => (
+                        <field.NumberField
+                          label={t("form.capping.percentileLabel")}
+                          description={t("form.capping.percentileHelp")}
+                          minValue={0}
+                          step={0.1}
+                          suffix={t("form.capping.percentileSuffix")}
+                          className="w-full sm:max-w-sm"
+                        />
+                      )}
+                    </form.AppField>
+                  )}
+                </div>
+              )}
+
+              <form.AppField name="description">
+                {(field) => <field.TextAreaField label={t("form.description.label")} rows={2} description={t("form.description.help")} />}
+              </form.AppField>
+            </Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
 
         <footer className="flex flex-wrap items-center justify-end gap-3 px-5 py-4">
           <form.Subscribe
@@ -754,7 +710,7 @@ export function MetricForm({
             <Direction inverse={d.inverse} />
           </dd>
           <dt className="text-muted">{t("form.preview.source")}</dt>
-          <dd className="truncate">{source === undefined ? t("builtinEvents") : dataSourceName(source)}</dd>
+          <dd className="truncate">{sourceLabel}</dd>
         </dl>
       </aside>
     </form>

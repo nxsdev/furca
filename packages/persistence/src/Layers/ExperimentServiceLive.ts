@@ -1,14 +1,16 @@
 import type { Actor } from "@furca/core/audit/AuditLog";
 import { PayloadStore } from "@furca/core/environments/PayloadStore";
 import {
+  type DecisionOutcome,
   Experiment,
   ExperimentDecision,
   ExperimentPhase,
   trafficChangeNeedsNewPhase,
 } from "@furca/core/experiments/Experiment";
-import { type ExperimentDraft, ExperimentService } from "@furca/core/experiments/ExperimentService";
+import { type ExperimentDraft, ExperimentService, type TrafficChange } from "@furca/core/experiments/ExperimentService";
 import { ExperimentRule, type FeatureRule, FeatureValueType, ForceRule, validateFeatureValue } from "@furca/core/features/Feature";
-import { NotFoundError } from "@furca/core/shared/errors";
+import { experimentReach, shadowedBy } from "@furca/core/features/ruleReach";
+import { ForbiddenError, NotFoundError } from "@furca/core/shared/errors";
 import { Database, type Db } from "@furca/database/Database";
 import { experiments, featureEnvironments } from "@furca/database/schema/index";
 import { and, eq } from "drizzle-orm";
@@ -77,130 +79,348 @@ const validateTraffic = (traffic: { readonly coverage: number; readonly weights:
 
 type RuleTransform = (rules: ReadonlyArray<FeatureRule>, featureId: string, environmentId: string) => ReadonlyArray<FeatureRule>;
 
+/** A computed experiment state change: the audit action, the new experiment and its flag rule writes */
+export interface Transition {
+  readonly action: string;
+  readonly after: Experiment;
+  readonly writes: (db: Db) => Array<BatchItem>;
+}
+
+export interface StopDecision {
+  readonly outcome: DecisionOutcome;
+  readonly variationKey: string | null;
+  readonly reason: string;
+}
+
+/** The experiments row columns except id, createdAt and archivedAt */
+const columns = (after: Experiment) => ({
+  key: after.key,
+  name: after.name,
+  hypothesis: after.hypothesis,
+  status: after.status,
+  featureId: after.featureId,
+  analysisEnvironmentId: after.analysisEnvironmentId,
+  hashAttribute: after.hashAttribute,
+  coverage: after.coverage,
+  dataSourceId: after.dataSourceId,
+  primaryMetricId: after.primaryMetricId,
+  updatedAt: after.updatedAt,
+  startedAt: after.startedAt,
+  stoppedAt: after.stoppedAt,
+  ...experimentJsonColumns(after),
+});
+
+/**
+ * Experiment loading, validation and the start / traffic / stop transitions. Shared with reviews:
+ * ChangeRequestServiceLive applies approved experiment changes through the same transitions
+ */
+export const makeExperimentOps = Effect.gen(function* () {
+  const database = yield* Database;
+
+  const load = (id: string) =>
+    database
+      .run("experiments.get", (db) => db.query.experiments.findFirst({ where: { id } }))
+      .pipe(
+        Effect.flatMap((row) =>
+          row ? Effect.succeed(toExperiment(row)) : Effect.fail(new NotFoundError({ entity: "experiment", id })),
+        ),
+      );
+
+  /** Metrics must exist, be active and read from the experiment's data source */
+  const validateMetrics = Effect.fn("ExperimentService.validateMetrics")(function* (
+    ids: ReadonlyArray<string>,
+    dataSourceId: string,
+  ) {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return;
+    const rows = yield* database.run("metrics.byIds", (db) => db.query.metrics.findMany({ where: { id: { in: unique } } }));
+    for (const id of unique) {
+      const metric = rows.find((m) => m.id === id);
+      if (metric === undefined) return yield* invalid("A selected metric no longer exists");
+      if (metric.archivedAt !== null) return yield* invalid(`Metric "${metric.name}" is archived`);
+      if (metric.dataSourceId !== dataSourceId) {
+        return yield* invalid(`Metric "${metric.name}" reads from a different data source than the experiment`);
+      }
+    }
+  });
+
+  /** The namespace exists and the slice is a non-empty range inside [0, 1] */
+  const validateNamespace = Effect.fn("ExperimentService.validateNamespace")(function* (allocation: Experiment["namespace"]) {
+    if (allocation === null) return;
+    if (!(allocation.start >= 0 && allocation.start < allocation.end && allocation.end <= 1)) {
+      return yield* invalid("The namespace slice must start before it ends, between 0% and 100%");
+    }
+    const row = yield* database.run("namespaces.get", (db) => db.query.namespaces.findFirst({ where: { id: allocation.namespaceId } }));
+    if (row === undefined) return yield* invalid("The selected namespace no longer exists");
+  });
+
+  /** Mutual exclusion: no other running experiment may hold an overlapping slice of the same namespace */
+  const requireFreeSlice = Effect.fn("ExperimentService.requireFreeSlice")(function* (e: Experiment) {
+    const mine = e.namespace;
+    if (mine === null) return;
+    const running = yield* database.run("experiments.running", (db) =>
+      db.query.experiments.findMany({ where: { status: "running", id: { ne: e.id } } }),
+    );
+    const clash = running
+      .map(toExperiment)
+      .find((o) => o.namespace?.namespaceId === mine.namespaceId && o.namespace.start < mine.end && mine.start < o.namespace.end);
+    if (clash !== undefined) {
+      return yield* invalid(
+        `The namespace slice overlaps "${clash.name}", which is running in the same namespace. Choose a free range or stop that experiment first`,
+      );
+    }
+  });
+
+  const validateDraft = Effect.fn("ExperimentService.validateDraft")(function* (draft: ExperimentDraft) {
+    if (draft.name.trim() === "") return yield* invalid("Name is required");
+    if (draft.variations.length < 2) return yield* invalid("An experiment needs at least two variations");
+    const keys = draft.variations.map((v) => v.key.trim());
+    if (keys.some((k) => k === "")) return yield* invalid("Every variation needs a key");
+    if (new Set(keys).size !== keys.length) return yield* invalid("Variation keys must be unique");
+    yield* validateTraffic(draft, draft.variations.length);
+    if (draft.hashAttribute.trim() === "") return yield* invalid("Choose the attribute to hash users by");
+    if (draft.dimensions.length > 5) return yield* invalid("Record at most 5 breakdown attributes");
+    if (draft.dimensions.some((d) => d.trim() === "" || d.length > 64 || /["\\]/.test(d))) {
+      return yield* invalid('Breakdown attributes need a name of at most 64 characters without " or \\');
+    }
+    if (new Set(draft.dimensions).size !== draft.dimensions.length) return yield* invalid("Each breakdown attribute can be chosen once");
+    if (draft.environmentIds.length === 0) return yield* invalid("Choose at least one environment");
+    if (new Set(draft.environmentIds).size !== draft.environmentIds.length) return yield* invalid("Each environment can be chosen once");
+    if (!draft.environmentIds.includes(draft.analysisEnvironmentId)) {
+      return yield* invalid("The analysis environment must be one of the experiment's environments");
+    }
+    if (!(draft.stats.alpha > 0 && draft.stats.alpha < 1)) return yield* invalid("Significance level must be between 0 and 1");
+    yield* requireGroups(database, [{ where: "Targeting", conditions: draft.conditions }]);
+    yield* validateNamespace(draft.namespace);
+
+    const feature = yield* database.run("features.get", (db) => db.query.features.findFirst({ where: { id: draft.featureId } }));
+    if (feature === undefined) return yield* invalid("The selected flag no longer exists");
+    if (feature.archivedAt !== null) return yield* invalid("Archived flags cannot run experiments");
+    for (const v of draft.variations) {
+      const error = validateFeatureValue(valueType(feature.valueType), v.value);
+      if (error !== null) return yield* invalid(`Variation "${v.key}": ${error}`);
+    }
+    const envs = yield* database.run("environments.byIds", (db) =>
+      db.query.environments.findMany({ where: { id: { in: [...draft.environmentIds] } } }),
+    );
+    if (envs.length !== draft.environmentIds.length) return yield* invalid("A selected environment no longer exists");
+    const source = yield* database.run("dataSources.get", (db) =>
+      db.query.dataSources.findFirst({ where: { id: draft.dataSourceId } }),
+    );
+    if (source === undefined) return yield* invalid("The selected data source no longer exists");
+    yield* validateMetrics(
+      [...(draft.primaryMetricId === null ? [] : [draft.primaryMetricId]), ...draft.secondaryMetricIds, ...draft.guardrailMetricIds],
+      draft.dataSourceId,
+    );
+  });
+
+  /** feature_environments updates for the rows of `featureIds` whose rules the transform changes */
+  const ruleWrites = Effect.fn("ExperimentService.ruleWrites")(function* (
+    featureIds: ReadonlyArray<string>,
+    transform: RuleTransform,
+  ) {
+    const rows = yield* database.run("featureEnvironments.byFeatures", (db) =>
+      db.query.featureEnvironments.findMany({ where: { featureId: { in: [...new Set(featureIds)] } } }),
+    );
+    return (db: Db): Array<BatchItem> =>
+      rows.flatMap((row) => {
+        const current = toRules(row.rules);
+        const next = transform(current, row.featureId, row.environmentId);
+        if (next === current) return [];
+        return [
+          db
+            .update(featureEnvironments)
+            .set({ rules: rulesJson(next) })
+            .where(and(eq(featureEnvironments.featureId, row.featureId), eq(featureEnvironments.environmentId, row.environmentId))),
+        ];
+      });
+  });
+
+  const requireStatus = (e: Experiment, status: Experiment["status"], message: string) =>
+    e.status === status ? Effect.void : invalid(message);
+
+  /**
+   * Starting, changing traffic and stopping rewrite what the flag serves in every environment of the
+   * experiment, so they go through a review (changeRequests) when any of them requires approval
+   */
+  const requireNoReview = (e: Experiment) =>
+    database
+      .run("environments.reviewed", (db) =>
+        db.query.environments.findFirst({
+          columns: { name: true },
+          where: { id: { in: [...e.environmentIds] }, requireApproval: true },
+          orderBy: { sortOrder: "asc" },
+        }),
+      )
+      .pipe(
+        Effect.flatMap((env) =>
+          env === undefined ? Effect.void : Effect.fail(new ForbiddenError({ message: `${env.name} requires a review` })),
+        ),
+      );
+
+  /** A started experiment whose rule sits below a rule that serves everyone would never enroll anyone */
+  const requireReachable = Effect.fn("ExperimentService.requireReachable")(function* (e: Experiment) {
+    const [rows, siblings, envs] = yield* database.run("experiments.reach", (db) =>
+      Promise.all([
+        db.query.featureEnvironments.findMany({ where: { featureId: e.featureId, environmentId: { in: [...e.environmentIds] } } }),
+        db.query.experiments.findMany({ where: { featureId: e.featureId, id: { ne: e.id } } }),
+        db.query.environments.findMany({ columns: { id: true, name: true }, where: { id: { in: [...e.environmentIds] } } }),
+      ]),
+    );
+    const reach = new Map(siblings.map((row) => [row.id, experimentReach(toExperiment(row))]));
+    reach.set(e.id, experimentReach(e));
+    for (const row of rows) {
+      const rules = syncRule(e)(toRules(row.rules), row.featureId, row.environmentId);
+      const blocker = shadowedBy(rules, (id) => reach.get(id))[rules.findIndex(isRuleOf(e.id))];
+      if (blocker !== null && blocker !== undefined) {
+        const env = envs.find((x) => x.id === row.environmentId)?.name ?? row.environmentId;
+        return yield* invalid(
+          `In ${env}, rule ${blocker + 1} serves everyone before the experiment's rule, so nobody would enter the experiment. Move the experiment's rule above it on the flag page`,
+        );
+      }
+    }
+  });
+
+  const prepareStart = Effect.fn("ExperimentService.prepareStart")(function* (before: Experiment, now: Date) {
+    yield* requireStatus(before, "draft", "Only draft experiments can be started");
+    if (before.primaryMetricId === null) return yield* invalid("Choose a primary metric before starting");
+    yield* validateDraft(before);
+    yield* requireFreeSlice(before);
+    const after = Experiment.make({
+      ...before,
+      status: "running",
+      startedAt: now,
+      updatedAt: now,
+      phases: [
+        ExperimentPhase.make({
+          startedAt: now,
+          endedAt: null,
+          coverage: before.coverage,
+          weights: before.weights,
+          conditions: before.conditions,
+          seed: newSeed(),
+          reason: "Experiment started",
+        }),
+      ],
+    });
+    yield* requireReachable(after);
+    const writes = yield* ruleWrites([after.featureId], syncRule(after));
+    return { action: "started", after, writes } satisfies Transition;
+  });
+
+  const prepareTraffic = Effect.fn("ExperimentService.prepareTraffic")(function* (before: Experiment, input: TrafficChange, now: Date) {
+    yield* requireStatus(before, "running", "Traffic can only change while the experiment is running");
+    yield* validateTraffic(input, before.variations.length);
+    yield* requireGroups(database, [{ where: "Targeting", conditions: input.conditions }]);
+    const current = before.phases.at(-1);
+    if (current === undefined) return yield* invalid("The experiment has no open phase");
+    const newPhase = trafficChangeNeedsNewPhase(current, input);
+    const closed = before.phases.slice(0, -1);
+    const phases = newPhase
+      ? [
+          ...closed,
+          ExperimentPhase.make({ ...current, endedAt: now }),
+          ExperimentPhase.make({
+            startedAt: now,
+            endedAt: null,
+            coverage: input.coverage,
+            weights: input.weights,
+            conditions: input.conditions,
+            seed: newSeed(),
+            reason: input.reason.trim() === "" ? "Traffic changed" : input.reason.trim(),
+          }),
+        ]
+      : [...closed, ExperimentPhase.make({ ...current, coverage: input.coverage })];
+    const after = Experiment.make({
+      ...before,
+      coverage: input.coverage,
+      weights: input.weights,
+      conditions: input.conditions,
+      phases,
+      updatedAt: now,
+    });
+    return { action: newPhase ? "phase.started" : "traffic.updated", after, writes: () => [] } satisfies Transition;
+  });
+
+  /** `decidedBy`: who made the decision (for a reviewed stop, the author of the request) */
+  const prepareStop = Effect.fn("ExperimentService.prepareStop")(function* (
+    before: Experiment,
+    input: StopDecision,
+    decidedBy: string,
+    now: Date,
+  ) {
+    yield* requireStatus(before, "running", "Only running experiments can be stopped");
+    const variation = input.outcome === "ship" ? before.variations.find((v) => v.key === input.variationKey) : undefined;
+    if (input.outcome === "ship" && variation === undefined) return yield* invalid("Choose the variation to ship");
+    const current = before.phases.at(-1);
+    const after = Experiment.make({
+      ...before,
+      status: "stopped",
+      stoppedAt: now,
+      updatedAt: now,
+      phases: current === undefined ? before.phases : [...before.phases.slice(0, -1), ExperimentPhase.make({ ...current, endedAt: now })],
+      decision: ExperimentDecision.make({
+        outcome: input.outcome,
+        variationKey: variation?.key ?? null,
+        reason: input.reason,
+        decidedAt: now,
+        decidedBy,
+      }),
+    });
+    const ship: RuleTransform = (rules) =>
+      variation === undefined || !rules.some(isRuleOf(before.id))
+        ? removeRule(before.id)(rules)
+        : rules.map((r) =>
+            isRuleOf(before.id)(r)
+              ? ForceRule.make({
+                  id: newId(),
+                  description: `Shipped from experiment ${before.name}`,
+                  enabled: true,
+                  conditions: current?.conditions ?? before.conditions,
+                  value: variation.value,
+                })
+              : r,
+          );
+    const writes = yield* ruleWrites([before.featureId], ship);
+    return { action: "stopped", after, writes } satisfies Transition;
+  });
+
+  return {
+    load,
+    validateDraft,
+    validateMetrics,
+    ruleWrites,
+    requireStatus,
+    requireNoReview,
+    prepareStart,
+    prepareTraffic,
+    prepareStop,
+  };
+});
+
+/** The experiments row update for `after`, for the same batch as its rule writes */
+export const experimentUpdate = (db: Db, before: Experiment, after: Experiment) =>
+  db
+    .update(experiments)
+    .set({ ...columns(after), ...(before.archived === after.archived ? {} : { archivedAt: after.archived ? after.updatedAt : null }) })
+    .where(eq(experiments.id, after.id));
+
 export const ExperimentServiceLive = Layer.effect(
   ExperimentService,
   Effect.gen(function* () {
     const database = yield* Database;
     const store = yield* PayloadStore;
-
-    const load = (id: string) =>
-      database
-        .run("experiments.get", (db) => db.query.experiments.findFirst({ where: { id } }))
-        .pipe(
-          Effect.flatMap((row) =>
-            row ? Effect.succeed(toExperiment(row)) : Effect.fail(new NotFoundError({ entity: "experiment", id })),
-          ),
-        );
-
-    /** Metrics must exist, be active and read from the experiment's data source */
-    const validateMetrics = Effect.fn("ExperimentService.validateMetrics")(function* (
-      ids: ReadonlyArray<string>,
-      dataSourceId: string,
-    ) {
-      const unique = [...new Set(ids)];
-      if (unique.length === 0) return;
-      const rows = yield* database.run("metrics.byIds", (db) => db.query.metrics.findMany({ where: { id: { in: unique } } }));
-      for (const id of unique) {
-        const metric = rows.find((m) => m.id === id);
-        if (metric === undefined) return yield* invalid("A selected metric no longer exists");
-        if (metric.archivedAt !== null) return yield* invalid(`Metric "${metric.name}" is archived`);
-        if (metric.dataSourceId !== dataSourceId) {
-          return yield* invalid(`Metric "${metric.name}" reads from a different data source than the experiment`);
-        }
-      }
-    });
-
-    /** The namespace exists and the slice is a non-empty range inside [0, 1] */
-    const validateNamespace = Effect.fn("ExperimentService.validateNamespace")(function* (allocation: Experiment["namespace"]) {
-      if (allocation === null) return;
-      if (!(allocation.start >= 0 && allocation.start < allocation.end && allocation.end <= 1)) {
-        return yield* invalid("The namespace slice must start before it ends, between 0% and 100%");
-      }
-      const row = yield* database.run("namespaces.get", (db) => db.query.namespaces.findFirst({ where: { id: allocation.namespaceId } }));
-      if (row === undefined) return yield* invalid("The selected namespace no longer exists");
-    });
-
-    /** Mutual exclusion: no other running experiment may hold an overlapping slice of the same namespace */
-    const requireFreeSlice = Effect.fn("ExperimentService.requireFreeSlice")(function* (e: Experiment) {
-      const mine = e.namespace;
-      if (mine === null) return;
-      const running = yield* database.run("experiments.running", (db) =>
-        db.query.experiments.findMany({ where: { status: "running", id: { ne: e.id } } }),
-      );
-      const clash = running
-        .map(toExperiment)
-        .find((o) => o.namespace?.namespaceId === mine.namespaceId && o.namespace.start < mine.end && mine.start < o.namespace.end);
-      if (clash !== undefined) {
-        return yield* invalid(
-          `The namespace slice overlaps "${clash.name}", which is running in the same namespace. Choose a free range or stop that experiment first`,
-        );
-      }
-    });
-
-    const validateDraft = Effect.fn("ExperimentService.validateDraft")(function* (draft: ExperimentDraft) {
-      if (draft.name.trim() === "") return yield* invalid("Name is required");
-      if (draft.variations.length < 2) return yield* invalid("An experiment needs at least two variations");
-      const keys = draft.variations.map((v) => v.key.trim());
-      if (keys.some((k) => k === "")) return yield* invalid("Every variation needs a key");
-      if (new Set(keys).size !== keys.length) return yield* invalid("Variation keys must be unique");
-      yield* validateTraffic(draft, draft.variations.length);
-      if (draft.hashAttribute.trim() === "") return yield* invalid("Choose the attribute to hash users by");
-      if (draft.dimensions.length > 5) return yield* invalid("Record at most 5 breakdown attributes");
-      if (draft.dimensions.some((d) => d.trim() === "" || d.length > 64 || /["\\]/.test(d))) {
-        return yield* invalid('Breakdown attributes need a name of at most 64 characters without " or \\');
-      }
-      if (new Set(draft.dimensions).size !== draft.dimensions.length) return yield* invalid("Each breakdown attribute can be chosen once");
-      if (draft.environmentIds.length === 0) return yield* invalid("Choose at least one environment");
-      if (new Set(draft.environmentIds).size !== draft.environmentIds.length) return yield* invalid("Each environment can be chosen once");
-      if (!draft.environmentIds.includes(draft.analysisEnvironmentId)) {
-        return yield* invalid("The analysis environment must be one of the experiment's environments");
-      }
-      if (!(draft.stats.alpha > 0 && draft.stats.alpha < 1)) return yield* invalid("Significance level must be between 0 and 1");
-      yield* requireGroups(database, [{ where: "Targeting", conditions: draft.conditions }]);
-      yield* validateNamespace(draft.namespace);
-
-      const feature = yield* database.run("features.get", (db) => db.query.features.findFirst({ where: { id: draft.featureId } }));
-      if (feature === undefined) return yield* invalid("The selected flag no longer exists");
-      if (feature.archivedAt !== null) return yield* invalid("Archived flags cannot run experiments");
-      for (const v of draft.variations) {
-        const error = validateFeatureValue(valueType(feature.valueType), v.value);
-        if (error !== null) return yield* invalid(`Variation "${v.key}": ${error}`);
-      }
-      const envs = yield* database.run("environments.byIds", (db) =>
-        db.query.environments.findMany({ where: { id: { in: [...draft.environmentIds] } } }),
-      );
-      if (envs.length !== draft.environmentIds.length) return yield* invalid("A selected environment no longer exists");
-      const source = yield* database.run("dataSources.get", (db) =>
-        db.query.dataSources.findFirst({ where: { id: draft.dataSourceId } }),
-      );
-      if (source === undefined) return yield* invalid("The selected data source no longer exists");
-      yield* validateMetrics(
-        [...(draft.primaryMetricId === null ? [] : [draft.primaryMetricId]), ...draft.secondaryMetricIds, ...draft.guardrailMetricIds],
-        draft.dataSourceId,
-      );
-    });
-
-    /** feature_environments updates for the rows of `featureIds` whose rules the transform changes */
-    const ruleWrites = Effect.fn("ExperimentService.ruleWrites")(function* (
-      featureIds: ReadonlyArray<string>,
-      transform: RuleTransform,
-    ) {
-      const rows = yield* database.run("featureEnvironments.byFeatures", (db) =>
-        db.query.featureEnvironments.findMany({ where: { featureId: { in: [...new Set(featureIds)] } } }),
-      );
-      return (db: Db): Array<BatchItem> =>
-        rows.flatMap((row) => {
-          const current = toRules(row.rules);
-          const next = transform(current, row.featureId, row.environmentId);
-          if (next === current) return [];
-          return [
-            db
-              .update(featureEnvironments)
-              .set({ rules: rulesJson(next) })
-              .where(and(eq(featureEnvironments.featureId, row.featureId), eq(featureEnvironments.environmentId, row.environmentId))),
-          ];
-        });
-    });
+    const {
+      load,
+      validateDraft,
+      validateMetrics,
+      ruleWrites,
+      requireStatus,
+      requireNoReview,
+      prepareStart,
+      prepareTraffic,
+      prepareStop,
+    } = yield* makeExperimentOps;
 
     // ponytail: read-modify-write of flag rules without a lock; concurrent edits of one flag can lose a write
     const save = Effect.fn("ExperimentService.save")(function* (
@@ -211,30 +431,11 @@ export const ExperimentServiceLive = Layer.effect(
       writes: (db: Db) => Array<BatchItem>,
       republish: boolean,
     ) {
-      const values = {
-        key: after.key,
-        name: after.name,
-        hypothesis: after.hypothesis,
-        status: after.status,
-        featureId: after.featureId,
-        analysisEnvironmentId: after.analysisEnvironmentId,
-        hashAttribute: after.hashAttribute,
-        coverage: after.coverage,
-        dataSourceId: after.dataSourceId,
-        primaryMetricId: after.primaryMetricId,
-        updatedAt: after.updatedAt,
-        startedAt: after.startedAt,
-        stoppedAt: after.stoppedAt,
-        ...experimentJsonColumns(after),
-      };
       yield* database.run(`experiments.${action}`, (db) =>
         batch(db, [
           before === null
-            ? db.insert(experiments).values({ id: after.id, createdAt: after.createdAt, archivedAt: null, ...values })
-            : db
-                .update(experiments)
-                .set({ ...values, ...(before.archived === after.archived ? {} : { archivedAt: after.archived ? after.updatedAt : null }) })
-                .where(eq(experiments.id, after.id)),
+            ? db.insert(experiments).values({ id: after.id, createdAt: after.createdAt, archivedAt: null, ...columns(after) })
+            : experimentUpdate(db, before, after),
           ...writes(db),
           auditInsert(db, { entityType: "experiment", entityId: after.id, action, actor, before, after }),
         ]),
@@ -244,8 +445,7 @@ export const ExperimentServiceLive = Layer.effect(
       return after;
     });
 
-    const requireStatus = (e: Experiment, status: Experiment["status"], message: string) =>
-      e.status === status ? Effect.void : invalid(message);
+    const commit = (before: Experiment, actor: Actor, t: Transition) => save(t.action, actor, before, t.after, t.writes, true);
 
     return {
       list: (includeArchived) =>
@@ -315,105 +515,20 @@ export const ExperimentServiceLive = Layer.effect(
 
       start: Effect.fn("ExperimentService.start")(function* (id, actor) {
         const before = yield* load(id);
-        yield* requireStatus(before, "draft", "Only draft experiments can be started");
-        if (before.primaryMetricId === null) return yield* invalid("Choose a primary metric before starting");
-        yield* validateDraft(before);
-        yield* requireFreeSlice(before);
-        const now = new Date();
-        const after = Experiment.make({
-          ...before,
-          status: "running",
-          startedAt: now,
-          updatedAt: now,
-          phases: [
-            ExperimentPhase.make({
-              startedAt: now,
-              endedAt: null,
-              coverage: before.coverage,
-              weights: before.weights,
-              conditions: before.conditions,
-              seed: newSeed(),
-              reason: "Experiment started",
-            }),
-          ],
-        });
-        const writes = yield* ruleWrites([after.featureId], syncRule(after));
-        return yield* save("started", actor, before, after, writes, true);
+        yield* requireNoReview(before);
+        return yield* commit(before, actor, yield* prepareStart(before, new Date()));
       }),
 
       updateTraffic: Effect.fn("ExperimentService.updateTraffic")(function* (input, actor) {
         const before = yield* load(input.id);
-        yield* requireStatus(before, "running", "Traffic can only change while the experiment is running");
-        yield* validateTraffic(input, before.variations.length);
-        yield* requireGroups(database, [{ where: "Targeting", conditions: input.conditions }]);
-        const current = before.phases.at(-1);
-        if (current === undefined) return yield* invalid("The experiment has no open phase");
-        const now = new Date();
-        const newPhase = trafficChangeNeedsNewPhase(current, input);
-        const closed = before.phases.slice(0, -1);
-        const phases = newPhase
-          ? [
-              ...closed,
-              ExperimentPhase.make({ ...current, endedAt: now }),
-              ExperimentPhase.make({
-                startedAt: now,
-                endedAt: null,
-                coverage: input.coverage,
-                weights: input.weights,
-                conditions: input.conditions,
-                seed: newSeed(),
-                reason: input.reason.trim() === "" ? "Traffic changed" : input.reason.trim(),
-              }),
-            ]
-          : [...closed, ExperimentPhase.make({ ...current, coverage: input.coverage })];
-        const after = Experiment.make({
-          ...before,
-          coverage: input.coverage,
-          weights: input.weights,
-          conditions: input.conditions,
-          phases,
-          updatedAt: now,
-        });
-        return yield* save(newPhase ? "phase.started" : "traffic.updated", actor, before, after, () => [], true);
+        yield* requireNoReview(before);
+        return yield* commit(before, actor, yield* prepareTraffic(before, input, new Date()));
       }),
 
       stop: Effect.fn("ExperimentService.stop")(function* (input, actor) {
         const before = yield* load(input.id);
-        yield* requireStatus(before, "running", "Only running experiments can be stopped");
-        const variation = input.outcome === "ship" ? before.variations.find((v) => v.key === input.variationKey) : undefined;
-        if (input.outcome === "ship" && variation === undefined) return yield* invalid("Choose the variation to ship");
-        const current = before.phases.at(-1);
-        const now = new Date();
-        const after = Experiment.make({
-          ...before,
-          status: "stopped",
-          stoppedAt: now,
-          updatedAt: now,
-          phases: current === undefined ? before.phases : [...before.phases.slice(0, -1), ExperimentPhase.make({ ...current, endedAt: now })],
-          decision: ExperimentDecision.make({
-            outcome: input.outcome,
-            variationKey: variation?.key ?? null,
-            reason: input.reason,
-            decidedAt: now,
-            decidedBy: actor.email,
-          }),
-        });
-        const ship: RuleTransform = (rules) =>
-          variation === undefined || !rules.some(isRuleOf(before.id))
-            ? removeRule(before.id)(rules)
-            : rules.map((r) =>
-                isRuleOf(before.id)(r)
-                  ? ForceRule.make({
-                      id: newId(),
-                      description: `Shipped from experiment ${before.name}`,
-                      enabled: true,
-                      conditions: current?.conditions ?? before.conditions,
-                      value: variation.value,
-                    })
-                  : r,
-              );
-        const writes = yield* ruleWrites([before.featureId], ship);
-        return yield* save("stopped", actor, before, after, writes, true);
+        yield* requireNoReview(before);
+        return yield* commit(before, actor, yield* prepareStop(before, input, actor.email, new Date()));
       }),
 
       archive: Effect.fn("ExperimentService.archive")(function* (input, actor) {

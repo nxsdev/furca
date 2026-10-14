@@ -7,7 +7,7 @@ import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { INTERVAL_INSET, IntervalBar, liftDomain, liftTicks } from "~/components/charts/IntervalBar";
 import { VariationSwatch } from "~/components/experiments/parts";
-import { formatCi, formatCount, formatLift, formatMetricValue, formatPercent, formatPValue } from "./format";
+import { formatCi, formatCount, formatLift, formatMetricValue, formatPercent, formatPValue, metricUnit } from "./format";
 import { VerdictLabel, verdictStyle } from "./verdict";
 
 /** Title and hint live under `results:table.roles.<role>` */
@@ -98,6 +98,7 @@ export function MetricsTable({
                 {group.map((result) => {
                   const metric = metrics.get(result.metricId);
                   const type = metric?.type ?? "mean";
+                  const unit = metricUnit(metric);
                   const summary = new Map(result.variations.map((v) => [v.variationKey, v]));
                   const base = control === undefined ? undefined : summary.get(control.key);
                   const nameCell = (rowSpan: number) => (
@@ -143,14 +144,17 @@ export function MetricsTable({
                         </td>
                         <td className="text-right font-mono tabular">
                           {base === undefined ? "–" : formatMetricValue(type, base.mean)}
+                          {base !== undefined && <span className="text-meta text-muted">{unit}</span>}
                           <div className="text-meta text-muted">{base === undefined ? "" : formatCount(base.users)}</div>
                         </td>
                         <td className="text-right font-mono tabular">
                           {v === undefined ? "–" : formatMetricValue(type, v.mean)}
+                          {v !== undefined && <span className="text-meta text-muted">{unit}</span>}
                           <div className="text-meta text-muted">{v === undefined ? "" : formatCount(v.users)}</div>
                         </td>
                         <td className="text-right font-mono tabular whitespace-nowrap">
-                          <span className={`font-medium ${tone === "text-muted" ? "" : tone}`}>
+                          {/* Only significant lifts get weight and color; the rest are noise and read as such */}
+                          <span className={tone === "text-muted" ? "text-muted" : `font-medium ${tone}`}>
                             {c.lift === null ? "–" : formatLift(c.lift)}
                           </span>
                           <div className="text-meta text-muted">{c.ci === null ? "" : formatCi(c.ci)}</div>
@@ -264,7 +268,7 @@ function MobileList({
                         {t("table.versus", { variation: experiment.variations[index]?.name ?? c.variationKey, control: control?.name ?? t("table.controlFallback") })}
                       </p>
                       <p className="flex flex-wrap items-baseline gap-x-2 font-mono tabular">
-                        <span className={`font-medium ${tone === "text-muted" ? "" : tone}`}>{c.lift === null ? "–" : formatLift(c.lift)}</span>
+                        <span className={tone === "text-muted" ? "text-muted" : `font-medium ${tone}`}>{c.lift === null ? "–" : formatLift(c.lift)}</span>
                         <span className="text-meta text-muted">{c.ci === null ? "" : formatCi(c.ci)}</span>
                         {evidence !== null && <span className="ml-auto text-meta text-muted">{evidence}</span>}
                       </p>
@@ -277,7 +281,8 @@ function MobileList({
                       />
                       {base !== undefined && v !== undefined && metric !== undefined && (
                         <p className="font-mono text-meta text-muted tabular">
-                          {formatMetricValue(metric.type, base.mean)} → {formatMetricValue(metric.type, v.mean)} ·{" "}
+                          {formatMetricValue(metric.type, base.mean)} → {formatMetricValue(metric.type, v.mean)}
+                          {metricUnit(metric)} ·{" "}
                           {t("table.usersPair", { base: formatCount(base.users), variation: formatCount(v.users) })}
                         </p>
                       )}

@@ -13,6 +13,7 @@ import { ListSkeleton, Panel, PanelHeader, QueryError, RelativeTime } from "~/co
 import { tbl } from "~/components/ui/table";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
+import { DraftSetup } from "./DraftSetup";
 import { VariationSwatch, trafficOf, variationBg, weightLabel } from "./parts";
 
 function Rows({ children }: { children: ReactNode }) {
@@ -45,8 +46,12 @@ function MetricLinks({ ids, metrics }: { ids: ReadonlyArray<string>; metrics: Re
 
 const num = <span className="font-mono tabular" />;
 
-/** Read-only setup: what was registered before the data arrived */
-export function SetupView({ experiment: x, feature }: { experiment: Experiment; feature: Feature | undefined }) {
+/** Drafts: editable summaries with a start checklist. Started: read-only, what was registered before the data arrived */
+export function SetupView({ experiment, feature }: { experiment: Experiment; feature: Feature | undefined }) {
+  return experiment.status === "draft" ? <DraftSetup experiment={experiment} feature={feature} /> : <RegisteredSetup experiment={experiment} feature={feature} />;
+}
+
+function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; feature: Feature | undefined }) {
   const { t } = useTranslation(["experiments", "common"]);
   const conditionsSummary = useConditionsSummary();
   const { environments } = useEnvironment();

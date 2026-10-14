@@ -21,11 +21,13 @@
       "action": "Create flag"
     },
     "sdk": {
-      "title": "Install the SDK",
-      "doneDescription": "{{name}} is receiving SDK traffic.",
-      "description": "Add @furca/sdk to your app with the {{name}} key. It downloads one payload and evaluates flags locally, with no request per check.",
-      "copyInstall": "Copy install command",
-      "otherRuntimes": "Cloudflare Workers, Node and other environments"
+      "title": "Connect the SDK",
+      "description": "Add this code to your app ({{name}}'s SDK key is filled in). The SDK downloads flags once and evaluates them locally, so checking a flag never makes a request.",
+      "otherRuntimes": "Cloudflare Workers, Node and other environments",
+      "waiting": "Waiting for the first data from the SDK in {{name}}… (checking every 5s)",
+      "received": "Received data from the SDK in {{name}}.",
+      "receivedAt": "Received data from the SDK in {{name}} (<time/>).",
+      "checkFailed": "Couldn't check for SDK data. Reload the page."
     },
     "metric": {
       "title": "Send events and define a metric",

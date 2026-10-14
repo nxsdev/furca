@@ -122,7 +122,7 @@ export const procedureAccess: {
     archive: "editor",
     delete: "editor",
   },
-  metrics: { list: "read", get: "read", create: "editor", update: "editor", archive: "editor" },
+  metrics: { list: "read", get: "read", create: "editor", update: "editor", archive: "editor", baseline: "read" },
   dataSources: { list: "read", get: "read", create: "admin", update: "admin", delete: "admin", test: "admin" },
   results: { latest: "read", dimension: "read", refresh: "editor" },
   events: { names: "read", properties: "read", volume: "read" },

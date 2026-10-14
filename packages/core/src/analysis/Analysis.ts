@@ -1,4 +1,5 @@
 import { Context, type Effect } from "effect";
+import type { EventSource, MetricType } from "../metrics/Metric";
 import type { DimensionResult, ResultSnapshot } from "../results/ExperimentResult";
 import type { NotFoundError, PersistenceError, ValidationError } from "../shared/errors";
 
@@ -51,6 +52,20 @@ export interface VolumeBucket {
   readonly events: number;
 }
 
+/** A metric's recent value in the built-in store, to prefill the experiment power planner */
+export interface MetricBaseline {
+  /** Days of data actually found, at most the requested number */
+  readonly days: number;
+  /** Users with any event or exposure in the environment over those days */
+  readonly users: number;
+  readonly dailyUsers: number;
+  /** proportion: share of those users with a matching event; null for mean metrics */
+  readonly rate: number | null;
+  /** mean: per-user count / sum of matching events (0 for users without one); null for proportion */
+  readonly mean: number | null;
+  readonly stdDev: number | null;
+}
+
 /** Built-in event store statistics for the metric builder and the overview page */
 export interface EventStatsServiceShape {
   /** Distinct event names of the last 30 days, most frequent first (max 200) */
@@ -62,6 +77,12 @@ export interface EventStatsServiceShape {
   ) => Effect.Effect<ReadonlyArray<EventPropertyStat>, PersistenceError>;
   /** 24 hourly buckets ending with the current hour, empty hours included */
   readonly volume: (environmentId: string) => Effect.Effect<ReadonlyArray<VolumeBucket>, PersistenceError>;
+  /** Baseline of a proportion / mean event metric over the last `days` (1–90); null without any users */
+  readonly baseline: (
+    environmentId: string,
+    metric: { readonly type: Exclude<MetricType, "ratio">; readonly source: EventSource },
+    days: number,
+  ) => Effect.Effect<MetricBaseline | null, PersistenceError>;
 }
 
 export class EventStatsService extends Context.Service<EventStatsService, EventStatsServiceShape>()(

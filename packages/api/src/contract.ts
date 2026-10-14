@@ -6,6 +6,7 @@
  * Errors use standard oRPC codes: UNAUTHORIZED, FORBIDDEN, NOT_FOUND, BAD_REQUEST, CONFLICT,
  * BAD_GATEWAY (warehouse failures), INTERNAL_SERVER_ERROR. `message` is always safe to display
  */
+import type { MetricBaseline } from "@furca/core/analysis/Analysis";
 import type { AuditLog } from "@furca/core/audit/AuditLog";
 import { AuditEntityType } from "@furca/core/audit/AuditLog";
 import { type DataSource, WarehouseConfig } from "@furca/core/datasources/DataSource";
@@ -146,8 +147,8 @@ export const contract = {
   public: {
     /** needsSetup is true until the first (owner) account exists */
     setupStatus: oc.output(type<{ needsSetup: boolean }>()),
-    /** Email the invitation was created for; NOT_FOUND when expired or used */
-    invitation: oc.input(input({ token: Schema.String })).output(type<{ email: string }>()),
+    /** Email and role the invitation was created for; NOT_FOUND when expired or used */
+    invitation: oc.input(input({ token: Schema.String })).output(type<{ email: string; role: AssignableRole }>()),
   },
 
   session: {
@@ -210,7 +211,11 @@ export const contract = {
      * metrics may change (anything else fails BAD_REQUEST)
      */
     update: oc.input(input({ ...Id, ...ExperimentDraftFields })).output(type<Experiment>()),
-    /** draft -> running: opens phase 0 with a fresh seed. Requires a primary metric */
+    /**
+     * draft -> running: opens phase 0 with a fresh seed. Requires a primary metric; BAD_REQUEST when
+     * a rule above the experiment's serves everyone. start / updateTraffic / stop are FORBIDDEN when
+     * an environment of the experiment requires a review: use changeRequests.create (experiment.*)
+     */
     start: oc.input(input(Id)).output(type<Experiment>()),
     /**
      * Running only. Raising coverage edits the current phase; any other change closes it and
@@ -252,6 +257,13 @@ export const contract = {
     create: oc.input(input({ key: Key, ...MetricFields })).output(type<Metric>()),
     update: oc.input(input({ ...Id, ...MetricFields })).output(type<Metric>()),
     archive: oc.input(input({ ...Id, archived: Schema.Boolean })).output(type<Metric>()),
+    /**
+     * Recent value of a built-in proportion / mean metric in one environment over the last `days`
+     * (1–90), to prefill the power planner. null for warehouse and ratio metrics, or without data
+     */
+    baseline: oc
+      .input(input({ metricId: Schema.String, environmentId: Schema.String, days: Schema.Finite }))
+      .output(type<MetricBaseline | null>()),
   },
 
   dataSources: {
@@ -386,9 +398,11 @@ export const contract = {
   },
 
   /**
-   * Reviews of flag changes in environments that require approval (environments.setRequireApproval).
-   * Editors open them; another admin approves (applies the change) or rejects; the author or an
-   * admin cancels
+   * Reviews of flag changes in environments that require approval (environments.setRequireApproval),
+   * and of experiment start / traffic / stop there (featureId: the experiment's flag; environmentId:
+   * a protected environment of the experiment). Editors open them; another admin approves (applies
+   * the change) or rejects; the author or an admin cancels. The only admin may approve their own
+   * request with a comment saying why
    */
   changeRequests: {
     /** Newest first */
@@ -396,13 +410,17 @@ export const contract = {
       .input(input({ status: Schema.optional(ChangeRequestStatus), featureId: Schema.optional(Schema.String) }))
       .output(type<ReadonlyArray<ChangeRequest>>()),
     get: oc.input(input(Id)).output(type<ChangeRequest>()),
-    /** Stores the change with the environment's current state as its base. BAD_REQUEST when nothing changes */
+    /**
+     * Stores the change with the environment's current state as its base. BAD_REQUEST when nothing
+     * changes; CONFLICT when the experiment already has an open request
+     */
     create: oc
       .input(input({ featureId: Schema.String, environmentId: Schema.String, change: FlagChange, comment: Schema.String }))
       .output(type<ChangeRequest>()),
     /**
-     * Applies the change and republishes. FORBIDDEN for the author; CONFLICT when the request is
-     * closed or the flag changed since it was opened
+     * Applies the change and republishes. FORBIDDEN for the author unless they are the only admin
+     * (then BAD_REQUEST without a comment); CONFLICT when the request is closed or the flag or
+     * experiment changed since it was opened
      */
     approve: oc.input(input({ ...Id, comment: Schema.String })).output(type<ChangeRequest>()),
     reject: oc.input(input({ ...Id, comment: Schema.String })).output(type<ChangeRequest>()),

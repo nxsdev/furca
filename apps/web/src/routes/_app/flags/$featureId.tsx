@@ -15,6 +15,7 @@ import { ImplementationPanel } from "~/components/flags/ImplementationPanel";
 import { AddRuleButton, newRule, type Rule, type RulesDraft, RulesList, ruleIssue } from "~/components/flags/RulesEditor";
 import { Segmented } from "~/components/flags/Segmented";
 import { TestUserPanel, useTestUser } from "~/components/flags/TestUserPanel";
+import { servesOnlyFalse, servingText, shadowedRules, stateAndServing } from "~/components/flags/serving";
 import { cacheFeature, useSetEnabled } from "~/components/flags/useSetEnabled";
 import { ValueInput, ValuePreview, valueIssue } from "~/components/flags/ValueInput";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
@@ -251,7 +252,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="flex min-w-0 flex-col gap-6">
                 <OpenReviews feature={feature} environments={environments} />
-                <EnvironmentsPanel feature={feature} environments={environments} />
+                <EnvironmentsPanel feature={feature} environments={environments} experimentsById={experimentsById} />
                 <Panel>
                   <PanelHeader
                     title={t("detail.rulesTitle")}
@@ -281,6 +282,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                     }
                   />
                   <EnvironmentOffNote feature={feature} environment={ruleEnv} rules={rules} experimentsById={experimentsById} />
+                  <ConcurrentExperimentsNote environment={ruleEnv} rules={rules} experimentsById={experimentsById} />
                   <RulesList
                     key={ruleEnv.id}
                     form={form}
@@ -586,7 +588,15 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
   );
 }
 
-function EnvironmentsPanel({ feature, environments }: { feature: Feature; environments: ReadonlyArray<Environment> }) {
+function EnvironmentsPanel({
+  feature,
+  environments,
+  experimentsById,
+}: {
+  feature: Feature;
+  environments: ReadonlyArray<Environment>;
+  experimentsById: ReadonlyMap<string, Experiment>;
+}) {
   const { t } = useTranslation(["flags", "reviews"]);
   const setEnabled = useSetEnabled();
   const { canEdit } = usePermissions();
@@ -602,7 +612,7 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
         {environments.map((env) => {
           const config = feature.environments.find((e) => e.environmentId === env.id);
           const enabled = config?.enabled ?? false;
-          const count = config?.rules.length ?? 0;
+          const unused = shadowedRules(config?.rules ?? [], experimentsById).filter((b) => b !== null).length;
           return (
             <li key={env.id} className="border-b border-border last:border-0">
               <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
@@ -617,14 +627,20 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
                       </span>
                     )}
                   </div>
-                  <div className="text-meta text-muted">
-                    {count === 0 ? t("environments.noRules") : t("environments.ruleCount", { count })}
-                  </div>
+                  {/* What SDKs get, not just on/off: "on" with a false default still serves false to everyone */}
+                  <div className="text-meta text-muted">{servingText(feature, env.id, experimentsById)}</div>
+                  {unused > 0 && (
+                    <div className="mt-0.5 flex items-center gap-1 text-meta">
+                      <TriangleAlert className="size-3.5 shrink-0 text-health" aria-hidden="true" />
+                      {t("environments.unusedRules", { count: unused })}
+                    </div>
+                  )}
                 </div>
                 <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? t("shared.on") : t("shared.off")}</span>
                 <FlagSwitch
                   size="md"
                   aria-label={t("shared.switchLabel", { key: feature.key, environment: env.name })}
+                  description={stateAndServing(feature, env.id, experimentsById)}
                   isSelected={enabled}
                   isDisabled={feature.archived || !canEdit}
                   onChange={(next) =>
@@ -632,6 +648,12 @@ function EnvironmentsPanel({ feature, environments }: { feature: Feature; enviro
                   }
                 />
               </div>
+              {servesOnlyFalse(feature, env.id) && (
+                <p className="flex items-start gap-2 px-4 pb-3 text-meta text-muted sm:px-5 sm:pl-10">
+                  <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+                  {t("serving.onlyFalseHint")}
+                </p>
+              )}
               {requesting?.environment.id === env.id && (
                 <ToggleRequestForm feature={feature} environment={env} enabled={requesting.enabled} onDone={() => setRequesting(null)} />
               )}
@@ -854,6 +876,38 @@ function EnvironmentOffNote({
         {running
           ? t("offNote.experimentStarved", { key: feature.key, environment: environment.name, experiment: running.name })
           : t("offNote.rulesInactive", { key: feature.key, environment: environment.name })}
+      </span>
+    </p>
+  );
+}
+
+/** Two running experiments on one flag in one environment: users reach the lower one only when the upper one passes them over */
+function ConcurrentExperimentsNote({
+  environment,
+  rules,
+  experimentsById,
+}: {
+  environment: Environment;
+  rules: ReadonlyArray<Rule>;
+  experimentsById: ReadonlyMap<string, Experiment>;
+}) {
+  const { t } = useTranslation("flags");
+  const running = rules.flatMap((r) => {
+    const x = r._tag === "experiment" && r.enabled ? experimentsById.get(r.experimentId) : undefined;
+    return x?.status === "running" ? [x] : [];
+  });
+  // Slices of one namespace never overlap (the server refuses overlapping starts)
+  const exclusive = running.every((x) => x.namespace !== null && x.namespace.namespaceId === running[0]?.namespace?.namespaceId);
+  if (running.length < 2 || exclusive) return null;
+  return (
+    <p className="flex items-start gap-2 border-b border-border bg-surface-secondary/60 px-4 py-2.5 text-label sm:px-5">
+      <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-health" aria-hidden="true" />
+      <span>
+        {t("concurrentExperiments", {
+          environment: environment.name,
+          count: running.length,
+          names: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(running.map((x) => x.name)),
+        })}
       </span>
     </p>
   );

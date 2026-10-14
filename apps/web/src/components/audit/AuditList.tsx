@@ -9,6 +9,7 @@ import { formatDateTime } from "~/components/results/format";
 import { ListSkeleton, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { i18n } from "~/i18n";
+import { MemberName, useMembers } from "~/lib/members";
 import { errorMessage, orpc } from "~/lib/rpc";
 import { diffLines, foldUnchanged, prettyLines } from "./diff";
 
@@ -69,6 +70,7 @@ const KNOWN_ACTIONS = [
   "role.updated",
   "review.requested",
   "review.approved",
+  "review.selfApproved",
   "review.rejected",
   "review.cancelled",
   "review.required",
@@ -225,6 +227,7 @@ export function AuditList({
 }) {
   const { t } = useTranslation(["audit", "common"]);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const { nameOf } = useMembers();
   const query = useInfiniteQuery(
     orpc.audit.list.infiniteOptions({
       input: (before: Date | null) => ({ entityType, entityId, before, limit }),
@@ -307,7 +310,9 @@ export function AuditList({
                         <RelativeTime date={entry.createdAt} />
                       </span>
                     </td>
-                    <td className={`${tbl.td} hidden max-w-[240px] truncate text-muted md:table-cell`}>{entry.actorEmail}</td>
+                    <td className={`${tbl.td} hidden max-w-[240px] truncate text-muted md:table-cell`}>
+                      <MemberName email={entry.actorEmail} />
+                    </td>
                     <td className={`${tbl.td} hidden text-right text-muted sm:table-cell`}>
                       <RelativeTime date={entry.createdAt} />
                     </td>
@@ -319,7 +324,7 @@ export function AuditList({
                           before={entry.before}
                           after={entry.after}
                           caption={t("list.caption", {
-                            email: entry.actorEmail,
+                            email: nameOf(entry.actorEmail),
                             date: formatDateTime(new Date(entry.createdAt)),
                           })}
                         />

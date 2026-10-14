@@ -1,13 +1,15 @@
 import { buttonVariants, Skeleton } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Check } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AuditList } from "~/components/audit/AuditList";
-import { apiHost, CodeBlock, INSTALL } from "~/components/environments/Quickstart";
+import { SdkTabs } from "~/components/environments/Quickstart";
 import { Onboarding, type OnboardingStep } from "~/components/overview/Onboarding";
 import { RunningExperiments } from "~/components/overview/RunningExperiments";
 import { TrafficChart } from "~/components/overview/TrafficChart";
-import { PageHeader, Panel, PanelHeader, QueryError } from "~/components/ui/primitives";
+import { PageHeader, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
@@ -19,19 +21,6 @@ export const Route = createFileRoute("/_app/overview")({
 
 const linkCls = "rounded-sm text-label text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus";
 
-const firstSnippet = (sdkKey: string, flagKey: string) => `import { createClient } from "@furca/sdk";
-
-const furca = createClient({
-  apiHost: "${apiHost()}",
-  sdkKey: "${sdkKey}",
-  attributes: { id: user.id },
-});
-await furca.ready();
-
-if (furca.isOn("${flagKey}")) {
-  // the new code path
-}`;
-
 function Page() {
   const { t } = useTranslation("overview");
   const { current } = useEnvironment();
@@ -39,8 +28,20 @@ function Page() {
   const features = useQuery(orpc.features.list.queryOptions({ input: { includeArchived: false } }));
   const experiments = useQuery(orpc.experiments.list.queryOptions({ input: { includeArchived: false } }));
   const metrics = useQuery(orpc.metrics.list.queryOptions({ input: { includeArchived: false } }));
-  const names = useQuery({ ...orpc.events.names.queryOptions(envInput), enabled: current !== null });
-  const volume = useQuery({ ...orpc.events.volume.queryOptions(envInput), enabled: current !== null });
+  // Until the SDK sends its first event or exposure, check every 5s (TanStack pauses while the tab is hidden)
+  const connected = useRef(false);
+  const poll = { enabled: current !== null, refetchInterval: () => (connected.current ? false : 5000) };
+  const names = useQuery({ ...orpc.events.names.queryOptions(envInput), ...poll });
+  const volume = useQuery({ ...orpc.events.volume.queryOptions(envInput), ...poll });
+  const eventNames = names.data ?? [];
+  const sawTraffic = eventNames.length > 0 || (volume.data ?? []).some((b) => b.events + b.exposures > 0);
+  connected.current = sawTraffic;
+  // Whichever poll saw traffic first stopped both: fetch the names once more for the time of the latest event
+  const refetchNames = useRef(names.refetch);
+  refetchNames.current = names.refetch;
+  useEffect(() => {
+    if (sawTraffic) void refetchNames.current();
+  }, [sawTraffic]);
 
   const header = (
     <PageHeader
@@ -71,8 +72,8 @@ function Page() {
       </>
     );
 
-  const eventNames = names.data ?? [];
-  const sawTraffic = eventNames.length > 0 || (volume.data ?? []).some((b) => b.events + b.exposures > 0);
+  /** Latest event; exposures only have hourly buckets, so an exposure-only connection shows no time */
+  const lastEventAt = eventNames.reduce<Date | null>((latest, n) => (latest === null || n.lastSeenAt > latest ? n.lastSeenAt : latest), null);
   const flagKey = features.data[0]?.key ?? "my-first-flag";
   const steps: ReadonlyArray<OnboardingStep> = [
     {
@@ -91,13 +92,27 @@ function Page() {
       id: "sdk",
       title: t("steps.sdk.title"),
       // ponytail: sawTraffic implies a selected environment (its queries are disabled otherwise)
-      description: t(sawTraffic ? "steps.sdk.doneDescription" : "steps.sdk.description", { name: current?.name ?? "" }),
+      description: sawTraffic ? (
+        <span className="text-foreground">
+          <Check className="mr-1 inline size-3.5 align-[-2px]" aria-hidden="true" />
+          {lastEventAt === null ? (
+            t("steps.sdk.received", { name: current?.name ?? "" })
+          ) : (
+            <Trans t={t} i18nKey="steps.sdk.receivedAt" values={{ name: current?.name ?? "" }} components={{ time: <RelativeTime date={lastEventAt} /> }} />
+          )}
+        </span>
+      ) : (
+        t("steps.sdk.description", { name: current?.name ?? "" })
+      ),
       done: sawTraffic,
       body:
         current === null ? undefined : (
-          <div className="flex w-full max-w-[720px] flex-col gap-2">
-            <CodeBlock code={INSTALL} label={t("steps.sdk.copyInstall")} />
-            <CodeBlock code={firstSnippet(current.sdkKey, flagKey)} />
+          <div className="flex w-full max-w-[720px] flex-col gap-3">
+            <SdkTabs sdkKey={current.sdkKey} flagKey={flagKey} targets={["browser", "react"]} />
+            <p className="flex items-center gap-2 text-label text-muted">
+              <span className="size-2 shrink-0 rounded-full bg-muted motion-safe:animate-pulse" aria-hidden="true" />
+              {names.isError && volume.isError ? t("steps.sdk.checkFailed") : t("steps.sdk.waiting", { name: current.name })}
+            </p>
             <Link to="/environments" className={`${linkCls} w-fit`}>
               {t("steps.sdk.otherRuntimes")}
             </Link>

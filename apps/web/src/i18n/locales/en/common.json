@@ -16,7 +16,8 @@
     "restore": "Restore",
     "learnMore": "Learn more",
     "showMore": "Show more",
-    "loadOlder": "Load older"
+    "loadOlder": "Load older",
+    "change": "Change"
   },
   "states": {
     "loading": "Loading",
@@ -35,6 +36,11 @@
     "minLength_one": "Use at least {{count}} character",
     "minLength_other": "Use at least {{count}} characters",
     "email": "Enter a valid email address",
-    "invalid": "Check this value"
+    "invalid": "Check this value",
+    "keyFromName": "made from the name",
+    "changeLabel": "Change {{label}}"
+  },
+  "help": {
+    "about": "About {{term}}"
   }
 }

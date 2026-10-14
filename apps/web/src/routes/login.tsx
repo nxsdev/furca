@@ -39,7 +39,14 @@ function LoginPage() {
         fields={[
           { name: "name", label: t("auth.fields.name"), autoComplete: "name" },
           { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email" },
-          { name: "password", label: t("auth.fields.password"), type: "password", autoComplete: "new-password", minLength: 10 },
+          {
+            name: "password",
+            label: t("auth.fields.password"),
+            type: "password",
+            autoComplete: "new-password",
+            minLength: 10,
+            description: t("auth.fields.passwordHint", { count: 10 }),
+          },
         ]}
         onSubmit={async ({ name, email, password }) => {
           const { error } = await authClient.signUp.email({ name, email, password });

@@ -4,6 +4,7 @@ import { CircleSlash, Rocket, Undo2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { errorText } from "~/components/form/form";
+import { i18n } from "~/i18n";
 
 /** Literal class names so Tailwind generates them; variation colors are for identity only */
 export const variationBg = ["bg-variation-0", "bg-variation-1", "bg-variation-2", "bg-variation-3", "bg-variation-4"];
@@ -49,6 +50,13 @@ export function DecisionBadge({ experiment }: { experiment: Experiment }) {
     </span>
   );
 }
+
+/** Prefix of the note ExperimentService.stop writes on a shipped rule (stored in English) */
+const SHIPPED_NOTE = "Shipped from experiment ";
+
+/** A rule's note in the UI language: the server's English "Shipped from experiment X" is localized */
+export const ruleNote = (description: string): string =>
+  description.startsWith(SHIPPED_NOTE) ? i18n.t("results:decision.shippedRuleNote", { name: description.slice(SHIPPED_NOTE.length) }) : description;
 
 export const currentPhase = (experiment: Experiment) => experiment.phases.at(-1) ?? null;
 

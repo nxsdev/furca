@@ -64,7 +64,9 @@
     "fields": {
       "name": "Name",
       "email": "Email",
-      "password": "Password"
+      "password": "Password",
+      "passwordHint_one": "At least {{count}} character",
+      "passwordHint_other": "At least {{count}} characters"
     },
     "setup": {
       "pageTitle": "Set up · furca",
@@ -82,7 +84,7 @@
     "invite": {
       "pageTitle": "Join · furca",
       "title": "Join furca",
-      "description": "You were invited as {{email}}.",
+      "description": "You were invited as {{email}} with the {{role}} role.",
       "submit": "Create account",
       "unavailable": "Invitation unavailable",
       "unavailableBody": "{{reason}}. Ask for a new link.",

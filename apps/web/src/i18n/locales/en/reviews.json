@@ -2,18 +2,19 @@
   "pageTitle": "Reviews · furca",
   "page": {
     "title": "Reviews",
-    "description": "Flag changes waiting for an admin's approval in environments that require review. Newest first.",
+    "description": "Flag and experiment changes waiting for an admin's approval in environments that require review. Newest first.",
     "loadFailed": "Couldn't load reviews. {{message}}",
     "emptyTitle": "Nothing waiting for review",
-    "emptyDescription": "Turn on Require review for an environment, such as production. Flag changes there then wait here until another admin approves them.",
-    "emptyAction": "Open SDK & environments"
+    "emptyDescription": "Turn on Require review for an environment, such as production. Flag changes and experiment starts, traffic changes and stops there then wait here until another admin approves them.",
+    "emptyAction": "Open SDK & environments",
+    "emptyDescriptionOn": "Changes in {{environments}} wait here until another admin approves them. Nothing is waiting right now."
   },
   "banner": {
     "title_one": "{{count}} change waiting for review",
     "title_other": "{{count}} changes waiting for review"
   },
   "item": {
-    "requestedBy": "Requested by {{email}} <relative/>"
+    "requestedBy": "Requested by <author/> · <relative/>"
   },
   "change": {
     "turnOn": "Turn on",
@@ -46,7 +47,13 @@
     "rejected": "{{key}} change rejected",
     "cancelled": "Request cancelled",
     "failed": "Couldn't update the request",
-    "waitingForAdmin": "Another admin approves your requests."
+    "waitingForAdmin": "Another admin approves your requests.",
+    "reasonRequired": "Say why you're approving your own request",
+    "reasonLabel": "Reason (required)",
+    "reasonPlaceholder": "Kept in the audit log and the flag's history as a self-approval",
+    "confirmSelfApprove": "Approve my request and apply",
+    "selfApprove": "Approve myself",
+    "onlyAdmin": "You're the only admin, so you can approve your own request with a reason."
   },
   "request": {
     "badge": "Review required",
@@ -60,5 +67,22 @@
     "saveAndRequest": "Save and request review",
     "requested": "Review requested",
     "requestedDescription": "An admin can approve it on this flag's page or under Reviews."
+  },
+  "experiment": {
+    "start": "Start experiment {{name}}",
+    "traffic": "Change traffic of {{name}}",
+    "ship": "Stop {{name}} and ship {{variation}}",
+    "rollback": "Stop {{name}} and roll back",
+    "inconclusive": "Stop {{name}} without a decision",
+    "startDetail": "Starts assigning {{coverage}} of matching users to {{variations}} at {{weights}}.",
+    "coverage": "Traffic",
+    "weights": "Split",
+    "conditionsChanged": "Changes who can enter.",
+    "newPhase": "Starts a new phase and re-randomizes users; earlier results stay with the previous phase.",
+    "shipDetail": "Serves <value/> to everyone the experiment targeted.",
+    "removeDetail": "Removes the experiment's rule: users get the remaining rules and the default value.",
+    "reason": "Reason: {{reason}}",
+    "stale": "The experiment changed after this request, so it can't be approved. Open a new request.",
+    "open": "Open experiment"
   }
 }

@@ -63,7 +63,8 @@
     "fields": {
       "name": "名前",
       "email": "メールアドレス",
-      "password": "パスワード"
+      "password": "パスワード",
+      "passwordHint_other": "{{count}}文字以上"
     },
     "setup": {
       "pageTitle": "セットアップ · furca",
@@ -81,7 +82,7 @@
     "invite": {
       "pageTitle": "参加 · furca",
       "title": "furca に参加",
-      "description": "{{email}} として招待されています。",
+      "description": "{{email}} として、{{role}}のロールで招待されています。",
       "submit": "アカウントを作成",
       "unavailable": "この招待は使用できません",
       "unavailableBody": "{{reason}}。新しいリンクを依頼してください。",

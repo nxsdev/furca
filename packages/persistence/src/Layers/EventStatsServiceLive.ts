@@ -1,8 +1,10 @@
 import { EventStatsService } from "@furca/core/analysis/Analysis";
+import type { EventSource } from "@furca/core/metrics/Metric";
 import { Database } from "@furca/database/Database";
 import { events, exposures } from "@furca/database/schema/index";
 import { and, count, desc, eq, gte, lt, max, sql } from "drizzle-orm";
 import { Effect, Layer } from "effect";
+import { d1BaselineSql } from "./AnalysisSql";
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -61,6 +63,37 @@ export const EventStatsServiceLive = Layer.effect(
           stats.set(r.property, stat);
         }
         return [...stats.values()];
+      }),
+
+      // ponytail: one scan of `days` of events (events_ts_idx) per planner open; fine for D1's sizes
+      baseline: Effect.fn("EventStatsService.baseline")(function* (
+        environmentId: string,
+        metric: { readonly type: "proportion" | "mean"; readonly source: EventSource },
+        days: number,
+      ) {
+        const span = Math.min(90, Math.max(1, Math.round(days)));
+        const now = Date.now();
+        const q = d1BaselineSql({ environmentId, sinceMs: now - span * DAY_MS, source: metric.source });
+        const row = yield* database.run("events.baseline", () =>
+          database.d1
+            .prepare(q.sql)
+            .bind(...q.params)
+            .first<{ n: number; converted: number; sum_y: number; sum_y2: number; first_ts: number | null }>(),
+        );
+        if (row === null || row.n === 0) return null;
+        // A store younger than the window has fewer days of traffic: divide by the days actually seen
+        const seen = row.first_ts === null ? span : Math.min(span, Math.max(1, Math.round((now - row.first_ts) / DAY_MS)));
+        const mean = row.sum_y / row.n;
+        const variance = row.n > 1 ? Math.max(0, (row.sum_y2 - row.n * mean * mean) / (row.n - 1)) : 0;
+        const proportion = metric.type === "proportion";
+        return {
+          days: seen,
+          users: row.n,
+          dailyUsers: row.n / seen,
+          rate: proportion ? row.converted / row.n : null,
+          mean: proportion ? null : mean,
+          stdDev: proportion ? null : Math.sqrt(variance),
+        };
       }),
 
       volume: Effect.fn("EventStatsService.volume")(function* (environmentId: string) {

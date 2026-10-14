@@ -49,12 +49,23 @@
     }
   },
   "create": {
-    "description": "コードから参照するキー、値の型、どのルールにも一致しないときに配信する値を設定します。",
+    "description": "コードから参照するフラグを作成します。作成直後はすべての環境でオフなので、そのままデプロイしても安全です。",
     "created": "{{key}} を作成しました",
     "enterKey": "キーを入力してください",
     "keyInvalid": "英小文字、数字、- と _ のみ使用できます（最大 64 文字）",
     "keyHelp": "英小文字、数字、- と _ が使えます。後から変更できません。",
-    "defaultValueHelp": "フラグがオンで、どのルールにも一致しないときに配信する値です。"
+    "defaultValueHelp": "フラグがオンで、どのルールにも一致しないときに配信する値です。",
+    "breadcrumb": "新規",
+    "name": "名前",
+    "nameHelp": "何を切り替えるフラグか。一覧と詳細でキーの下に表示されます。",
+    "keyHintTyped": "コードで使う英数字のキーを入力してください（例: new-checkout）。後から変更できません。",
+    "typeHelp": "通常はブール値（オン/オフ）です。文字列・数値・JSON は、ユーザーごとに異なる値を配信するときに使います。",
+    "options": "詳細設定（任意）",
+    "optionsWhy": "このままで問題ありません。ルールに一致しないときの値を変えたいときや、タグで整理したいときに変更します。",
+    "defaultValueSummary": "デフォルト値 {{value}}",
+    "offEverywhere": "すべての環境でオフ",
+    "noTags": "タグなし",
+    "tagCount_other": "タグ {{count}}件"
   },
   "detail": {
     "notFoundTitle": "フラグが見つかりません",
@@ -104,8 +115,7 @@
   "environments": {
     "title": "環境",
     "description": "フラグがオフの環境では、ペイロードにフラグが含まれず、SDK はコードで指定したフォールバック値を返します。",
-    "noRules": "ルールなし",
-    "ruleCount_other": "ルール {{count}}件"
+    "unusedRules_other": "使われないルールが {{count}} 件あります"
   },
   "defaultRow": {
     "saved": "デフォルト値を保存しました",
@@ -150,7 +160,10 @@
       "stopped": "停止済み"
     },
     "ofMatchingUsers": "一致するユーザーの <pct>{{percent}}</pct>",
-    "variations_other": "バリエーション {{count}}個"
+    "variations_other": "バリエーション {{count}}個",
+    "experimentLabel": "実験「{{name}}」",
+    "everyoneGets": "全員に {{value}}",
+    "shadowed": "上のルール {{number}}（{{label}}）が先に全員に一致するため、このルールは使われません"
   },
   "ruleEditor": {
     "who": "対象",
@@ -230,7 +243,12 @@
       "disabled": "<actor>{{actor}}</actor> がフラグをオフにしました",
       "archived": "<actor>{{actor}}</actor> がフラグをアーカイブしました",
       "unarchived": "<actor>{{actor}}</actor> がフラグを復元しました",
-      "deleted": "<actor>{{actor}}</actor> がフラグを削除しました"
+      "deleted": "<actor>{{actor}}</actor> がフラグを削除しました",
+      "reviewRequested": "<actor>{{actor}}</actor> がレビューをリクエストしました",
+      "reviewApproved": "<actor>{{actor}}</actor> がレビューを承認しました",
+      "reviewSelfApproved": "<actor>{{actor}}</actor> が自分のリクエストを承認しました（承認できる管理者が 1 人だけのため）",
+      "reviewRejected": "<actor>{{actor}}</actor> がレビューを却下しました",
+      "reviewCancelled": "<actor>{{actor}}</actor> がレビューのリクエストを取り消しました"
     },
     "loadError": "履歴を読み込めませんでした。{{error}}",
     "emptyTitle": "変更履歴はまだありません",
@@ -269,6 +287,16 @@
     "turnedOff": "{{environment}} で {{key}} をオフにしました",
     "turnedOnDescription": "SDK は次回のペイロード取得時に反映します。",
     "turnedOffDescription": "SDK はコード側のフォールバック値を返すようになります。",
-    "undo": "元に戻す"
-  }
+    "undo": "元に戻す",
+    "turnedOnServing": "{{serving}}。{{next}}"
+  },
+  "serving": {
+    "off": "SDK はコード側の既定値を返します",
+    "everyone": "全員に {{value}} を配信",
+    "rules": "ルールに一致したユーザーに {{ruleValue}}、それ以外は {{value}}",
+    "mixed": "ルールに一致したユーザーにはそのルールの値、それ以外は {{value}}",
+    "withState": "{{state}} · {{serving}}",
+    "onlyFalseHint": "全員に false を配信しています。一部のユーザーに true を返すにはルールを追加し、全員に返すにはデフォルト値を true にしてください。"
+  },
+  "concurrentExperiments_other": "{{environment}} で、このフラグの実験が {{count}} 件同時に実行中です（{{names}}）。上の実験に入らなかったユーザーだけが下の実験に入るため、下の実験の対象は想定より少なくなります。"
 }
