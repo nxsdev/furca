@@ -190,24 +190,29 @@ function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; f
             )}
           </Rows>
         </Panel>
-        <Panel>
-          <PanelHeader title={t("setup.plan")} />
-          <Rows>
-            <Row label={t("setup.detect")}>
-              <Trans t={t} i18nKey="setup.detectValue" values={{ mde: formatPercent(x.plan.mde) }} components={{ num }} />
-            </Row>
-            <Row label={t("setup.perVariation")}>
-              {x.plan.sampleSizePerVariation === null ? (
-                <span className="text-muted">{t("setup.notPlanned")}</span>
-              ) : (
-                <span className="font-mono tabular">{formatCount(x.plan.sampleSizePerVariation)}</span>
-              )}
-            </Row>
-            <Row label={t("setup.dailyUsers")}>
-              {x.plan.dailyTraffic === null ? <span className="text-muted">–</span> : <span className="font-mono tabular">{formatCount(x.plan.dailyTraffic)}</span>}
-            </Row>
-          </Rows>
-        </Panel>
+        {x.status === "running" ? (
+          // Still editable while running: results show progress and an ETA once a plan exists
+          <DraftSetup experiment={x} feature={feature} only="plan" />
+        ) : (
+          <Panel>
+            <PanelHeader title={t("setup.plan")} />
+            <Rows>
+              <Row label={t("setup.detect")}>
+                <Trans t={t} i18nKey="setup.detectValue" values={{ mde: formatPercent(x.plan.mde) }} components={{ num }} />
+              </Row>
+              <Row label={t("setup.perVariation")}>
+                {x.plan.sampleSizePerVariation === null ? (
+                  <span className="text-muted">{t("setup.notPlanned")}</span>
+                ) : (
+                  <span className="font-mono tabular">{formatCount(x.plan.sampleSizePerVariation)}</span>
+                )}
+              </Row>
+              <Row label={t("setup.dailyUsers")}>
+                {x.plan.dailyTraffic === null ? <span className="text-muted">–</span> : <span className="font-mono tabular">{formatCount(x.plan.dailyTraffic)}</span>}
+              </Row>
+            </Rows>
+          </Panel>
+        )}
       </div>
     </div>
   );

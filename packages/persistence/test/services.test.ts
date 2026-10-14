@@ -272,12 +272,15 @@ describe("experiments", () => {
     expect(payload(PROD).features["ship-me"]!.rules).toEqual([{ type: "force", conditions: [], value: "blue" }]);
   });
 
-  it("only name, hypothesis and secondary / guardrail metrics change after start", async () => {
+  it("only name, hypothesis, secondary / guardrail metrics and the plan change after start", async () => {
     const flag = await createFlag("locked");
     const created = await run(ExperimentService.use((s) => s.create({ key: "locked-test", ...draft(flag.id) }, actor)));
     const started = await run(ExperimentService.use((s) => s.start(created.id, actor)));
     const renamed = await run(ExperimentService.use((s) => s.update({ ...started, name: "Renamed" }, actor)));
     expect(renamed.name).toBe("Renamed");
+    const plan = { mde: 0.03, sampleSizePerVariation: 40_000, dailyTraffic: 5_000 };
+    const planned = await run(ExperimentService.use((s) => s.update({ ...renamed, plan }, actor)));
+    expect(planned.plan).toEqual(plan);
     const error = await fail(ExperimentService.use((s) => s.update({ ...started, coverage: 0.9 }, actor)));
     expect(error.message).toContain("changed: coverage");
   });

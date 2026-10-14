@@ -168,6 +168,28 @@ export const savedPlanDays = (x: Pick<Experiment, "plan" | "weights" | "coverage
   return daysToReach({ usersPerVariation: n, variations: 1 / Math.min(...x.weights), dailyTraffic, coverage: x.coverage });
 };
 
+/** The saved experiment as experiments.update input fields (without id) */
+export const savedFields = (x: Experiment) => ({
+  name: x.name,
+  hypothesis: x.hypothesis,
+  featureId: x.featureId,
+  environmentIds: [...x.environmentIds],
+  analysisEnvironmentId: x.analysisEnvironmentId,
+  hashAttribute: x.hashAttribute,
+  variations: x.variations.map((v) => ({ key: v.key, name: v.name, value: v.value })),
+  coverage: x.coverage,
+  weights: [...x.weights],
+  conditions: x.conditions.map((c) => ({ ...c, values: [...c.values] })),
+  dataSourceId: x.dataSourceId,
+  primaryMetricId: x.primaryMetricId,
+  secondaryMetricIds: [...x.secondaryMetricIds],
+  guardrailMetricIds: [...x.guardrailMetricIds],
+  stats: { ...x.stats },
+  plan: { ...x.plan },
+  dimensions: [...x.dimensions],
+  namespace: x.namespace === null ? null : { ...x.namespace },
+});
+
 /** experiments.create / update input (without key / id) */
 export const toInput = (v: ExperimentValues, primary: Metric | undefined) => {
   const plan = planOf(v, primary);

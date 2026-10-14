@@ -208,7 +208,7 @@ export const contract = {
     create: oc.input(input({ key: Key, ...ExperimentDraftFields })).output(type<Experiment>()),
     /**
      * Draft: every field. Running / stopped: only name, hypothesis, secondary and guardrail
-     * metrics may change (anything else fails BAD_REQUEST)
+     * metrics and the plan may change (anything else fails BAD_REQUEST)
      */
     update: oc.input(input({ ...Id, ...ExperimentDraftFields })).output(type<Experiment>()),
     /**

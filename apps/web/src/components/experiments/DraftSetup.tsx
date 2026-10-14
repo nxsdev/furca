@@ -23,6 +23,7 @@ import {
   draftIssues,
   LONG_PLAN_DAYS,
   planOf,
+  savedFields,
   savedPlanDays,
   type SectionId,
   startChecks,
@@ -40,7 +41,16 @@ const BASELINE_DAYS = 28;
  * The draft's setup as one sentence per section, each with a "Change" button that opens its editor
  * in place (one at a time), beside a checklist that separates what blocks starting from advice
  */
-export function DraftSetup({ experiment: x, feature: loadedFeature }: { experiment: Experiment; feature: Feature | undefined }) {
+/** `only` renders a single section without the checklist, e.g. the plan of a running experiment (still editable after start) */
+export function DraftSetup({
+  experiment: x,
+  feature: loadedFeature,
+  only,
+}: {
+  experiment: Experiment;
+  feature: Feature | undefined;
+  only?: SectionId;
+}) {
   const { t } = useTranslation(["experiments", "common"]);
   const queryClient = useQueryClient();
   const { canEdit } = usePermissions();
@@ -71,7 +81,10 @@ export function DraftSetup({ experiment: x, feature: loadedFeature }: { experime
     },
     onSubmit: async ({ value, formApi }) => {
       try {
-        const next = await client.experiments.update({ id: x.id, ...toInput(value, metricOf(value.primaryMetricId)) });
+        const input = toInput(value, metricOf(value.primaryMetricId));
+        // After start only the plan is edited here: resend everything else exactly as saved, so the
+        // form's round trip (weights, sequential tuning) can't trip the server's post-start lock
+        const next = await client.experiments.update(x.status === "draft" ? { id: x.id, ...input } : { ...savedFields(x), id: x.id, plan: input.plan });
         queryClient.setQueryData(orpc.experiments.get.queryKey({ input: { id: next.id } }), next);
         void queryClient.invalidateQueries({ queryKey: orpc.experiments.list.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
@@ -188,30 +201,31 @@ export function DraftSetup({ experiment: x, feature: loadedFeature }: { experime
     id: SectionId,
     props: { title: string; help?: ReactNode; summary: ReactNode; hint?: ReactNode; muted?: boolean },
     editor: () => ReactNode,
-  ) => (
-    <Section
-      key={id}
-      id={id}
-      {...props}
-      attention={flagged.has(id)}
-      isOpen={open === id}
-      canEdit={canEdit}
-      isLocked={open !== null && open !== id}
-      onOpen={() => openSection(id)}
-      onCancel={cancel}
-      isSubmitting={isSubmitting}
-      footer={
-        <form.AppForm>
-          <form.FormError />
-        </form.AppForm>
-      }
-    >
-      {open === id && editor()}
-    </Section>
-  );
+  ) =>
+    only !== undefined && id !== only ? null : (
+      <Section
+        key={id}
+        id={id}
+        {...props}
+        attention={flagged.has(id)}
+        isOpen={open === id}
+        canEdit={canEdit}
+        isLocked={open !== null && open !== id}
+        onOpen={() => openSection(id)}
+        onCancel={cancel}
+        isSubmitting={isSubmitting}
+        footer={
+          <form.AppForm>
+            <form.FormError />
+          </form.AppForm>
+        }
+      >
+        {open === id && editor()}
+      </Section>
+    );
 
   return (
-    <form noValidate onSubmit={submitHandler(form)} className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <form noValidate onSubmit={submitHandler(form)} className={`grid items-start gap-4 ${only === undefined ? "lg:grid-cols-[minmax(0,1fr)_18rem]" : ""}`}>
       <div className="flex min-w-0 flex-col gap-4">
         <Panel>
           <ul className="divide-y divide-border">
@@ -676,7 +690,7 @@ export function DraftSetup({ experiment: x, feature: loadedFeature }: { experime
       </div>
 
       {/* Links only while no editor is open: opening another section would drop unsaved edits */}
-      <Checklist checks={checks} onOpen={canEdit && open === null ? openSection : undefined} />
+      {only === undefined && <Checklist checks={checks} onOpen={canEdit && open === null ? openSection : undefined} />}
     </form>
   );
 }

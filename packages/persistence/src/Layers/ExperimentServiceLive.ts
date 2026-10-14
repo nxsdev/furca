@@ -22,7 +22,8 @@ import { requireGroups } from "../targeting";
 import { emitExperimentEvent } from "../webhooks";
 
 /** Fields that may still change once an experiment has started */
-const MUTABLE_AFTER_START = new Set<keyof ExperimentDraft>(["name", "hypothesis", "secondaryMetricIds", "guardrailMetricIds"]);
+// The plan only sizes the test (no effect on assignment), so it can be set once data shows it was missing
+const MUTABLE_AFTER_START = new Set<keyof ExperimentDraft>(["name", "hypothesis", "secondaryMetricIds", "guardrailMetricIds", "plan"]);
 
 const DRAFT_KEYS = [
   "name",
@@ -497,7 +498,7 @@ export const ExperimentServiceLive = Layer.effect(
         const locked = DRAFT_KEYS.filter((k) => !MUTABLE_AFTER_START.has(k) && canonical(k, before[k]) !== canonical(k, draft[k]));
         if (locked.length > 0) {
           return yield* invalid(
-            `Only the name, hypothesis, secondary and guardrail metrics can change after the experiment has started (changed: ${locked.join(", ")})`,
+            `Only the name, hypothesis, secondary and guardrail metrics and the plan can change after the experiment has started (changed: ${locked.join(", ")})`,
           );
         }
         if (draft.name.trim() === "") return yield* invalid("Name is required");
@@ -508,6 +509,7 @@ export const ExperimentServiceLive = Layer.effect(
           hypothesis: draft.hypothesis,
           secondaryMetricIds: draft.secondaryMetricIds,
           guardrailMetricIds: draft.guardrailMetricIds,
+          plan: draft.plan,
           updatedAt: now,
         });
         return yield* save("updated", actor, before, after, () => [], false);
