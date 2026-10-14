@@ -1,1 +1,17 @@
-{}
+{
+  "interval": {
+    "description": "Lift {{lift}}, interval {{ci}}",
+    "empty": "No estimate yet"
+  },
+  "keyboardHint": "Focus the chart and use the arrow keys to read each value.",
+  "lift": {
+    "label": "Cumulative lift by first-exposure date",
+    "description": "Each line is a variation's relative lift against {{control}}; the shaded band is its interval. Values are cumulative up to each date.",
+    "tooltipTitle_one": "{{date}} · {{users}} user",
+    "tooltipTitle_other": "{{date}} · {{users}} users"
+  },
+  "traffic": {
+    "label": "SDK traffic per hour in {{name}}, last 24 hours",
+    "description": "Exposures and tracked events per hour."
+  }
+}

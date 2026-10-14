@@ -15,6 +15,13 @@
  *   pooled across variations (D1: nearest rank floor(p·(n−1)); BigQuery: APPROX_QUANTILES, 0.1% grid).
  *   Not applied to proportion metrics (values are 0/1). Ratio metrics cap the numerator only
  *
+ * - Metric property filters (built-in store only; warehouse SQL writes its own WHERE) are AND-ed on
+ *   events: eq / neq / in / not_in / contains compare the value as text (booleans as "true" / "false"),
+ *   gt / gte / lt / lte compare JSON numbers. A missing property only matches neq, not_in, not_exists
+ * - Breakdowns (`dimension`): each unit gets a `slice`, its first exposure's value of that dimension.
+ *   The 20 values with the most units keep their name, the rest become "(other)", missing "(not set)".
+ *   Every output gains a leading `slice` column; capping stays pooled across slices
+ *
  * Exposure counts columns: variation (NULL = multiple exposure), users
  * Moments columns: variation, day (UTC date of t0, YYYY-MM-DD), n, sum_y, sum_y2, sum_d, sum_d2,
  * sum_yd, sum_x, sum_x2, sum_xy, cap_value
@@ -22,15 +29,20 @@
  * User input is always a bound parameter. The only interpolated text is warehouse SQL written by
  * admins (data source exposure SQL, metric SQL), which is the point of a warehouse-native source
  */
-import type { EventSource, Metric } from "@furca/core/metrics/Metric";
+import type { EventSource, Metric, PropertyFilter } from "@furca/core/metrics/Metric";
 
 const HOUR_MS = 3_600_000;
 export const LOOKBACK_MS = 14 * 24 * HOUR_MS;
+export const TOP_SLICES = 20;
+export const OTHER_SLICE = "(other)";
+export const NOT_SET_SLICE = "(not set)";
 
 export interface AnalysisWindow {
   readonly experimentKey: string;
   readonly startMs: number;
   readonly endMs: number;
+  /** Break results down by this exposure dimension (adds a leading `slice` column) */
+  readonly dimension?: string | null;
 }
 
 interface MomentsOptions extends AnalysisWindow {
@@ -67,20 +79,73 @@ const sqliteParams = () => {
   return { params, p: (v: string | number) => `?${params.push(v)}` };
 };
 
+/** `$."name"` for json_extract. Names containing " or \ cannot be addressed (validated on save) */
+const jsonPath = (name: string) => `$."${name}"`;
+
+/** Same top-20 / "(other)" / "(not set)" bucketing in both dialects; `dim` is the unit's raw value */
+const sliceOf = (units: string) => `CASE WHEN dim IS NULL THEN '${NOT_SET_SLICE}'
+      WHEN dim IN (SELECT dim FROM ${units} WHERE nv = 1 AND dim IS NOT NULL GROUP BY dim ORDER BY COUNT(*) DESC, dim LIMIT ${TOP_SLICES})
+      THEN dim ELSE '${OTHER_SLICE}' END`;
+
 /** Uses the primary key (environment_id, experiment_key, phase, user_id, variation_key) */
-const d1Units = (env: string, key: string, phase: string, start: string, end: string) => `units AS (
-    SELECT user_id, MIN(variation_key) AS variation, COUNT(*) AS nv, MIN(first_seen_at) AS t0
+const d1Units = (env: string, key: string, phase: string, start: string, end: string, dimPath: string | null) => {
+  const units = `SELECT user_id, MIN(variation_key) AS variation, COUNT(*) AS nv, MIN(first_seen_at) AS t0${
+    dimPath === null ? "" : `, CAST(MIN(json_extract(dimensions, ${dimPath})) AS TEXT) AS dim`
+  }
     FROM exposures
     WHERE environment_id = ${env} AND experiment_key = ${key} AND phase = ${phase}
       AND first_seen_at >= ${start} AND first_seen_at <= ${end}
-    GROUP BY user_id
-  )`;
+    GROUP BY user_id`;
+  if (dimPath === null) return `units AS (\n    ${units}\n  )`;
+  return `exposed AS MATERIALIZED (\n    ${units}\n  ),
+  units AS (SELECT *, ${sliceOf("exposed")} AS slice FROM exposed)`;
+};
 
 export const d1ExposureCountsSql = (q: AnalysisWindow & D1Scope): D1Query => {
   const { params, p } = sqliteParams();
-  const sql = `WITH ${d1Units(p(q.environmentId), p(q.experimentKey), p(q.phase), p(q.startMs), p(q.endMs))}
-SELECT CASE WHEN nv > 1 THEN NULL ELSE variation END AS variation, COUNT(*) AS users FROM units GROUP BY 1`;
+  const dim = q.dimension == null ? null : p(jsonPath(q.dimension));
+  const sql = `WITH ${d1Units(p(q.environmentId), p(q.experimentKey), p(q.phase), p(q.startMs), p(q.endMs), dim)}
+SELECT ${dim === null ? "" : "slice, "}CASE WHEN nv > 1 THEN NULL ELSE variation END AS variation, COUNT(*) AS users
+FROM units GROUP BY ${dim === null ? "1" : "1, 2"}`;
   return { sql, params };
+};
+
+/**
+ * One property filter on events `e` as a SQL predicate. Two bound parameters at most (the JSON path
+ * and the value, or the values as one JSON array), so D1's 100-parameter limit holds
+ */
+const d1Filter = (f: PropertyFilter, p: (v: string | number) => string) => {
+  const path = p(jsonPath(f.property));
+  const raw = `json_extract(e.properties, ${path})`;
+  const type = `json_type(e.properties, ${path})`;
+  const text = `(CASE ${type} WHEN 'true' THEN 'true' WHEN 'false' THEN 'false' ELSE CAST(${raw} AS TEXT) END)`;
+  const value = () => p(f.values[0] ?? "");
+  const number = (op: string) => `(${type} IN ('integer', 'real') AND ${raw} ${op} ${p(Number(f.values[0]))})`;
+  const anyOf = () => `${text} IN (SELECT value FROM json_each(${p(JSON.stringify(f.values))}))`;
+  switch (f.operator) {
+    case "eq":
+      return `${text} = ${value()}`;
+    case "neq":
+      return `${text} IS NOT ${value()}`;
+    case "in":
+      return anyOf();
+    case "not_in":
+      return `NOT COALESCE(${anyOf()}, 0)`;
+    case "contains":
+      return `instr(${text}, ${value()}) > 0`;
+    case "gt":
+      return number(">");
+    case "gte":
+      return number(">=");
+    case "lt":
+      return number("<");
+    case "lte":
+      return number("<=");
+    case "exists":
+      return `${raw} IS NOT NULL`;
+    case "not_exists":
+      return `${raw} IS NULL`;
+  }
 };
 
 export const d1MomentsSql = (
@@ -90,16 +155,22 @@ export const d1MomentsSql = (
   const { params, p } = sqliteParams();
   const env = p(q.environmentId);
   const end = p(q.endMs);
+  const dim = q.dimension == null ? null : p(jsonPath(q.dimension));
+  const slice = dim === null ? "" : "slice, ";
   const post = `e.ts >= u.t0 + ${p(delayMs)}${windowMs === null ? "" : ` AND e.ts < u.t0 + ${p(windowMs)}`} AND e.ts <= ${end}`;
   const before = `e.ts >= u.t0 - ${p(LOOKBACK_MS)} AND e.ts < u.t0`;
-  const value = (source: EventSource, range: string) => {
-    const from = `FROM events e WHERE e.environment_id = ${env} AND e.name = ${p(source.event)} AND e.user_id = u.user_id AND ${range}`;
+  /** Event name + filters, bound once per source and shared by the post and pre-period subqueries */
+  const match = (source: EventSource) =>
+    [`e.name = ${p(source.event)}`, ...source.filters.map((f) => d1Filter(f, p))].join(" AND ");
+  const value = (where: string, aggregation: EventSource["aggregation"], range: string) => {
+    const from = `FROM events e WHERE e.environment_id = ${env} AND ${where} AND e.user_id = u.user_id AND ${range}`;
     if (q.metric.type === "proportion") return `EXISTS (SELECT 1 ${from})`;
-    return source.aggregation === "count" ? `(SELECT COUNT(*) ${from})` : `(SELECT TOTAL(e.value) ${from})`;
+    return aggregation === "count" ? `(SELECT COUNT(*) ${from})` : `(SELECT TOTAL(e.value) ${from})`;
   };
-  const y = value(q.numerator, post);
-  const d = ratio && q.denominator !== null ? value(q.denominator, post) : "0";
-  const x = pre ? value(q.numerator, before) : "0";
+  const numerator = match(q.numerator);
+  const y = value(numerator, q.numerator.aggregation, post);
+  const d = ratio && q.denominator !== null ? value(match(q.denominator), q.denominator.aggregation, post) : "0";
+  const x = pre ? value(numerator, q.numerator.aggregation, before) : "0";
   const cap = capping.type === "absolute" ? p(capping.value) : capping.type === "percentile" ? "(SELECT c FROM cap)" : null;
   const percentileCte =
     capping.type === "percentile"
@@ -109,16 +180,16 @@ export const d1MomentsSql = (
   // ponytail: one full re-scan per metric per refresh, bounded by D1's 30 s query limit. Measured on
   // local workerd: 1M exposed units + 4M events = 3.6 s and ~10M rows read (linear). Upgrade path:
   // incremental daily moments tables, or BigQuery
-  const sql = `WITH ${d1Units(env, p(q.experimentKey), p(q.phase), p(q.startMs), end)},
-  vals AS MATERIALIZED (SELECT u.variation, u.t0, ${y} AS y, ${d} AS d, ${x} AS x FROM units u WHERE u.nv = 1)${percentileCte},
+  const sql = `WITH ${d1Units(env, p(q.experimentKey), p(q.phase), p(q.startMs), end, dim)},
+  vals AS MATERIALIZED (SELECT ${slice}u.variation, u.t0, ${y} AS y, ${d} AS d, ${x} AS x FROM units u WHERE u.nv = 1)${percentileCte},
   capped AS (
-    SELECT variation, t0, ${cap === null ? "y" : `MIN(y, ${cap})`} AS y, d, ${cap === null ? "x" : `MIN(x, ${cap})`} AS x, ${cap ?? "NULL"} AS cap
+    SELECT ${slice}variation, t0, ${cap === null ? "y" : `MIN(y, ${cap})`} AS y, d, ${cap === null ? "x" : `MIN(x, ${cap})`} AS x, ${cap ?? "NULL"} AS cap
     FROM vals
   )
-SELECT variation, date(t0 / 1000, 'unixepoch') AS day, COUNT(*) AS n,
+SELECT ${slice}variation, date(t0 / 1000, 'unixepoch') AS day, COUNT(*) AS n,
   TOTAL(y) AS sum_y, TOTAL(y * y) AS sum_y2, TOTAL(d) AS sum_d, TOTAL(d * d) AS sum_d2, TOTAL(y * d) AS sum_yd,
   TOTAL(x) AS sum_x, TOTAL(x * x) AS sum_x2, TOTAL(x * y) AS sum_xy, MAX(cap) AS cap_value
-FROM capped GROUP BY variation, day`;
+FROM capped GROUP BY ${slice}variation, day`;
   return { sql, params };
 };
 
@@ -133,22 +204,34 @@ export interface BigQueryQuery {
 
 const strip = (sql: string) => sql.trim().replace(/;+$/, "");
 
-const bigQueryUnits = (exposureSql: string) => `furca_exposure_source AS (
-${strip(exposureSql)}
-),
-furca_units AS (
-  SELECT CAST(user_id AS STRING) AS user_id, MIN(CAST(variation_key AS STRING)) AS variation,
-    COUNT(DISTINCT CAST(variation_key AS STRING)) AS nv, MIN(timestamp) AS t0
+/** Breakdown dimensions are exposure SQL columns, so they must be plain identifiers */
+export const isBigQueryColumn = (name: string) => /^[A-Za-z_][A-Za-z0-9_]{0,299}$/.test(name);
+
+const bigQueryUnits = (exposureSql: string, dimension: string | null | undefined) => {
+  if (dimension != null && !isBigQueryColumn(dimension)) throw new Error(`Invalid BigQuery column name: ${dimension}`);
+  const units = `SELECT CAST(user_id AS STRING) AS user_id, MIN(CAST(variation_key AS STRING)) AS variation,
+    COUNT(DISTINCT CAST(variation_key AS STRING)) AS nv, MIN(timestamp) AS t0${
+      dimension == null ? "" : `,\n    ARRAY_AGG(CAST(\`${dimension}\` AS STRING) IGNORE NULLS ORDER BY timestamp LIMIT 1)[SAFE_OFFSET(0)] AS dim`
+    }
   FROM furca_exposure_source
   WHERE experiment_key = @experiment_key AND timestamp >= TIMESTAMP_MILLIS(@start_ms) AND timestamp <= TIMESTAMP_MILLIS(@end_ms)
-  GROUP BY 1
-)`;
+  GROUP BY 1`;
+  return `furca_exposure_source AS (
+${strip(exposureSql)}
+),
+${
+  dimension == null
+    ? `furca_units AS (\n  ${units}\n)`
+    : `furca_exposed AS (\n  ${units}\n),\nfurca_units AS (SELECT *, ${sliceOf("furca_exposed")} AS slice FROM furca_exposed)`
+}`;
+};
 
 const windowParams = (q: AnalysisWindow) => ({ experiment_key: q.experimentKey, start_ms: q.startMs, end_ms: q.endMs });
 
 export const bigQueryExposureCountsSql = (q: AnalysisWindow & { readonly exposureSql: string }): BigQueryQuery => ({
-  sql: `WITH ${bigQueryUnits(q.exposureSql)}
-SELECT IF(nv > 1, NULL, variation) AS variation, COUNT(*) AS users FROM furca_units GROUP BY 1`,
+  sql: `WITH ${bigQueryUnits(q.exposureSql, q.dimension)}
+SELECT ${q.dimension == null ? "" : "slice, "}IF(nv > 1, NULL, variation) AS variation, COUNT(*) AS users
+FROM furca_units GROUP BY ${q.dimension == null ? "1" : "1, 2"}`,
   params: windowParams(q),
 });
 
@@ -156,6 +239,7 @@ export const bigQueryMomentsSql = (
   q: MomentsOptions & { readonly exposureSql: string; readonly numeratorSql: string; readonly denominatorSql: string | null },
 ): BigQueryQuery => {
   const { ratio, pre, delayMs, windowMs, capping } = plan(q);
+  const slice = q.dimension == null ? "" : "slice, ";
   const params: Record<string, string | number> = { ...windowParams(q), delay_ms: delayMs };
   const perUnit = (name: string, source: string, range: string) => `${name} AS (
   SELECT u.user_id, SUM(s.value) AS v
@@ -173,7 +257,7 @@ export const bigQueryMomentsSql = (
   const valueOf = (alias: string) => (q.metric.type === "proportion" ? `IF(${alias}.user_id IS NULL, 0, 1)` : `COALESCE(${alias}.v, 0)`);
 
   const ctes = [
-    bigQueryUnits(q.exposureSql),
+    bigQueryUnits(q.exposureSql, q.dimension),
     `furca_numerator_source AS (\n${strip(q.numeratorSql)}\n)`,
     perUnit("furca_numerator", "furca_numerator_source", post),
   ];
@@ -191,7 +275,7 @@ export const bigQueryMomentsSql = (
     joins.push("LEFT JOIN furca_pre pr ON pr.user_id = u.user_id");
   }
   ctes.push(`furca_values AS (
-  SELECT u.variation, u.t0, ${valueOf("m")} AS y, ${denominator ? "COALESCE(dn.v, 0)" : "0"} AS d, ${pre ? valueOf("pr") : "0"} AS x
+  SELECT ${slice}u.variation, u.t0, ${valueOf("m")} AS y, ${denominator ? "COALESCE(dn.v, 0)" : "0"} AS d, ${pre ? valueOf("pr") : "0"} AS x
   FROM furca_units u
   ${joins.join("\n  ")}
   WHERE u.nv = 1
@@ -209,14 +293,14 @@ export const bigQueryMomentsSql = (
     cap = "(SELECT c FROM furca_cap)";
   }
   ctes.push(`furca_capped AS (
-  SELECT variation, t0, ${cap === null ? "y" : `LEAST(y, ${cap})`} AS y, d, ${cap === null ? "x" : `LEAST(x, ${cap})`} AS x, ${cap ?? "CAST(NULL AS FLOAT64)"} AS cap
+  SELECT ${slice}variation, t0, ${cap === null ? "y" : `LEAST(y, ${cap})`} AS y, d, ${cap === null ? "x" : `LEAST(x, ${cap})`} AS x, ${cap ?? "CAST(NULL AS FLOAT64)"} AS cap
   FROM furca_values
 )`);
 
   const sql = `WITH ${ctes.join(",\n")}
-SELECT variation, FORMAT_DATE('%F', DATE(t0)) AS day, COUNT(*) AS n,
+SELECT ${slice}variation, FORMAT_DATE('%F', DATE(t0)) AS day, COUNT(*) AS n,
   SUM(y) AS sum_y, SUM(y * y) AS sum_y2, SUM(d) AS sum_d, SUM(d * d) AS sum_d2, SUM(y * d) AS sum_yd,
   SUM(x) AS sum_x, SUM(x * x) AS sum_x2, SUM(x * y) AS sum_xy, ANY_VALUE(cap) AS cap_value
-FROM furca_capped GROUP BY variation, day`;
+FROM furca_capped GROUP BY ${slice}variation, day`;
   return { sql, params };
 };

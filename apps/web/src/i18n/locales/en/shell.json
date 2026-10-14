@@ -11,7 +11,9 @@
     "settings": "Settings",
     "home": "furca home",
     "openNavigation": "Open navigation",
-    "navigation": "Navigation"
+    "navigation": "Navigation",
+    "savedGroups": "Saved groups",
+    "namespaces": "Namespaces"
   },
   "environment": {
     "label": "Environment"

@@ -274,6 +274,13 @@
       "create": "Create draft",
       "editNote": "Still a draft: nothing is live until you start it.",
       "createNote": "Drafts don't change what users see."
+    },
+    "breakdowns": {
+      "title": "Breakdowns",
+      "placeholder": "country, plan, platform",
+      "suggested": "Used in targeting:",
+      "description": "Attributes to split results by. The SDK sends their values with each exposure, so only users exposed after the experiment starts are covered. Choose them now: they lock once it starts.",
+      "warehouse": "With BigQuery, the exposure SQL needs a column with the same name instead."
     }
   },
   "traffic": {
@@ -370,7 +377,9 @@
     "detectValue": "<num>{{mde}}</num> relative lift",
     "perVariation": "Per variation",
     "notPlanned": "Not planned",
-    "dailyUsers": "Daily users"
+    "dailyUsers": "Daily users",
+    "breakdowns": "Breakdowns",
+    "noBreakdowns": "None recorded"
   },
   "phases": {
     "intro": "Changing weights, targeting or lowering coverage starts a new phase with a new seed, so every user is re-assigned. Results only use the current phase.",

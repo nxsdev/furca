@@ -213,6 +213,7 @@
   },
   "simulate": {
     "needs": "Needs {{condition}} ({{actual}})",
+    "needsGroup": "Needs {{condition}}",
     "notSet": "not set",
     "has": "has {{value}}",
     "conditionsMatch": "Conditions match",
@@ -220,6 +221,7 @@
     "noHashAttribute": "No {{attribute}} attribute to bucket by",
     "inRollout": "In the {{percent}} rollout (bucket {{bucket}})",
     "outsideRollout": "Outside the {{percent}} rollout (bucket {{bucket}})",
+    "outsideNamespace": "Outside this experiment's slice of namespace {{namespace}}",
     "outsideExperiment": "Outside experiment coverage (bucket {{bucket}})",
     "assigned": "Assigned to {{variation}} (bucket {{bucket}})"
   },

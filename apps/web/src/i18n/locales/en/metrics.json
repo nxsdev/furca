@@ -44,7 +44,8 @@
       "absolute": ", each user capped at {{value}}",
       "percentile": ", each user capped at the {{percentile}}th percentile"
     },
-    "tail": " {{when}}{{cap}}."
+    "tail": " {{when}}{{cap}}.",
+    "filters": "Only <c>{{event}}</c> events where {{filters}} count."
   },
   "list": {
     "title": "Metrics",
@@ -227,6 +228,26 @@
       "type": "Type",
       "goal": "Goal",
       "source": "Source"
+    },
+    "filters": {
+      "where": "where",
+      "and": "and",
+      "add": "Filter by property",
+      "property": "Property",
+      "operator": "Operator",
+      "value": "Value",
+      "values": "Values",
+      "valuesPlaceholder": "Type and press Enter",
+      "noValue": "No value needed",
+      "remove": "Remove filter {{number}}",
+      "seen_one": "{{events}} event",
+      "seen_other": "{{events}} events",
+      "errors": {
+        "property": "Choose a property for every filter",
+        "unsupported": "Property names containing \" or \\ can't be filtered",
+        "value": "Enter a value for every filter",
+        "number": "Greater / less than compare numbers: enter a number"
+      }
     }
   }
 }

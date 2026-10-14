@@ -24,6 +24,14 @@ const CORS = {
 const json = (body: unknown, status: number) => Response.json(body, { status, headers: CORS });
 
 const Text = Schema.String.check(Schema.isMaxLength(256));
+/** Flat JSON objects: at most `max` keys of 1-64 characters */
+const FlatObject = <Value extends Schema.Top>(value: Value, max: number) =>
+  Schema.Record(Schema.String, value).check(
+    Schema.isMaxProperties(max),
+    Schema.isPropertyNames(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(64))),
+  );
+const Properties = FlatObject(Schema.Union([Schema.String.check(Schema.isMaxLength(200)), Schema.Finite, Schema.Boolean]), 20);
+const Dimensions = FlatObject(Schema.String.check(Schema.isMaxLength(100)), 5);
 
 /** EventsBody from @furca/sdk/types */
 const EventsBody = Schema.Struct({
@@ -34,12 +42,21 @@ const EventsBody = Schema.Struct({
         variationKey: Text,
         phase: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
         userId: Text,
+        dimensions: Schema.optional(Dimensions),
         ts: Schema.Finite,
       }),
     ),
   ),
   events: Schema.optional(
-    Schema.Array(Schema.Struct({ name: Text, userId: Text, value: Schema.optional(Schema.NullOr(Schema.Finite)), ts: Schema.Finite })),
+    Schema.Array(
+      Schema.Struct({
+        name: Text,
+        userId: Text,
+        value: Schema.optional(Schema.NullOr(Schema.Finite)),
+        properties: Schema.optional(Properties),
+        ts: Schema.Finite,
+      }),
+    ),
   ),
 });
 const decodeEventsBody = Schema.decodeUnknownExit(EventsBody);
@@ -93,8 +110,8 @@ const ingest = async (request: Request, env: FurcaEnv, sdkKey: string): Promise<
   const decoded = decodeEventsBody(parseJson(text));
   if (decoded._tag === "Failure") return json({ error: "Invalid events body" }, 400);
   // SDKs before phase support send no phase: their exposures belong to phase 0
-  const exposures = (decoded.value.exposures ?? []).map((e) => ({ ...e, phase: e.phase ?? 0 }));
-  const events = (decoded.value.events ?? []).map((e) => ({ ...e, value: e.value ?? null }));
+  const exposures = (decoded.value.exposures ?? []).map((e) => ({ ...e, phase: e.phase ?? 0, dimensions: e.dimensions ?? null }));
+  const events = (decoded.value.events ?? []).map((e) => ({ ...e, value: e.value ?? null, properties: e.properties ?? null }));
   if (exposures.length + events.length > MAX_ITEMS) return json({ error: `At most ${MAX_ITEMS} items per request` }, 413);
   return run(
     env,

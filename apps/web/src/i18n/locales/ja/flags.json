@@ -209,6 +209,7 @@
   },
   "simulate": {
     "needs": "必要な条件：{{condition}}（{{actual}}）",
+    "needsGroup": "必要な条件：{{condition}}",
     "notSet": "未設定",
     "has": "現在の値は {{value}}",
     "conditionsMatch": "条件に一致",
@@ -216,6 +217,7 @@
     "noHashAttribute": "振り分けに使う属性 {{attribute}} がありません",
     "inRollout": "{{percent}} のロールアウトの対象内（バケット {{bucket}}）",
     "outsideRollout": "{{percent}} のロールアウトの対象外（バケット {{bucket}}）",
+    "outsideNamespace": "Namespace {{namespace}} のこの実験の割り当て範囲外",
     "outsideExperiment": "実験の対象割合外（バケット {{bucket}}）",
     "assigned": "{{variation}} に割り当て（バケット {{bucket}}）"
   },

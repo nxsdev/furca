@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { ValuePreview } from "~/components/flags/ValueInput";
 import { formatCount, formatDateTime, formatDuration, formatList, formatPercent } from "~/components/results/format";
-import { conditionsSummary } from "~/components/targeting/ConditionBuilder";
+import { useConditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { ListSkeleton, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
 import { useEnvironment } from "~/lib/environment";
@@ -48,6 +48,7 @@ const num = <span className="font-mono tabular" />;
 /** Read-only setup: what was registered before the data arrived */
 export function SetupView({ experiment: x, feature }: { experiment: Experiment; feature: Feature | undefined }) {
   const { t } = useTranslation(["experiments", "common"]);
+  const conditionsSummary = useConditionsSummary();
   const { environments } = useEnvironment();
   const metricsQuery = useQuery(orpc.metrics.list.queryOptions({ input: { includeArchived: true } }));
   const metrics = new Map((metricsQuery.data ?? []).map((m) => [m.id, m]));
@@ -146,6 +147,13 @@ export function SetupView({ experiment: x, feature }: { experiment: Experiment; 
             <Row label={t("setup.guardrails")}>
               <MetricLinks ids={x.guardrailMetricIds} metrics={metrics} />
             </Row>
+            <Row label={t("setup.breakdowns")}>
+              {x.dimensions.length === 0 ? (
+                <span className="text-muted">{t("setup.noBreakdowns")}</span>
+              ) : (
+                <span className="font-mono">{formatList(x.dimensions)}</span>
+              )}
+            </Row>
           </Rows>
         </Panel>
         <Panel>
@@ -203,6 +211,7 @@ export function SetupView({ experiment: x, feature }: { experiment: Experiment; 
 /** Timeline of traffic periods; each new phase re-randomizes users with a new seed */
 export function PhasesView({ experiment: x }: { experiment: Experiment }) {
   const { t } = useTranslation("experiments");
+  const conditionsSummary = useConditionsSummary();
   const phases = x.phases.map((p, i) => ({ p, i })).reverse();
   return (
     <div className="flex flex-col gap-4">

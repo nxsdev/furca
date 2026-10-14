@@ -12,7 +12,13 @@
     "value": "値",
     "valuePlaceholder": "値",
     "removeCondition": "条件 {{number}} を削除",
-    "addCondition": "条件を追加"
+    "addCondition": "条件を追加",
+    "group": "保存済みグループ",
+    "groupPlaceholder": "保存済みグループを選択",
+    "loadingGroups": "グループを読み込み中…",
+    "createGroup": "先に保存済みグループを作成してください",
+    "listSize_other": "{{count}} 件",
+    "conditionGroup": "条件"
   },
   "tagInput": {
     "remove": "{{value}} を削除"
@@ -22,13 +28,17 @@
     "enterNumber": "数値を入力してください",
     "invalidVersion": "2.4.0 のような形式でバージョンを入力してください",
     "chooseAttribute": "属性を選択してください",
-    "enterValue": "値を入力してください"
+    "enterValue": "値を入力してください",
+    "chooseGroup": "保存済みグループを選択してください",
+    "groupMissing": "このグループは削除されています。別のグループを選択してください",
+    "groupsFailed": "保存済みグループを読み込めませんでした"
   },
   "operatorGroups": {
     "text": "テキスト",
     "number": "数値",
     "version": "バージョン",
-    "presence": "有無"
+    "presence": "有無",
+    "savedGroups": "保存済みグループ"
   },
   "operators": {
     "eq": "次と等しい",
@@ -76,6 +86,7 @@
     "exists": "{{attribute}} が存在する",
     "not_exists": "{{attribute}} が存在しない",
     "in_group": "保存済みグループ {{value}} に含まれる",
-    "not_in_group": "保存済みグループ {{value}} に含まれない"
+    "not_in_group": "保存済みグループ {{value}} に含まれない",
+    "unknownGroup": "削除されたグループ"
   }
 }

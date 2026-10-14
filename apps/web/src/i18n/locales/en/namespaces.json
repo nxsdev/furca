@@ -1,1 +1,66 @@
-{}
+{
+  "pageTitle": "Namespaces · furca",
+  "page": {
+    "title": "Namespaces",
+    "description": "Experiments in the same namespace take non-overlapping slices of its users, so nobody is in more than one of them.",
+    "new": "New namespace",
+    "emptyTitle": "No namespaces yet",
+    "emptyDescription": "Create one for experiments that must not share users, such as two tests on the same checkout page. Each experiment then takes its own slice.",
+    "loadFailed": "Couldn't load namespaces. {{message}}"
+  },
+  "table": {
+    "namespace": "Namespace",
+    "allocation": "Allocation",
+    "free": "Free",
+    "actions": "Actions"
+  },
+  "row": {
+    "moreActions": "More actions for {{name}}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "noExperiments": "No draft or running experiment holds a slice"
+  },
+  "form": {
+    "name": "Name",
+    "namePlaceholder": "Checkout",
+    "key": "Key",
+    "keyHelp": "Hashed by the SDK. Can't be changed later",
+    "keyLocked": "Hashed by the SDK, so it can't change",
+    "keyInvalid": "Use lowercase letters, digits, - and _ (max 64)",
+    "description": "Description",
+    "descriptionPlaceholder": "What these experiments have in common",
+    "created": "Namespace {{name}} created",
+    "saved": "Namespace saved"
+  },
+  "delete": {
+    "title": "Delete {{name}}?",
+    "body": "Experiments can no longer use this namespace. Stopped experiments keep their history.",
+    "confirm": "Delete namespace",
+    "done": "{{name}} deleted"
+  },
+  "status": {
+    "draft": "Draft",
+    "running": "Running",
+    "stopped": "Stopped"
+  },
+  "bar": {
+    "empty": "No experiment holds a slice"
+  },
+  "experimentForm": {
+    "title": "Mutual exclusion",
+    "description": "Experiments in the same namespace never share users: each takes its own slice.",
+    "namespace": "Namespace",
+    "none": "None (runs independently)",
+    "start": "From",
+    "end": "To",
+    "help": "Only users in this slice of the namespace can enter; coverage then applies within it.",
+    "useFree": "Use first free slice",
+    "full": "Every slice of this namespace is taken",
+    "overlapRunning": "Overlaps {{names}}, running in this namespace. Starting will fail until you choose a free range.",
+    "overlapDraft": "Overlaps the draft {{names}}. Only one of them can run at a time.",
+    "rangeInvalid": "The slice must start before it ends, between 0% and 100%",
+    "noNamespaces": "No namespaces yet. <link>Create one</link> to keep experiments from sharing users.",
+    "loadFailed": "Couldn't load namespaces. {{message}}",
+    "missing": "This namespace was deleted. Choose another one or None."
+  }
+}

@@ -7,6 +7,8 @@ import { ArrowUpRight, Link2 } from "lucide-react";
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { setServerError, submitHandler, useAppForm, useRequired } from "~/components/form/form";
+import { ApiKeysPanel } from "~/components/platform/ApiKeysPanel";
+import { WebhooksPanel } from "~/components/platform/WebhooksPanel";
 import { ConfirmDialog } from "~/components/ui/ConfirmDialog";
 import { CopyButton, ListSkeleton, PageHeader, Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/primitives";
 import { tbl } from "~/components/ui/table";
@@ -358,6 +360,8 @@ function Page() {
             <InvitationsPanel invitations={list.data.invitations} />
           </>
         )}
+        <ApiKeysPanel />
+        <WebhooksPanel />
         <AboutPanel />
       </div>
     </>

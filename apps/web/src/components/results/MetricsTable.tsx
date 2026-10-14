@@ -1,10 +1,11 @@
 import type { Experiment, StatsEngine } from "@furca/core/experiments/Experiment";
 import type { Metric } from "@furca/core/metrics/Metric";
-import type { MetricResult, MetricRole, VariationComparison } from "@furca/core/results/ExperimentResult";
+import type { MetricResult, MetricRole } from "@furca/core/results/ExperimentResult";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
+import { INTERVAL_INSET, IntervalBar, liftDomain, liftTicks } from "~/components/charts/IntervalBar";
 import { VariationSwatch } from "~/components/experiments/parts";
 import { formatCi, formatCount, formatLift, formatMetricValue, formatPercent, formatPValue } from "./format";
 import { VerdictLabel, verdictStyle } from "./verdict";
@@ -12,69 +13,28 @@ import { VerdictLabel, verdictStyle } from "./verdict";
 /** Title and hint live under `results:table.roles.<role>` */
 const roles: ReadonlyArray<MetricRole> = ["primary", "secondary", "guardrail"];
 
-/** Shared lift axis across every row: covers all intervals and zero, with nice ticks */
+/** Shared lift axis across every row: one domain for every IntervalBar, labeled in the column header */
 function useAxis(metrics: ReadonlyArray<MetricResult>) {
-  const bounds = metrics.flatMap((m) => m.comparisons.flatMap((c) => (c.ci === null ? [] : [...c.ci])));
-  // ponytail: clamp to ±100% so one wild early interval doesn't flatten every other row; clipped bars run to the edge
-  const lo = Math.max(-1, Math.min(0, ...bounds));
-  const hi = Math.min(1, Math.max(0, ...bounds));
-  const span = Math.max(hi - lo, 0.02);
-  const step = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5].find((s) => span / s <= 4) ?? 1;
-  const min = Math.floor(lo / step) * step;
-  const max = Math.ceil(hi / step) * step;
-  const ticks: Array<number> = [];
-  for (let t = min; t <= max + 1e-9; t += step) ticks.push(Number(t.toFixed(4)));
-  const x = (v: number) => ((Math.min(max, Math.max(min, v)) - min) / (max - min || 1)) * 100;
-  return { ticks, x };
+  const domain = liftDomain(metrics.flatMap((m) => m.comparisons.map((c) => c.ci)));
+  return { domain, ticks: liftTicks(domain) };
 }
 
 type Axis = ReturnType<typeof useAxis>;
 
 function AxisHeader({ axis }: { axis: Axis }) {
+  const [min, max] = axis.domain;
   return (
-    <div className="relative h-4" aria-hidden="true">
+    <div className="relative h-4" style={{ marginInline: INTERVAL_INSET }} aria-hidden="true">
       {axis.ticks.map((t) => (
         <span
           key={t}
           className="absolute -translate-x-1/2 font-mono text-[11px] font-normal tabular text-muted"
-          style={{ left: `${axis.x(t)}%` }}
+          style={{ left: `${((t - min) / (max - min)) * 100}%` }}
         >
           {t === 0 ? "0" : formatLift(t).replace(".0%", "%")}
         </span>
       ))}
     </div>
-  );
-}
-
-/** Interval bar + point estimate on the shared axis, colored by verdict */
-export function CiPlot({ comparison, axis, trusted = true }: { comparison: VariationComparison; axis: Axis; trusted?: boolean }) {
-  const { t } = useTranslation("results");
-  const s = verdictStyle[trusted ? comparison.verdict : "neutral"];
-  const zero = axis.x(0);
-  if (comparison.ci === null || comparison.lift === null) {
-    return (
-      <svg width="100%" height="24" aria-hidden="true" className="block">
-        <line x1={`${zero}%`} x2={`${zero}%`} y1="0" y2="24" className="stroke-border" strokeWidth="1" />
-      </svg>
-    );
-  }
-  const [l, h] = comparison.ci.map(axis.x) as [number, number];
-  return (
-    <svg
-      width="100%"
-      height="24"
-      role="img"
-      aria-label={t("table.plotLabel", { lift: formatLift(comparison.lift), ci: formatCi(comparison.ci) })}
-      className="block overflow-visible"
-    >
-      {axis.ticks.map((t) => (
-        <line key={t} x1={`${axis.x(t)}%`} x2={`${axis.x(t)}%`} y1="2" y2="22" className="stroke-separator" strokeWidth="1" />
-      ))}
-      <line x1={`${zero}%`} x2={`${zero}%`} y1="0" y2="24" className="stroke-muted/60" strokeWidth="1" />
-      <rect x={`${l}%`} width={`${Math.max(h - l, 0.5)}%`} y="8" height="8" rx="2" className={s.band} />
-      <rect x={`${l}%`} width={`${Math.max(h - l, 0.5)}%`} y="11" height="2" className={s.fill} opacity="0.55" />
-      <circle cx={`${axis.x(comparison.lift)}%`} cy="12" r="4" className={`${s.fill} stroke-surface`} strokeWidth="1.5" />
-    </svg>
   );
 }
 
@@ -196,7 +156,13 @@ export function MetricsTable({
                           <div className="text-meta text-muted">{c.ci === null ? "" : formatCi(c.ci)}</div>
                         </td>
                         <td>
-                          <CiPlot comparison={c} axis={axis} trusted={trusted} />
+                          <IntervalBar
+                            lift={c.lift}
+                            ci={c.ci}
+                            verdict={trusted ? c.verdict : "neutral"}
+                            domain={axis.domain}
+                            label={`${metric?.name ?? t("table.deletedMetric")}: ${t("table.versus", { variation: variationName(c.variationKey), control: control?.name ?? t("table.controlFallback") })}`}
+                          />
                         </td>
                         <td className="text-right font-mono tabular">
                           {engine === "bayesian"
@@ -302,7 +268,13 @@ function MobileList({
                         <span className="text-meta text-muted">{c.ci === null ? "" : formatCi(c.ci)}</span>
                         {evidence !== null && <span className="ml-auto text-meta text-muted">{evidence}</span>}
                       </p>
-                      <CiPlot comparison={c} axis={axis} trusted={trusted} />
+                      <IntervalBar
+                        lift={c.lift}
+                        ci={c.ci}
+                        verdict={trusted ? c.verdict : "neutral"}
+                        domain={axis.domain}
+                        label={`${name}: ${t("table.versus", { variation: experiment.variations[index]?.name ?? c.variationKey, control: control?.name ?? t("table.controlFallback") })}`}
+                      />
                       {base !== undefined && v !== undefined && metric !== undefined && (
                         <p className="font-mono text-meta text-muted tabular">
                           {formatMetricValue(metric.type, base.mean)} → {formatMetricValue(metric.type, v.mean)} ·{" "}

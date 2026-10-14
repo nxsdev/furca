@@ -159,9 +159,28 @@
     "lowerIsBetter": " · 低いほど良い",
     "noComparisons": "この指標では比較が計算されませんでした。",
     "unreliable": "信頼性に問題あり",
-    "plotLabel": "リフト {{lift}}、区間 {{ci}}",
     "toWin": "勝つ確率 {{percent}}",
     "versus": "{{variation}} vs {{control}}",
     "usersPair": "{{base}} / {{variation}} ユーザー"
+  },
+  "breakdown": {
+    "title": "内訳",
+    "exploratory": "探索的な分析です。多重比較の補正をしていないため、勝者を決めるためではなく、効果がどこから来ているかを見るために使ってください。",
+    "dimension": "属性",
+    "metric": "指標",
+    "recompute": "内訳を再計算",
+    "loading": "内訳を計算中",
+    "noData": "現在のフェーズにはまだ露出がありません。",
+    "emptyTitle": "内訳は記録されていません",
+    "emptyDescription": "内訳では country や plan などの属性ごとに結果を分けて見られます。実験の設定時に「内訳」で属性を選ぶと（<link>設定</link>を参照）、SDK が露出ごとにその値を送信します。",
+    "caption": "属性値ごとの {{metric}}（{{control}} との比較）",
+    "columns": {
+      "value": "値",
+      "users": "ユーザー"
+    },
+    "other": "その他の値",
+    "notSet": "未設定",
+    "guardrailRegressed": "ここでガードレールが悪化: {{metrics}}",
+    "computed": "現在のフェーズから <time></time> に計算しました。"
   }
 }

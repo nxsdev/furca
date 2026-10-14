@@ -44,6 +44,7 @@ export const SdkServiceLive = Layer.effect(
           phase: e.phase,
           userId: e.userId,
           firstSeenAt: Math.round(e.ts),
+          dimensions: e.dimensions,
         }));
         const eventRows = input.events.filter(keep).map((e) => ({
           environmentId: environment.id,
@@ -51,11 +52,12 @@ export const SdkServiceLive = Layer.effect(
           name: e.name,
           value: e.value,
           ts: Math.round(e.ts),
+          properties: e.properties,
         }));
         yield* database.run("sdk.ingest", (db) =>
           batch(db, [
-            // The primary key keeps the first time a unit saw a variation in a phase
-            ...chunk(exposureRows, 6).map((rows) => db.insert(exposures).values([...rows]).onConflictDoNothing()),
+            // The primary key keeps the first time a unit saw a variation in a phase (and its dimensions)
+            ...chunk(exposureRows, 7).map((rows) => db.insert(exposures).values([...rows]).onConflictDoNothing()),
             ...chunk(eventRows, 6).map((rows) => db.insert(events).values([...rows])),
           ]),
         );

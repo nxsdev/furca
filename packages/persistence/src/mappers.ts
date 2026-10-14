@@ -12,10 +12,13 @@ import {
   StatsSettings,
   Variation,
 } from "@furca/core/experiments/Experiment";
-import { NamespaceAllocation } from "@furca/core/experiments/Namespace";
+import { Namespace, NamespaceAllocation } from "@furca/core/experiments/Namespace";
 import { Feature, FeatureEnvironmentConfig, FeatureRule, FeatureValueType } from "@furca/core/features/Feature";
 import { Metric, MetricCapping, MetricDefinition, MetricType } from "@furca/core/metrics/Metric";
+import { ApiKey, ApiKeyRole } from "@furca/core/platform/ApiKey";
+import { Webhook, WebhookEvent, WebhookFormat } from "@furca/core/platform/Webhook";
 import { Condition } from "@furca/core/targeting/Condition";
+import { SavedGroup, SavedGroupType } from "@furca/core/targeting/SavedGroup";
 import type * as schema from "@furca/database/schema/index";
 import { Schema } from "effect";
 
@@ -110,6 +113,58 @@ export const toDataSource = (row: Row<typeof schema.dataSources>): DataSource =>
     exposureSql: row.exposureSql,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  });
+
+export const toSavedGroup = (row: Row<typeof schema.savedGroups>): SavedGroup =>
+  SavedGroup.make({
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    description: row.description,
+    type: decode(SavedGroupType)(row.type),
+    conditions: conditions(row.conditions),
+    attribute: row.attribute,
+    values: strings(row.values),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  });
+
+export const toNamespace = (row: Row<typeof schema.namespaces>): Namespace =>
+  Namespace.make({
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    description: row.description,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  });
+
+export const toApiKey = (row: Row<typeof schema.apiKeys>): ApiKey =>
+  ApiKey.make({
+    id: row.id,
+    name: row.name,
+    prefix: row.prefix,
+    role: decode(ApiKeyRole)(row.role),
+    createdBy: row.createdBy,
+    createdAt: row.createdAt,
+    lastUsedAt: row.lastUsedAt,
+    revokedAt: row.revokedAt,
+  });
+
+/** The encrypted signing secret stays in the row */
+export const toWebhook = (row: Row<typeof schema.webhooks>): Webhook =>
+  Webhook.make({
+    id: row.id,
+    name: row.name,
+    url: row.url,
+    format: decode(WebhookFormat)(row.format),
+    events: decode(Schema.Array(WebhookEvent))(row.events),
+    enabled: row.enabled,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    lastDeliveredAt: row.lastDeliveredAt,
+    lastStatus: row.lastStatus,
+    lastError: row.lastError,
   });
 
 /**

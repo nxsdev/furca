@@ -1,3 +1,6 @@
+import { EffectSchemaToJsonSchemaConverter } from "@orpc/experimental-effect";
+import { OpenAPIGenerator } from "@orpc/openapi";
+import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { RPCHandler } from "@orpc/server/fetch";
 import { handleSdkRequest } from "../Http/sdk";
 import { Effect, Layer } from "effect";
@@ -11,8 +14,31 @@ export type { FurcaEnv } from "./Env";
 
 const rpcHandler = new RPCHandler(router);
 
+/** The REST surface: everything an API key can call (no setup / session procedures) */
+const { public: _public, session: _session, ...restRouter } = router;
+const restHandler = new OpenAPIHandler(restRouter);
+
+let openApiSpec: Promise<object> | undefined;
+/** OpenAPI 3.1 document of /api/v1, generated once per isolate */
+const openApiDocument = () =>
+  (openApiSpec ??= new OpenAPIGenerator({ converters: [new EffectSchemaToJsonSchemaConverter()] }).generate(restRouter, {
+    version: "3.1.1",
+    base: {
+      info: {
+        title: "furca API",
+        version: "1",
+        description:
+          "Admin API of furca. Every operation is `POST /api/v1/<area>/<operation>` with a JSON body. " +
+          "Authenticate with an API key from Settings > API keys: `Authorization: Bearer furca_…`",
+      },
+      components: { securitySchemes: { apiKey: { type: "http", scheme: "bearer", description: "furca API key (furca_…)" } } },
+      security: [{ apiKey: [] }],
+    },
+  }));
+
 /** Builds every Effect service for this request (Workers bindings are per request) */
-const buildServices = (env: FurcaEnv) => Effect.runSync(Layer.build(makeAppLayer(env)).pipe(Effect.scoped));
+const buildServices = (env: FurcaEnv, ctx: ExecutionContext) =>
+  Effect.runSync(Layer.build(makeAppLayer(env, ctx)).pipe(Effect.scoped));
 
 /** Routes every /api/* request. Called from apps/web/src/server.ts */
 export const handleApiRequest = async (request: Request, env: FurcaEnv, ctx: ExecutionContext): Promise<Response> => {
@@ -23,7 +49,20 @@ export const handleApiRequest = async (request: Request, env: FurcaEnv, ctx: Exe
   if (url.pathname.startsWith("/api/rpc")) {
     const { matched, response } = await rpcHandler.handle(request, {
       prefix: "/api/rpc",
-      context: { headers: request.headers, env, auth, "effect/context": buildServices(env) },
+      context: { headers: request.headers, env, auth, ctx, "effect/context": buildServices(env, ctx) },
+    });
+    if (matched) return response;
+  }
+  if (url.pathname === "/api/v1/openapi.json" && request.method === "GET") {
+    return Response.json({ ...(await openApiDocument()), servers: [{ url: `${url.origin}/api/v1` }] });
+  }
+  if (url.pathname.startsWith("/api/v1/")) {
+    // API keys only: without the cookie a browser session can never authorize a cross-site request (CSRF-safe)
+    const headers = new Headers(request.headers);
+    headers.delete("cookie");
+    const { matched, response } = await restHandler.handle(request, {
+      prefix: "/api/v1",
+      context: { headers, env, auth, ctx, "effect/context": buildServices(env, ctx) },
     });
     if (matched) return response;
   }

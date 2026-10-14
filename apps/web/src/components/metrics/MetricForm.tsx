@@ -14,7 +14,7 @@ import {
 } from "@heroui/react";
 import { type EventNameStat, Key } from "@furca/api/contract";
 import { BUILTIN_DATA_SOURCE_ID, type DataSource } from "@furca/core/datasources/DataSource";
-import type { EventAggregation, Metric, MetricType } from "@furca/core/metrics/Metric";
+import type { EventAggregation, EventSource, Metric, MetricType } from "@furca/core/metrics/Metric";
 import { type AnyFieldApi, type DeepKeys, useStore } from "@tanstack/react-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Schema } from "effect";
@@ -29,6 +29,7 @@ import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 import { Direction, formatHours, metricTypeLabel, MetricSentence } from "./describe";
+import { type FilterValues, filterIssue, filterValues, PropertyFilters } from "./PropertyFilters";
 import { slugify } from "./slugify";
 
 type MetricInput = Omit<Parameters<typeof client.metrics.create>[0], "key">;
@@ -41,8 +42,8 @@ interface Values {
   description: string;
   type: MetricType;
   dataSourceId: string;
-  num: { event: string; aggregation: EventAggregation };
-  den: { event: string; aggregation: EventAggregation };
+  num: SourceValues;
+  den: SourceValues;
   numSql: string;
   denSql: string;
   inverse: boolean;
@@ -54,7 +55,22 @@ interface Values {
   capPercentile: number;
 }
 
+interface SourceValues {
+  event: string;
+  aggregation: EventAggregation;
+  filters: FilterValues[];
+}
+
 const presetWindows: ReadonlyArray<WindowChoice> = ["24", "72", "168"];
+
+const sourceValues = (s: EventSource | null | undefined): SourceValues => ({
+  event: s?.event ?? "",
+  aggregation: s?.aggregation ?? "count",
+  filters: (s?.filters ?? []).map((f) => ({ property: f.property, operator: f.operator, values: [...f.values] })),
+});
+
+const filtersInput = (filters: ReadonlyArray<FilterValues>) =>
+  filters.map((f) => ({ property: f.property.trim(), operator: f.operator, values: filterValues(f) }));
 
 const toValues = (m: Metric | undefined): Values => {
   const d = m?.definition;
@@ -65,8 +81,8 @@ const toValues = (m: Metric | undefined): Values => {
     description: m?.description ?? "",
     type: m?.type ?? "proportion",
     dataSourceId: m?.dataSourceId ?? BUILTIN_DATA_SOURCE_ID,
-    num: d?._tag === "event" ? { ...d.numerator } : { event: "", aggregation: "count" },
-    den: d?._tag === "event" && d.denominator !== null ? { ...d.denominator } : { event: "", aggregation: "count" },
+    num: sourceValues(d?._tag === "event" ? d.numerator : null),
+    den: sourceValues(d?._tag === "event" ? d.denominator : null),
     numSql: d?._tag === "sql" ? d.numeratorSql : "",
     denSql: d?._tag === "sql" ? (d.denominatorSql ?? "") : "",
     inverse: m?.inverse ?? false,
@@ -91,9 +107,13 @@ const toInput = (d: Values, isSql: boolean): MetricInput => ({
     ? { _tag: "sql", numeratorSql: d.numSql, denominatorSql: d.type === "ratio" ? d.denSql : null }
     : {
         _tag: "event",
-        // TODO(analytics): property filters editor
-        numerator: { event: d.num.event.trim(), aggregation: d.type === "proportion" ? "count" : d.num.aggregation, filters: [] },
-        denominator: d.type === "ratio" ? { event: d.den.event.trim(), aggregation: d.den.aggregation, filters: [] } : null,
+        numerator: {
+          event: d.num.event.trim(),
+          aggregation: d.type === "proportion" ? "count" : d.num.aggregation,
+          filters: filtersInput(d.num.filters),
+        },
+        denominator:
+          d.type === "ratio" ? { event: d.den.event.trim(), aggregation: d.den.aggregation, filters: filtersInput(d.den.filters) } : null,
       },
   inverse: d.inverse,
   windowHours: windowHoursOf(d),
@@ -119,6 +139,10 @@ const validate = (d: Values, isSql: boolean, isEdit: boolean): FieldErrors => {
   } else {
     if (d.num.event.trim() === "") e["num.event"] = i18n.t("metrics:form.errors.numEvent");
     if (d.type === "ratio" && d.den.event.trim() === "") e["den.event"] = i18n.t("metrics:form.errors.denEvent");
+    const numFilters = d.num.filters.map(filterIssue).find((issue) => issue !== null);
+    if (numFilters) e["num.filters"] = numFilters;
+    const denFilters = d.type === "ratio" ? d.den.filters.map(filterIssue).find((issue) => issue !== null) : null;
+    if (denFilters) e["den.filters"] = denFilters;
   }
   const w = windowHoursOf(d);
   if (w !== null && !(w > 0)) e.customWindow = i18n.t("metrics:form.errors.window");
@@ -288,6 +312,8 @@ export function MetricForm({
   const sourceList = sources.data ?? [];
   const isSqlSource = (id: string) => id !== BUILTIN_DATA_SOURCE_ID && sourceList.find((s) => s.id === id)?.type !== "builtin";
   const eventNames = names.data ?? [];
+  /** Property suggestions only for events this environment has received */
+  const knownEvent = (event: string) => (eventNames.some((n) => n.name === event.trim()) ? event.trim() : null);
 
   const form = useAppForm({
     defaultValues: toValues(metric),
@@ -480,6 +506,18 @@ export function MetricForm({
                     </div>
                   )}
                 </div>
+                <form.AppField name="num.filters">
+                  {(field) => (
+                    <PropertyFilters
+                      value={field.state.value}
+                      onChange={field.handleChange}
+                      environmentId={env?.id ?? null}
+                      event={knownEvent(d.num.event)}
+                      // Like targeting conditions: incomplete rows are reported once a save was tried
+                      error={field.form.state.submissionAttempts > 0 ? shown(field) : undefined}
+                    />
+                  )}
+                </form.AppField>
               </div>
               {d.type === "ratio" && (
                 <div className="flex flex-col gap-4 border-t border-border pt-4">
@@ -503,6 +541,17 @@ export function MetricForm({
                       </form.AppField>
                     </div>
                   </div>
+                  <form.AppField name="den.filters">
+                    {(field) => (
+                      <PropertyFilters
+                        value={field.state.value}
+                        onChange={field.handleChange}
+                        environmentId={env?.id ?? null}
+                        event={knownEvent(d.den.event)}
+                        error={field.form.state.submissionAttempts > 0 ? shown(field) : undefined}
+                      />
+                    )}
+                  </form.AppField>
                 </div>
               )}
               <p className="text-xs text-muted">

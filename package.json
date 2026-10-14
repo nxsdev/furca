@@ -80,7 +80,6 @@
     "react-aria-components": "1.22.1",
     "react-dom": "19.3.0",
     "react-i18next": "17.0.16",
-    "recharts": "3.10.1",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vite": "8.3.4"

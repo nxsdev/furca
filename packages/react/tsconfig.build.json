@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [],
+    // Resolve other @furca packages like a consumer does: through node_modules to their built dist/
+    "paths": {}
+  },
+  "include": ["src"]
+}

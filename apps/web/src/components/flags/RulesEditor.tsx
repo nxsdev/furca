@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, Ellipsis, FlaskConical, Pencil, Plus, Trash2 } from
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { withForm } from "~/components/form/form";
-import { ConditionBuilder, conditionIssue, conditionsSummary } from "~/components/targeting/ConditionBuilder";
+import { ConditionBuilder, conditionIssue, useConditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { i18n } from "~/i18n";
 import { FlagSwitch } from "./FlagSwitch";
 import { defaultValueFor, ValueInput, ValuePreview, valueIssue } from "./ValueInput";
@@ -80,6 +80,7 @@ export const RulesList = withForm({
     footer,
   }) {
     const { t } = useTranslation("flags");
+    const conditionsSummary = useConditionsSummary();
     return (
       <form.AppField name={`envs[${envIndex}].rules`}>
         {(field) => {

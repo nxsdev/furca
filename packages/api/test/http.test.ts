@@ -213,6 +213,44 @@ describe("SDK events endpoint", () => {
     const count = await t.d1.prepare("select count(*) as n from exposures where experiment_key = 'bulk'").first<{ n: number }>();
     expect(count!.n).toBe(250);
   });
+
+  it("stores event properties and exposure dimensions as JSON; the first exposure keeps its dimensions", async () => {
+    const sdkKey = await productionSdkKey();
+    const now = Date.now();
+    const exposure = { experimentKey: "dims", variationKey: "control", userId: "d1", ts: now - 1000 };
+    const res = await post(sdkKey, {
+      exposures: [{ ...exposure, dimensions: { country: "jp" } }, { ...exposure, ts: now, dimensions: { country: "us" } }],
+      events: [
+        { name: "props", userId: "d1", properties: { plan: "pro", seats: 3, trial: false }, ts: now },
+        { name: "props", userId: "d1", ts: now },
+      ],
+    });
+    expect(await res.json()).toEqual({ accepted: 4 });
+    const dims = await t.d1.prepare("select dimensions from exposures where experiment_key = 'dims'").all();
+    expect(dims.results).toEqual([{ dimensions: '{"country":"jp"}' }]);
+    const props = await t.d1.prepare("select properties from events where name = 'props' order by id").all();
+    expect(props.results).toEqual([{ properties: '{"plan":"pro","seats":3,"trial":false}' }, { properties: null }]);
+  });
+
+  it("rejects properties and dimensions beyond the limits or of the wrong shape", async () => {
+    const sdkKey = await productionSdkKey();
+    const event = (properties: unknown) => post(sdkKey, { events: [{ name: "bad", userId: "u", properties, ts: Date.now() }] });
+    const exposure = (dimensions: unknown) =>
+      post(sdkKey, { exposures: [{ experimentKey: "bad", variationKey: "control", userId: "u", dimensions, ts: Date.now() }] });
+    const keys = (n: number, value: unknown) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`k${i}`, value]));
+
+    expect((await event(keys(20, "x"))).status).toBe(202);
+    expect((await event(keys(21, "x"))).status).toBe(400);
+    expect((await event({ ["k".repeat(65)]: "x" })).status).toBe(400);
+    expect((await event({ plan: "x".repeat(201) })).status).toBe(400);
+    expect((await event({ nested: { a: 1 } })).status).toBe(400);
+    expect((await event({ list: ["a"] })).status).toBe(400);
+    expect((await event({ none: null })).status).toBe(400);
+    expect((await exposure(keys(5, "x"))).status).toBe(202);
+    expect((await exposure(keys(6, "x"))).status).toBe(400);
+    expect((await exposure({ country: "x".repeat(101) })).status).toBe(400);
+    expect((await exposure({ age: 30 })).status).toBe(400);
+  });
 });
 
 describe("analysis RPC", () => {

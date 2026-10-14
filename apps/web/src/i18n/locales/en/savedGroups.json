@@ -1,1 +1,80 @@
-{}
+{
+  "pageTitle": "Saved groups · furca",
+  "detailPageTitle": "Saved group · furca",
+  "list": {
+    "title": "Saved groups",
+    "description": "Audiences you define once and target from any flag rule or experiment. Changing a group updates everything that uses it.",
+    "new": "New saved group",
+    "loadFailed": "Couldn't load saved groups. {{message}}",
+    "emptyTitle": "No saved groups yet",
+    "emptyDescription": "Save an audience such as beta testers, internal staff or enterprise accounts, then target it with \"is in saved group\" instead of repeating the same conditions.",
+    "columns": {
+      "group": "Group",
+      "type": "Type",
+      "members": "Members",
+      "usedBy": "Used by",
+      "updated": "Updated"
+    },
+    "valueCount_one": "{{formatted}} value",
+    "valueCount_other": "{{formatted}} values",
+    "flagCount_one": "{{count}} flag",
+    "flagCount_other": "{{count}} flags",
+    "experimentCount_one": "{{count}} experiment",
+    "experimentCount_other": "{{count}} experiments"
+  },
+  "new": {
+    "breadcrumb": "New",
+    "title": "New saved group",
+    "description": "Define who is in the group. Flags and experiments then target it by name."
+  },
+  "type": {
+    "list": "ID list",
+    "condition": "Conditions"
+  },
+  "form": {
+    "basics": "Basics",
+    "name": "Name",
+    "namePlaceholder": "Beta testers",
+    "key": "Key",
+    "keyHelp": "Lowercase letters, digits, - and _. Can't be changed later",
+    "keyLocked": "Keys can't change",
+    "keyInvalid": "Use lowercase letters, digits, - and _ (max 64)",
+    "description": "Description",
+    "descriptionPlaceholder": "Who is in this group and why",
+    "members": "Members",
+    "type": "Defined by",
+    "typeList": "Users whose attribute is one of the IDs you paste",
+    "typeCondition": "Users matching every condition",
+    "attribute": "Match attribute",
+    "attributeHelp": "The user attribute compared with the list, usually id",
+    "ids": "IDs",
+    "idsCount_one": "{{formatted}} unique ID",
+    "idsCount_other": "{{formatted}} unique IDs",
+    "duplicates_one": "{{formatted}} duplicate ignored",
+    "duplicates_other": "{{formatted}} duplicates ignored",
+    "idsHelp": "One per line, or paste a comma-separated list. Up to {{max}}; every SDK downloads the list.",
+    "idsRequired": "Add at least one ID",
+    "idsTooMany": "A list can hold at most {{max}} IDs",
+    "conditions": "Users in the group match",
+    "conditionsRequired": "Add at least one condition",
+    "save": "Save changes",
+    "create": "Create saved group",
+    "liveNote": "Changes apply immediately to every flag and experiment that targets this group."
+  },
+  "detail": {
+    "fallbackTitle": "Saved group",
+    "loadFailed": "Couldn't load this saved group. {{message}}",
+    "saved": "Saved group updated",
+    "savedDescription": "SDKs receive the new membership on their next refresh.",
+    "usedBy": "Used by",
+    "unused": "Nothing targets this group yet. Choose \"is in saved group\" in a flag rule or experiment's targeting.",
+    "flag": "Flag",
+    "history": "History"
+  },
+  "delete": {
+    "title": "Delete {{name}}?",
+    "body": "Flags and experiments will no longer be able to target this group. This can't be undone.",
+    "confirm": "Delete group",
+    "done": "{{name}} deleted"
+  }
+}

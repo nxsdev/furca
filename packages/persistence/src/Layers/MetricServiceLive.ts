@@ -1,5 +1,5 @@
 import type { Actor } from "@furca/core/audit/AuditLog";
-import { Metric, MetricCapping, MetricDefinition } from "@furca/core/metrics/Metric";
+import { type EventSource, Metric, MetricCapping, MetricDefinition } from "@furca/core/metrics/Metric";
 import { type MetricInput, MetricService } from "@furca/core/metrics/MetricService";
 import { NotFoundError } from "@furca/core/shared/errors";
 import { Database } from "@furca/database/Database";
@@ -8,6 +8,34 @@ import { eq } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { toMetric } from "../mappers";
 import { auditInsert, batch, invalid, newId } from "../shared";
+
+const MAX_FILTERS = 10;
+
+/** Problem with an event source's property filters, or null. Values per operator: see PropertyFilter */
+export const filtersProblem = (source: EventSource): string | null => {
+  if (source.filters.length > MAX_FILTERS) return `Use at most ${MAX_FILTERS} filters per event`;
+  for (const f of source.filters) {
+    const name = f.property.trim();
+    if (name === "") return "Choose a property for every filter";
+    if (/["\\]/.test(name)) return `Property "${name}" cannot be filtered: names with " or \\ are not supported`;
+    const label = `Filter on "${name}"`;
+    const { values } = f;
+    if (f.operator === "exists" || f.operator === "not_exists") {
+      if (values.length > 0) return `${label} takes no value`;
+      continue;
+    }
+    if (values.some((v) => v === "")) return `${label} needs a value`;
+    if (f.operator === "in" || f.operator === "not_in") {
+      if (values.length === 0) return `${label} needs at least one value`;
+      continue;
+    }
+    if (values.length !== 1) return `${label} needs exactly one value`;
+    if (["gt", "gte", "lt", "lte"].includes(f.operator) && !Number.isFinite(Number(values[0]))) {
+      return `${label} compares numbers: enter a number`;
+    }
+  }
+  return null;
+};
 
 const columns = (m: Metric) => ({
   name: m.name,
@@ -54,6 +82,8 @@ export const MetricServiceLive = Layer.effect(
         if (definition.numerator.event.trim() === "" || definition.denominator?.event.trim() === "") {
           return yield* invalid("Choose an event name");
         }
+        const problem = filtersProblem(definition.numerator) ?? (definition.denominator && filtersProblem(definition.denominator));
+        if (problem) return yield* invalid(problem);
       } else if (definition.numeratorSql.trim() === "" || definition.denominatorSql?.trim() === "") {
         return yield* invalid("SQL is required");
       }

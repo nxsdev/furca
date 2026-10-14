@@ -1,15 +1,20 @@
-import { ORPCError } from "@orpc/server";
+import { SavedGroupService } from "@furca/core/targeting/SavedGroupService";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const savedGroupsRouter = {
-  list: authed.savedGroups.list.handler(notImplemented),
-  get: authed.savedGroups.get.handler(notImplemented),
-  create: authed.savedGroups.create.handler(notImplemented),
-  update: authed.savedGroups.update.handler(notImplemented),
-  delete: authed.savedGroups.delete.handler(notImplemented),
+  list: authed.savedGroups.list.effect(function* () {
+    return yield* (yield* SavedGroupService).list;
+  }),
+  get: authed.savedGroups.get.effect(function* (_opts, { id }) {
+    return yield* (yield* SavedGroupService).get(id);
+  }),
+  create: authed.savedGroups.create.effect(function* ({ context }, input) {
+    return yield* (yield* SavedGroupService).create(input, context.user);
+  }),
+  update: authed.savedGroups.update.effect(function* ({ context }, input) {
+    return yield* (yield* SavedGroupService).update(input, context.user);
+  }),
+  delete: authed.savedGroups.delete.effect(function* ({ context }, { id }) {
+    return yield* (yield* SavedGroupService).delete(id, context.user);
+  }),
 };

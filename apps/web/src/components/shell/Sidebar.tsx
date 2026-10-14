@@ -9,6 +9,7 @@ import {
   History,
   KeyRound,
   Languages,
+  Layers,
   LayoutGrid,
   LogOut,
   Monitor,
@@ -16,6 +17,7 @@ import {
   Search,
   Settings,
   Sun,
+  UsersRound,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +25,17 @@ import { currentLocale, setLocale } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
 import { Logo } from "./Logo";
 
-export type NavKey = "overview" | "flags" | "experiments" | "metrics" | "dataSources" | "environments" | "audit" | "settings";
+export type NavKey =
+  | "overview"
+  | "flags"
+  | "experiments"
+  | "metrics"
+  | "savedGroups"
+  | "namespaces"
+  | "dataSources"
+  | "environments"
+  | "audit"
+  | "settings";
 
 interface NavItem {
   readonly to: string;
@@ -40,6 +52,8 @@ export const primaryNav: ReadonlyArray<NavItem> = [
 ];
 
 export const secondaryNav: ReadonlyArray<NavItem> = [
+  { to: "/saved-groups", label: "savedGroups", icon: UsersRound },
+  { to: "/namespaces", label: "namespaces", icon: Layers },
   { to: "/data-sources", label: "dataSources", icon: Database },
   { to: "/environments", label: "environments", icon: KeyRound },
   { to: "/audit", label: "audit", icon: History },

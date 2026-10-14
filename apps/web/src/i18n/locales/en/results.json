@@ -161,9 +161,28 @@
     "lowerIsBetter": " · lower is better",
     "noComparisons": "No comparisons were computed for this metric.",
     "unreliable": "Unreliable",
-    "plotLabel": "Lift {{lift}}, interval {{ci}}",
     "toWin": "{{percent}} to win",
     "versus": "{{variation}} vs {{control}}",
     "usersPair": "{{base}} / {{variation}} users"
+  },
+  "breakdown": {
+    "title": "Breakdown",
+    "exploratory": "Exploratory: slices are not corrected for multiple comparisons. Use them to see where an effect comes from, not to pick a winner.",
+    "dimension": "Attribute",
+    "metric": "Metric",
+    "recompute": "Recompute breakdown",
+    "loading": "Computing breakdown",
+    "noData": "No exposures in the current phase yet.",
+    "emptyTitle": "No breakdowns recorded",
+    "emptyDescription": "Breakdowns split results by an attribute such as country or plan. Choose them under Breakdowns when you set up an experiment (see <link>Setup</link>); the SDK then sends their values with every exposure.",
+    "caption": "{{metric}} by attribute value compared with {{control}}",
+    "columns": {
+      "value": "Value",
+      "users": "Users"
+    },
+    "other": "Other values",
+    "notSet": "Not set",
+    "guardrailRegressed": "Guardrail regressed here: {{metrics}}",
+    "computed": "Computed <time></time> from the current phase."
   }
 }

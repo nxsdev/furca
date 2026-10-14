@@ -12,7 +12,14 @@
     "value": "Value",
     "valuePlaceholder": "value",
     "removeCondition": "Remove condition {{number}}",
-    "addCondition": "Add condition"
+    "addCondition": "Add condition",
+    "group": "Saved group",
+    "groupPlaceholder": "Choose a saved group",
+    "loadingGroups": "Loading groups…",
+    "createGroup": "Create a saved group first",
+    "listSize_one": "{{count}} value",
+    "listSize_other": "{{count}} values",
+    "conditionGroup": "conditions"
   },
   "tagInput": {
     "remove": "Remove {{value}}"
@@ -22,13 +29,17 @@
     "enterNumber": "Enter a number",
     "invalidVersion": "Use a version like 2.4.0",
     "chooseAttribute": "Choose an attribute",
-    "enterValue": "Enter a value"
+    "enterValue": "Enter a value",
+    "chooseGroup": "Choose a saved group",
+    "groupMissing": "This group was deleted. Choose another one",
+    "groupsFailed": "Could not load saved groups"
   },
   "operatorGroups": {
     "text": "Text",
     "number": "Number",
     "version": "Version",
-    "presence": "Presence"
+    "presence": "Presence",
+    "savedGroups": "Saved group"
   },
   "operators": {
     "eq": "is",
@@ -76,6 +87,7 @@
     "exists": "{{attribute}} exists",
     "not_exists": "{{attribute}} does not exist",
     "in_group": "in saved group {{value}}",
-    "not_in_group": "not in saved group {{value}}"
+    "not_in_group": "not in saved group {{value}}",
+    "unknownGroup": "a deleted group"
   }
 }

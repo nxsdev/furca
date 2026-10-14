@@ -15,6 +15,8 @@ import { Effect, Layer } from "effect";
 import { rulesJson } from "../mappers";
 import { publishAll } from "../payload";
 import { auditInsert, batch, type BatchItem, getFeature, invalid, loadFeatures, newId } from "../shared";
+import { requireGroups } from "../targeting";
+import { emitFlagUpdated } from "../webhooks";
 
 const experimentIds = (rules: ReadonlyArray<FeatureRule>) =>
   rules
@@ -65,6 +67,7 @@ export const FeatureServiceLive = Layer.effect(
         batch(db, [...writes(db), auditInsert(db, { entityType: "feature", entityId, action, actor, before, after })]),
       );
       if (republish) yield* publishAll(database, store);
+      yield* emitFlagUpdated(action, before, after, actor);
     });
 
     const environmentConfig = (feature: Feature, environmentId: string) => {
@@ -176,6 +179,10 @@ export const FeatureServiceLive = Layer.effect(
         const current = yield* environmentConfig(before, input.environmentId);
         const error = validateRules(before, current.rules, input.rules);
         if (error !== null) return yield* invalid(error);
+        yield* requireGroups(
+          database,
+          input.rules.flatMap((rule, i) => (rule._tag === "experiment" ? [] : [{ where: `Rule ${i + 1}`, conditions: rule.conditions }])),
+        );
         const now = new Date();
         const after = withEnvironment(before, input.environmentId, { rules: input.rules }, now);
         yield* commit("rules.updated", actor, before, after, (db) => [

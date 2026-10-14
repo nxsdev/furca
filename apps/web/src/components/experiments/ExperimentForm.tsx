@@ -29,8 +29,9 @@ import { Trans, useTranslation } from "react-i18next";
 import { ValueInput, defaultValueFor } from "~/components/flags/ValueInput";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
 import { slugify } from "~/components/metrics/slugify";
+import { NamespaceSlice } from "~/components/namespaces/NamespaceSlice";
 import { formatCount, formatList, formatPercent } from "~/components/results/format";
-import { ConditionBuilder, conditionsSummary } from "~/components/targeting/ConditionBuilder";
+import { ConditionBuilder, TagInput, useConditionsSummary } from "~/components/targeting/ConditionBuilder";
 import { Segmented } from "~/components/ui/Segmented";
 import { i18n } from "~/i18n";
 import { useEnvironment } from "~/lib/environment";
@@ -115,6 +116,7 @@ export function ExperimentForm({
   onCancel: () => void;
 }) {
   const { t } = useTranslation(["experiments", "common"]);
+  const conditionsSummary = useConditionsSummary();
   const isEdit = experiment !== undefined;
   const queryClient = useQueryClient();
   const { environments, current } = useEnvironment();
@@ -584,6 +586,9 @@ export function ExperimentForm({
               </span>
             </p>
           )}
+          <form.AppField name="namespace">
+            {(field) => <NamespaceSlice value={field.state.value} onChange={field.handleChange} experimentId={experiment?.id} />}
+          </form.AppField>
         </Step>
 
         <Step
@@ -647,6 +652,17 @@ export function ExperimentForm({
               )}
             </form.AppField>
           </div>
+          <form.AppField name="dimensions">
+            {(field) => (
+              <Breakdowns
+                value={field.state.value}
+                onChange={field.handleChange}
+                // Targeting attributes are what users differ by; the hash attribute is unique per user
+                suggestions={d.conditions.map((c) => c.attribute.trim()).filter((a) => a !== "" && a !== d.hashAttribute)}
+                warehouse={dataSourceId !== BUILTIN_DATA_SOURCE_ID}
+              />
+            )}
+          </form.AppField>
         </Step>
 
         <Step n={5} id="step-plan" title={t("form.plan.title")} description={t("form.plan.description")}>
@@ -840,6 +856,57 @@ function Step({
       </header>
       <div className="flex flex-col gap-5 px-5 py-5">{children}</div>
     </section>
+  );
+}
+
+const MAX_DIMENSIONS = 5;
+
+/** Attribute names whose values the SDK sends with exposures, so results can be split by them */
+function Breakdowns({
+  value,
+  onChange,
+  suggestions,
+  warehouse,
+}: {
+  value: ReadonlyArray<string>;
+  onChange: (next: string[]) => void;
+  suggestions: ReadonlyArray<string>;
+  warehouse: boolean;
+}) {
+  const { t } = useTranslation("experiments");
+  const full = value.length >= MAX_DIMENSIONS;
+  const suggested = [...new Set(suggestions)].filter((a) => !value.includes(a));
+  return (
+    <div className="flex flex-col gap-2 border-t border-border pt-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-label font-medium">{t("form.breakdowns.title")}</p>
+        <span className="font-mono text-meta text-muted tabular">
+          {value.length} / {MAX_DIMENSIONS}
+        </span>
+      </div>
+      <TagInput
+        aria-label={t("form.breakdowns.title")}
+        values={value}
+        onChange={(next) => onChange(next.slice(0, MAX_DIMENSIONS))}
+        placeholder={t("form.breakdowns.placeholder")}
+        className="font-mono"
+      />
+      {suggested.length > 0 && !full && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-meta text-muted">{t("form.breakdowns.suggested")}</span>
+          {suggested.map((a) => (
+            <Button key={a} size="sm" variant="outline" className="h-6 px-2 font-mono text-meta" onPress={() => onChange([...value, a])}>
+              <Plus className="size-3" aria-hidden="true" />
+              {a}
+            </Button>
+          ))}
+        </div>
+      )}
+      <p className="text-meta text-muted">
+        {t("form.breakdowns.description")}
+        {warehouse && ` ${t("form.breakdowns.warehouse")}`}
+      </p>
+    </div>
   );
 }
 

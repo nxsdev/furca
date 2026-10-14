@@ -18,6 +18,8 @@ packages/integrations  External providers (BigQuery REST client)
 packages/api           oRPC v2 contract (src/contract.ts), handlers (src/Handlers/*), SDK HTTP endpoints (src/Http), runtime
 packages/stats         Pure statistics engine (no Effect; also bundled into the browser)
 packages/sdk           Public zero-dependency SDK (@furca/sdk), local evaluation, GrowthBook-compatible hashing
+packages/react         React bindings (@furca/react)
+packages/openfeature   OpenFeature web + server providers (@furca/openfeature)
 packages/infra         Alchemy v2 stack: Worker + D1 + KV
 ```
 
@@ -27,6 +29,8 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 
 - Typecheck one package: `cd packages/<name> && ../../node_modules/.bin/tsc --noEmit -p .` (TypeScript 7 + Effect language service)
 - Tests: `bun test packages/<name>` (from repo root)
+- Published packages (sdk, react, openfeature) export `dist/`; the repo resolves `@furca/*` to `src` through `paths` in
+  tsconfig.base.json. A tsconfig that sets its own `paths` must repeat those entries
 - New migration after editing `packages/database/src/schema/*`: `cd packages/database && bunx drizzle-kit generate --name <what>`. Never edit an applied migration
 - Route tree after adding routes: `cd apps/web && npx -y @tanstack/router-cli@1.167.5 generate`
 - Dev server: `bun run dev` (Alchemy local D1/KV, http://localhost:5173). Demo data: `bun scripts/seed-demo.ts http://localhost:5173`.

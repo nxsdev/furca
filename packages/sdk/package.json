@@ -2,9 +2,33 @@
   "name": "@furca/sdk",
   "version": "0.1.0",
   "description": "furca feature flag & A/B testing SDK with local evaluation",
+  "keywords": [
+    "feature-flags",
+    "ab-testing",
+    "experimentation",
+    "growthbook"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nxsdev/furca.git",
+    "directory": "packages/sdk"
+  },
   "type": "module",
-  "exports": { ".": "./src/index.ts", "./*": "./src/*.ts" },
   "sideEffects": false,
-  "scripts": { "typecheck": "tsc --noEmit -p ." }
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p ."
+  }
 }

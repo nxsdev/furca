@@ -1,1 +1,118 @@
-{}
+{
+  "secret": {
+    "copy": "Copy secret",
+    "done": "Done"
+  },
+  "apiKeys": {
+    "title": "API keys",
+    "description": "Call the REST API from scripts, CI and other services. Changes made with a key are recorded in the audit log under its name.",
+    "create": "New API key",
+    "empty": "No API keys yet. Create one to toggle flags from a deploy pipeline or read experiments from a dashboard.",
+    "loadFailed": "Couldn't load API keys. {{message}}",
+    "name": "Name",
+    "roleColumn": "Access",
+    "createdBy": "Created by",
+    "lastUsed": "Last used",
+    "actions": "Actions",
+    "neverUsed": "Never",
+    "role": {
+      "admin": "Admin",
+      "readonly": "Read-only"
+    },
+    "roleHelp": {
+      "admin": "Admin keys can do anything a member can, except removing members.",
+      "readonly": "Read-only keys can list and get, but cannot change anything."
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "GitHub Actions deploys",
+      "role": "Access",
+      "submit": "Create key"
+    },
+    "createdTitle": "API key for {{name}}",
+    "createdWarning": "Copy it now and store it somewhere safe. You won't be able to see it again.",
+    "revoke": "Revoke",
+    "revokedAt": "Revoked <relative/>",
+    "revoked": "{{name}} revoked",
+    "revokeTitle": "Revoke {{name}}?",
+    "revokeConfirm": "Revoke key",
+    "revokeBody": "Requests using this key fail immediately. This can't be undone; create a new key if you need access again."
+  },
+  "rest": {
+    "title": "REST API",
+    "spec": "OpenAPI spec",
+    "description": "Every operation is a POST to /api/v1/<area>/<operation> with a JSON body and your key as a bearer token.",
+    "copyCurl": "Copy curl example"
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "description": "Notify your services or a Slack channel when flags change, experiments start or stop, or SDK payloads update.",
+    "create": "New webhook",
+    "empty": "No webhooks yet. Add a Slack incoming webhook to tell your team when experiments start and stop.",
+    "loadFailed": "Couldn't load webhooks. {{message}}",
+    "name": "Name",
+    "eventsColumn": "Events",
+    "lastDelivery": "Last delivery",
+    "actions": "Actions",
+    "neverDelivered": "Not sent yet",
+    "delivered": "Delivered ({{status}})",
+    "failed": "Failed: {{error}}",
+    "paused": "Paused",
+    "test": "Send test",
+    "testOk": "Test delivered ({{status}})",
+    "testFailed": "Test delivery failed",
+    "edit": "Edit {{name}}",
+    "delete": "Delete {{name}}",
+    "created": "Webhook created",
+    "saved": "{{name}} saved",
+    "deleted": "{{name}} deleted",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteConfirm": "Delete webhook",
+    "deleteBody": "furca stops sending events to this URL. Past deliveries are not affected.",
+    "secretTitle": "Signing secret",
+    "secretWarning": "Verify the furca-signature header (sha256=HMAC of the raw body) with this secret. It is shown only once.",
+    "format": {
+      "json": "JSON",
+      "slack": "Slack"
+    },
+    "formatHelp": {
+      "json": "Signed JSON body for your own services",
+      "slack": "A one-line message for a Slack incoming webhook"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "#releases",
+      "url": "URL",
+      "urlInvalid": "Enter an http(s) URL",
+      "format": "Format",
+      "events": "Events",
+      "eventsHelp": "Deliveries are sent once, with a 5 second timeout.",
+      "eventsRequired": "Choose at least one event",
+      "enabled": "Enabled",
+      "enabledHelp": "Paused webhooks receive nothing until you turn them back on. Send test still works.",
+      "create": "Create webhook"
+    },
+    "events": {
+      "flag_updated": {
+        "label": "Flag changed",
+        "help": "Created, edited, toggled, rules saved, archived or deleted"
+      },
+      "experiment_started": {
+        "label": "Experiment started",
+        "help": "A draft starts running"
+      },
+      "experiment_phase_started": {
+        "label": "New experiment phase",
+        "help": "Traffic changed and users were re-randomized"
+      },
+      "experiment_stopped": {
+        "label": "Experiment stopped",
+        "help": "Shipped, rolled back or inconclusive"
+      },
+      "payload_updated": {
+        "label": "SDK payload updated",
+        "help": "Anything SDKs receive changed"
+      }
+    }
+  }
+}

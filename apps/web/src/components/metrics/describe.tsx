@@ -3,6 +3,7 @@ import type { Metric, MetricType } from "@furca/core/metrics/Metric";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { conditionsSummary } from "~/components/targeting/summary";
 import { i18n, intlLocale } from "~/i18n";
 
 export const metricTypeLabel = (type: MetricType): string => i18n.t(`metrics:types.${type}`);
@@ -97,10 +98,30 @@ export function MetricSentence({ metric }: { metric: Describable }) {
         ? t("sentence.cap.absolute", { value: metric.capping.value })
         : t("sentence.cap.percentile", { percentile: percentileOf(metric.capping.value) });
 
+  // "Only purchase events where plan is pro count." per filtered source
+  const filtered =
+    d._tag === "event"
+      ? [d.numerator, ...(metric.type === "ratio" && d.denominator !== null ? [d.denominator] : [])].filter((s) => s.filters.length > 0)
+      : [];
+
   return (
     <>
       {what}
       {t("sentence.tail", { when, cap })}
+      {filtered.map((s, i) => (
+        <span key={i}>
+          {" "}
+          <Trans
+            t={t}
+            i18nKey="sentence.filters"
+            values={{
+              event: ev(s.event),
+              filters: conditionsSummary(s.filters.map((f) => ({ attribute: f.property, operator: f.operator, values: f.values }))),
+            }}
+            components={{ c: tok }}
+          />
+        </span>
+      ))}
     </>
   );
 }

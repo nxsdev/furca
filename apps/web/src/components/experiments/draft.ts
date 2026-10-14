@@ -83,6 +83,8 @@ export function draftIssues(v: ExperimentValues, ctx: { readonly isEdit: boolean
     add("weights", "variations", i18n.t("experiments:form.checks.weights"));
   const condition = v.conditions.map((c) => conditionIssue(c)).find((m) => m !== null);
   if (condition != null) add("targeting", "conditions", condition);
+  const ns = v.namespace;
+  if (ns !== null && !(ns.start >= 0 && ns.start < ns.end && ns.end <= 1)) add("targeting", "namespace", i18n.t("namespaces:experimentForm.rangeInvalid"));
   if (v.environmentIds.length === 0) add("envs", "environmentIds", i18n.t("experiments:form.traffic.environmentsError"));
   if (v.hashAttribute.trim() === "") add("hash", "hashAttribute", i18n.t("common:form.required"));
   return issues;

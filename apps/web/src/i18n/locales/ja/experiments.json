@@ -271,6 +271,13 @@
       "create": "下書きを作成",
       "editNote": "まだ下書きです。開始するまで何も公開されません。",
       "createNote": "下書きの段階では、ユーザーに表示される内容は変わりません。"
+    },
+    "breakdowns": {
+      "title": "内訳",
+      "placeholder": "country, plan, platform",
+      "suggested": "ターゲティングで使用中:",
+      "description": "結果を分けて見る属性です。SDK が露出ごとにその値を送信するため、開始後に露出したユーザーだけが対象になります。開始後は変更できないので、いま選んでください。",
+      "warehouse": "BigQuery の場合は、代わりに露出 SQL に同じ名前の列を追加してください。"
     }
   },
   "traffic": {
@@ -367,7 +374,9 @@
     "detectValue": "相対リフト <num>{{mde}}</num>",
     "perVariation": "バリエーションあたり",
     "notPlanned": "未計画",
-    "dailyUsers": "1 日あたりのユーザー数"
+    "dailyUsers": "1 日あたりのユーザー数",
+    "breakdowns": "内訳",
+    "noBreakdowns": "記録していません"
   },
   "phases": {
     "intro": "配分やターゲティングを変更したり対象割合を下げたりすると、新しいシードで新しいフェーズが始まり、すべてのユーザーが再割り当てされます。結果には現在のフェーズのみが使われます。",

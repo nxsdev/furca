@@ -169,27 +169,32 @@ const traffic = async (users = userCount) => {
   const start = Math.max(new Date(experiment.phases.at(-1)!.startedAt).getTime(), now - 6 * 86_400_000);
   const items: { exposures: unknown[]; events: unknown[] } = { exposures: [], events: [] };
   const at = (t: number) => Math.min(now - 1000, Math.round(t));
+  // Right after setup the phase is under a second old: keep exposures (and what follows them) inside the phase
+  const atOrAfter = (t: number, floor: number) => Math.max(floor, at(t));
   const countries = ["US", "JP", "DE", "GB", "BR"];
 
   for (let i = 0; i < users; i++) {
     const id = `demo-${run}-${i}`;
-    const attributes = { id, country: countries[i % countries.length] };
+    const country = countries[i % countries.length]!;
+    const plan = Math.random() < 0.3 ? "pro" : "free";
+    const attributes = { id, country };
     const result = evaluate(payload, "new-checkout", attributes);
     if (result.experiment === null) continue;
     const treated = result.experiment.variationKey !== "control";
     // More users arrive later in the window, like a ramp-up
     const exposedAt = start + Math.sqrt(Math.random()) * (now - start);
-    items.exposures.push({ experimentKey: result.experiment.key, variationKey: result.experiment.variationKey, phase, userId: id, ts: at(exposedAt) });
+    const exposureTs = atOrAfter(exposedAt, start);
+    items.exposures.push({ experimentKey: result.experiment.key, variationKey: result.experiment.variationKey, phase, userId: id, ts: exposureTs, dimensions: { country } });
 
-    const after = () => at(exposedAt + Math.random() * Math.min(48 * 3600_000, now - exposedAt));
+    const after = () => atOrAfter(exposedAt + Math.random() * Math.min(48 * 3600_000, now - exposedAt), exposureTs);
     // Pre-exposure purchases give CUPED something to work with
     const loyal = Math.random() < 0.2;
     if (loyal && exposedAt - 86_400_000 > now - 6.5 * 86_400_000) items.events.push({ name: "purchase", userId: id, value: 60, ts: at(exposedAt - 86_400_000) });
 
-    if (Math.random() < (treated ? 0.33 : 0.3) + (loyal ? 0.1 : 0)) items.events.push({ name: "add_to_cart", userId: id, value: null, ts: after() });
+    if (Math.random() < (treated ? 0.33 : 0.3) + (loyal ? 0.1 : 0)) items.events.push({ name: "add_to_cart", userId: id, value: null, ts: after(), properties: { plan } });
     if (Math.random() < (treated ? 0.125 : 0.1) + (loyal ? 0.08 : 0)) {
       const value = Math.max(5, Math.exp(normal(3.7, 0.6)) * (Math.random() < 0.003 ? 40 : 1));
-      items.events.push({ name: "purchase", userId: id, value: Math.round(value * 100) / 100, ts: after() });
+      items.events.push({ name: "purchase", userId: id, value: Math.round(value * 100) / 100, ts: after(), properties: { plan } });
     }
     const views = 1 + Math.floor(Math.random() * 4);
     for (let v = 0; v < views; v++) {

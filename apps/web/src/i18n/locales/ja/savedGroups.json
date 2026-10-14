@@ -1,1 +1,75 @@
-{}
+{
+  "pageTitle": "保存済みグループ · furca",
+  "detailPageTitle": "保存済みグループ · furca",
+  "list": {
+    "title": "保存済みグループ",
+    "description": "一度定義すれば、どのフラグのルールや実験からも対象にできるオーディエンスです。グループを変更すると、使っているすべてに反映されます。",
+    "new": "保存済みグループを作成",
+    "loadFailed": "保存済みグループを読み込めませんでした。{{message}}",
+    "emptyTitle": "保存済みグループはまだありません",
+    "emptyDescription": "ベータテスター、社内メンバー、エンタープライズ顧客などのオーディエンスを保存しておけば、同じ条件を繰り返す代わりに「保存済みグループに含まれる」で対象にできます。",
+    "columns": {
+      "group": "グループ",
+      "type": "種類",
+      "members": "メンバー",
+      "usedBy": "使用箇所",
+      "updated": "更新"
+    },
+    "valueCount_other": "{{formatted}} 件",
+    "flagCount_other": "{{count}} 件のフラグ",
+    "experimentCount_other": "{{count}} 件の実験"
+  },
+  "new": {
+    "breadcrumb": "新規",
+    "title": "保存済みグループを作成",
+    "description": "グループに含まれるユーザーを定義します。フラグや実験からは名前で対象にできます。"
+  },
+  "type": {
+    "list": "ID リスト",
+    "condition": "条件"
+  },
+  "form": {
+    "basics": "基本情報",
+    "name": "名前",
+    "namePlaceholder": "ベータテスター",
+    "key": "キー",
+    "keyHelp": "小文字の英字、数字、- と _。あとから変更できません",
+    "keyLocked": "キーは変更できません",
+    "keyInvalid": "小文字の英字、数字、- と _ を使ってください（最大64文字）",
+    "description": "説明",
+    "descriptionPlaceholder": "このグループに含まれる人とその理由",
+    "members": "メンバー",
+    "type": "定義方法",
+    "typeList": "属性が貼り付けた ID のいずれかに一致するユーザー",
+    "typeCondition": "すべての条件に一致するユーザー",
+    "attribute": "照合する属性",
+    "attributeHelp": "リストと比較するユーザー属性。通常は id です",
+    "ids": "ID",
+    "idsCount_other": "重複なしで {{formatted}} 件",
+    "duplicates_other": "重複 {{formatted}} 件は無視されます",
+    "idsHelp": "1行に1つ、またはカンマ区切りで貼り付けてください。最大 {{max}} 件で、リストはすべての SDK にダウンロードされます。",
+    "idsRequired": "ID を1つ以上追加してください",
+    "idsTooMany": "リストに入れられる ID は最大 {{max}} 件です",
+    "conditions": "グループに含まれるユーザーの条件",
+    "conditionsRequired": "条件を1つ以上追加してください",
+    "save": "変更を保存",
+    "create": "保存済みグループを作成",
+    "liveNote": "変更は、このグループを対象にしているすべてのフラグと実験にすぐ反映されます。"
+  },
+  "detail": {
+    "fallbackTitle": "保存済みグループ",
+    "loadFailed": "この保存済みグループを読み込めませんでした。{{message}}",
+    "saved": "保存済みグループを更新しました",
+    "savedDescription": "SDK は次の更新時に新しいメンバーを受け取ります。",
+    "usedBy": "使用箇所",
+    "unused": "このグループを対象にしているものはまだありません。フラグのルールや実験のターゲティングで「保存済みグループに含まれる」を選んでください。",
+    "flag": "フラグ",
+    "history": "履歴"
+  },
+  "delete": {
+    "title": "{{name}} を削除しますか？",
+    "body": "フラグや実験からこのグループを対象にできなくなります。この操作は取り消せません。",
+    "confirm": "グループを削除",
+    "done": "{{name}} を削除しました"
+  }
+}

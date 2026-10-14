@@ -3,6 +3,9 @@ import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
 import type { Experiment, ExperimentPhase } from "@furca/core/experiments/Experiment";
 import type { Metric } from "@furca/core/metrics/Metric";
 import {
+  DimensionMetricResult,
+  DimensionResult,
+  DimensionSlice,
   ExperimentHealth,
   MetricResult,
   type MetricRole,
@@ -40,6 +43,9 @@ import {
   d1ExposureCountsSql,
   d1MomentsSql,
   type D1Query,
+  isBigQueryColumn,
+  NOT_SET_SLICE,
+  OTHER_SLICE,
 } from "./AnalysisSql";
 
 type Rows = ReadonlyArray<Record<string, unknown>>;
@@ -89,7 +95,20 @@ const bigQuerySource = (
   exposureSql: string,
   window: AnalysisWindow,
 ): AnalysisSource => {
-  const run = (q: BigQueryQuery) => BigQuery.query(sa, target, q.sql, q.params);
+  const dimension = window.dimension;
+  if (dimension != null && !isBigQueryColumn(dimension)) {
+    const error = Effect.fail(new WarehouseError({ message: missingColumn(dimension) }));
+    return { exposureCounts: error, moments: () => error };
+  }
+  const run = (q: BigQueryQuery) =>
+    BigQuery.query(sa, target, q.sql, q.params).pipe(
+      // BigQuery: "Unrecognized name: plan at [6:22]" when the exposure SQL has no such column
+      Effect.mapError((e) =>
+        dimension != null && new RegExp(`Unrecognized name: ${dimension}\\b`).test(e.message)
+          ? new WarehouseError({ message: missingColumn(dimension) })
+          : e,
+      ),
+    );
   return {
     exposureCounts: run(bigQueryExposureCountsSql({ ...window, exposureSql })),
     moments: (metric, cuped) =>
@@ -107,6 +126,9 @@ const bigQuerySource = (
         : Effect.fail(new WarehouseError({ message: `Metric "${metric.name}" uses built-in events; BigQuery cannot read them` })),
   };
 };
+
+const missingColumn = (dimension: string) =>
+  `Add a column named ${dimension} to the exposure SQL to break results down by it`;
 
 const momentsOf = (row: Record<string, unknown>, kind: MetricKind, pre: boolean): Moments => {
   const v = (column: string) => Number(row[column] ?? 0);
@@ -156,7 +178,12 @@ const inconclusive = (variationKey: string, message: string) =>
  * Moments rows -> per-variation summaries, comparisons vs control (index 0) and the cumulative
  * timeseries. Holm-corrects frequentist p-values per family (primary, secondary)
  */
-export const analyzeMetrics = (measured: ReadonlyArray<Measured>, experiment: Experiment): MetricResult[] => {
+export const analyzeMetrics = (
+  measured: ReadonlyArray<Measured>,
+  experiment: Experiment,
+  /** false for exploratory breakdowns, which are never corrected */
+  correct = true,
+): MetricResult[] => {
   const { stats } = experiment;
   const keys = experiment.variations.map((v) => v.key);
   const settings: AnalysisSettings = {
@@ -194,7 +221,7 @@ export const analyzeMetrics = (measured: ReadonlyArray<Measured>, experiment: Ex
   // treatments) are corrected separately, so adding exploratory metrics never costs the decision
   // metric power. Guardrails are uncorrected: a missed regression is the costlier error there
   const adjusted = new Map<string, number>();
-  if (stats.engine === "frequentist" && stats.correction === "holm") {
+  if (correct && stats.engine === "frequentist" && stats.correction === "holm") {
     for (const role of ["primary", "secondary"] as const) {
       const tests = computed.flatMap((c, mi) =>
         "error" in c || c.role !== role
@@ -273,6 +300,37 @@ export const analyzeMetrics = (measured: ReadonlyArray<Measured>, experiment: Ex
   });
 };
 
+/**
+ * Sliced counts + moments -> one uncorrected analysis per slice. Named values largest first, then
+ * "(other)" and "(not set)"
+ */
+const slicesOf = (experiment: Experiment, counts: Rows, measured: ReadonlyArray<Measured>): DimensionSlice[] => {
+  const keys = new Set(experiment.variations.map((v) => v.key));
+  const users = new Map<string, number>();
+  for (const row of counts) {
+    if (row.variation == null || !keys.has(String(row.variation))) continue; // multiple exposures are excluded
+    const slice = String(row.slice);
+    users.set(slice, (users.get(slice) ?? 0) + Number(row.users));
+  }
+  const last = (slice: string) => (slice === NOT_SET_SLICE ? 2 : slice === OTHER_SLICE ? 1 : 0);
+  return [...users]
+    .sort(([a, n], [b, m]) => last(a) - last(b) || m - n || a.localeCompare(b))
+    .map(([value, n]) => {
+      const results = analyzeMetrics(
+        measured.map((m) => ("error" in m ? m : { ...m, rows: m.rows.filter((r) => String(r.slice) === value) })),
+        experiment,
+        false,
+      );
+      return DimensionSlice.make({
+        value,
+        users: n,
+        metrics: results.map((r) =>
+          DimensionMetricResult.make({ metricId: r.metricId, role: r.role, variations: r.variations, comparisons: r.comparisons, error: r.error }),
+        ),
+      });
+    });
+};
+
 const encodeHealth = Schema.encodeSync(Schema.NullOr(ExperimentHealth));
 const encodeMetrics = Schema.encodeSync(Schema.Array(MetricResult));
 const decodeHealth = Schema.decodeUnknownSync(Schema.NullOr(ExperimentHealth));
@@ -330,16 +388,19 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
       return bigQuerySource(sa, dataSource.bigquery, dataSource.exposureSql, window);
     });
 
-    const analyze = Effect.fn("ExperimentAnalysisService.analyze")(function* (
+    /** Exposure counts and per-metric moments rows of the current phase (sliced when `dimension` is set) */
+    const measure = Effect.fn("ExperimentAnalysisService.measure")(function* (
       experiment: Experiment,
       phaseIndex: number,
       phase: ExperimentPhase,
       now: Date,
+      dimension: string | null,
     ) {
       const window: AnalysisWindow = {
         experimentKey: experiment.key,
         startMs: phase.startedAt.getTime(),
         endMs: (phase.endedAt ?? now).getTime(),
+        dimension,
       };
       const roles: ReadonlyArray<{ readonly id: string; readonly role: MetricRole }> = [
         ...(experiment.primaryMetricId === null ? [] : [{ id: experiment.primaryMetricId, role: "primary" as const }]),
@@ -356,7 +417,7 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
       );
 
       const source = yield* sourceFor(experiment, dataSources.get(experiment.dataSourceId), phaseIndex, window);
-      const health = healthOf(experiment, phase, yield* source.exposureCounts);
+      const counts = yield* source.exposureCounts;
 
       const problem = (metric: Metric): string | null => {
         const own = dataSources.get(metric.dataSourceId);
@@ -384,18 +445,28 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
         },
         { concurrency: 4 },
       );
-      return { health, metrics: analyzeMetrics(measured, experiment) };
+      return { counts, measured };
+    });
+
+    const currentPhase = Effect.fn("ExperimentAnalysisService.currentPhase")(function* (experimentId: string) {
+      const experiment = yield* loadExperiment(experimentId);
+      const phaseIndex = experiment.phases.length - 1;
+      const phase = experiment.phases[phaseIndex];
+      if (phase === undefined) return yield* new ValidationError({ message: "Start the experiment to see results" });
+      return { experiment, phaseIndex, phase };
     });
 
     return {
       refresh: Effect.fn("ExperimentAnalysisService.refresh")(function* (experimentId: string) {
-        const experiment = yield* loadExperiment(experimentId);
-        const phaseIndex = experiment.phases.length - 1;
-        const phase = experiment.phases[phaseIndex];
-        if (phase === undefined) return yield* new ValidationError({ message: "Start the experiment to see results" });
+        const { experiment, phaseIndex, phase } = yield* currentPhase(experimentId);
         const computedAt = new Date();
-        const outcome = yield* analyze(experiment, phaseIndex, phase, computedAt).pipe(
-          Effect.map((r) => ({ status: "ok" as const, error: null, ...r })),
+        const outcome = yield* measure(experiment, phaseIndex, phase, computedAt, null).pipe(
+          Effect.map(({ counts, measured }) => ({
+            status: "ok" as const,
+            error: null,
+            health: healthOf(experiment, phase, counts),
+            metrics: analyzeMetrics(measured, experiment),
+          })),
           Effect.catchTag("WarehouseError", (e) =>
             Effect.succeed({ status: "error" as const, error: e.message, health: null, metrics: [] }),
           ),
@@ -425,6 +496,20 @@ export const ExperimentAnalysisServiceLive = Layer.effect(
           }),
         );
         return row === undefined ? null : toResultSnapshot(row);
+      }),
+
+      dimension: Effect.fn("ExperimentAnalysisService.dimension")(function* (experimentId: string, dimension: string) {
+        const { experiment, phaseIndex, phase } = yield* currentPhase(experimentId);
+        if (!experiment.dimensions.includes(dimension)) {
+          return yield* new ValidationError({ message: `This experiment does not record "${dimension}" with exposures` });
+        }
+        const computedAt = new Date();
+        const result = (slices: ReadonlyArray<DimensionSlice>, error: string | null) =>
+          DimensionResult.make({ experimentId, dimension, computedAt, slices, error });
+        return yield* measure(experiment, phaseIndex, phase, computedAt, dimension).pipe(
+          Effect.map(({ counts, measured }) => result(slicesOf(experiment, counts, measured), null)),
+          Effect.catchTag("WarehouseError", (e) => Effect.succeed(result([], e.message))),
+        );
       }),
     };
   }),

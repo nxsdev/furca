@@ -13,6 +13,7 @@ import { Panel, PanelHeader, QueryError, RelativeTime } from "~/components/ui/pr
 import { useEnvironment } from "~/lib/environment";
 import { i18n } from "~/i18n";
 import { errorMessage, orpc } from "~/lib/rpc";
+import { DimensionBreakdown } from "./DimensionBreakdown";
 import { formatCount, formatLift, formatList, formatPercent, pText } from "./format";
 import { LiftChart } from "./LiftChart";
 import { MetricsTable } from "./MetricsTable";
@@ -92,6 +93,7 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
           />
         )}
       </Panel>
+      <DimensionBreakdown experiment={experiment} metrics={metrics} trusted={isHealthy(snapshot.health)} />
       <TrendPanel experiment={experiment} results={snapshot.metrics} metrics={metrics} />
     </div>
   );

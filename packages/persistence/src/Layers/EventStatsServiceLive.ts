@@ -7,6 +7,25 @@ import { Effect, Layer } from "effect";
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
+/**
+ * Property keys of one event with their event counts and 10 most frequent values. Values read as
+ * text like the metric filters compare them (booleans "true" / "false")
+ */
+const PROPERTIES_SQL = `WITH props AS (
+    SELECT j.key AS property,
+      CASE j.type WHEN 'true' THEN 'true' WHEN 'false' THEN 'false' ELSE CAST(j.value AS TEXT) END AS value
+    FROM events e, json_each(e.properties) j
+    WHERE e.environment_id = ?1 AND e.name = ?2 AND e.ts >= ?3 AND e.properties IS NOT NULL
+  ),
+  top_keys AS (SELECT property, COUNT(*) AS n FROM props GROUP BY property ORDER BY n DESC, property LIMIT 50),
+  top_values AS (
+    SELECT property, value, ROW_NUMBER() OVER (PARTITION BY property ORDER BY COUNT(*) DESC, value) AS rank
+    FROM props WHERE property IN (SELECT property FROM top_keys) AND value IS NOT NULL
+    GROUP BY property, value
+  )
+SELECT k.property, k.n, v.value FROM top_keys k LEFT JOIN top_values v ON v.property = k.property AND v.rank <= 10
+ORDER BY k.n DESC, k.property, v.rank`;
+
 export const EventStatsServiceLive = Layer.effect(
   EventStatsService,
   Effect.gen(function* () {
@@ -25,6 +44,24 @@ export const EventStatsServiceLive = Layer.effect(
               .limit(200),
           )
           .pipe(Effect.map((rows) => rows.map((r) => ({ name: r.name, count: r.count, lastSeenAt: new Date(r.lastSeen ?? 0) })))),
+
+      // ponytail: json_each over 30 days of one event (events_name_user_ts_idx prefix); pre-aggregate if it gets slow
+      properties: Effect.fn("EventStatsService.properties")(function* (environmentId: string, event: string) {
+        const rows = yield* database.run("events.properties", () =>
+          database.d1
+            .prepare(PROPERTIES_SQL)
+            .bind(environmentId, event, Date.now() - 30 * DAY_MS)
+            .all<{ property: string; n: number; value: string | null }>()
+            .then((r) => r.results),
+        );
+        const stats = new Map<string, { property: string; count: number; sampleValues: string[] }>();
+        for (const r of rows) {
+          const stat = stats.get(r.property) ?? { property: r.property, count: r.n, sampleValues: [] };
+          if (r.value !== null) stat.sampleValues.push(r.value);
+          stats.set(r.property, stat);
+        }
+        return [...stats.values()];
+      }),
 
       volume: Effect.fn("EventStatsService.volume")(function* (environmentId: string) {
         const end = Math.floor(Date.now() / HOUR_MS) * HOUR_MS + HOUR_MS;

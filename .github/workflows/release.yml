@@ -1,0 +1,56 @@
+name: Release SDKs
+
+# Publishes @furca/sdk, @furca/react and @furca/openfeature to npm with provenance, in lockstep.
+# To release: set the same "version" in packages/{sdk,react,openfeature}/package.json, run `bun install`
+# (the lockfile records workspace versions), commit, then push the tag `sdk-v<version>`.
+# Required repository secret: NPM_TOKEN (npm automation / granular token with publish rights on @furca)
+
+on:
+  push:
+    tags: ["sdk-v*"]
+
+permissions:
+  contents: read
+  id-token: write # npm --provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: bun install --frozen-lockfile
+
+      - name: Check the tag matches the package versions
+        run: |
+          for p in sdk react openfeature; do
+            v=$(node -p "require('./packages/$p/package.json').version")
+            if [ "sdk-v$v" != "$GITHUB_REF_NAME" ]; then echo "packages/$p is $v but the tag is $GITHUB_REF_NAME"; exit 1; fi
+          done
+
+      - name: Test
+        run: bun test packages/sdk packages/react packages/openfeature
+
+      # tsc emits dist/ (and type-checks). sdk goes first: the others resolve @furca/sdk to its dist/ when building.
+      # `bun pm pack` rewrites workspace:/catalog: ranges to real versions; `npm publish` alone would ship them verbatim
+      - name: Build and pack
+        run: |
+          for p in sdk react openfeature; do
+            cp LICENSE "packages/$p/"
+            (cd "packages/$p" && bun run build && bun pm pack --destination "$RUNNER_TEMP/pack")
+          done
+
+      - name: Publish
+        run: |
+          for p in sdk react openfeature; do
+            npm publish "$RUNNER_TEMP"/pack/furca-$p-*.tgz --provenance --access public
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

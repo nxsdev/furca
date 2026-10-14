@@ -6,6 +6,7 @@ import {
   evaluateConditions,
   getBucketRanges,
   hash,
+  inNamespace,
   type PayloadRule,
   type SdkPayload,
 } from "@furca/sdk";
@@ -24,9 +25,12 @@ export interface TraceStep {
 const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 const show = (v: unknown) => (typeof v === "string" ? `"${v}"` : String(v));
 
-function step(rule: PayloadRule, attributes: Attributes): { matched: boolean; reason: string } {
-  const failing = rule.conditions.find((c) => !evaluateConditions([c], attributes));
+function step(rule: PayloadRule, attributes: Attributes, savedGroups: SdkPayload["savedGroups"]): { matched: boolean; reason: string } {
+  const failing = rule.conditions.find((c) => !evaluateConditions([c], attributes, savedGroups));
   if (failing !== undefined) {
+    // Group conditions have no attribute of their own to show
+    if (failing.operator === "in_group" || failing.operator === "not_in_group")
+      return { matched: false, reason: i18n.t("flags:simulate.needsGroup", { condition: conditionsSummary([failing]) }) };
     const has = Object.hasOwn(attributes, failing.attribute) ? attributes[failing.attribute] : undefined;
     return {
       matched: false,
@@ -42,6 +46,8 @@ function step(rule: PayloadRule, attributes: Attributes): { matched: boolean; re
   const raw = Object.hasOwn(attributes, rule.hashAttribute) ? attributes[rule.hashAttribute] : undefined;
   const id = raw === undefined || raw === null ? "" : String(raw);
   if (id === "") return { matched: false, reason: i18n.t("flags:simulate.noHashAttribute", { attribute: rule.hashAttribute }) };
+  if (rule.type === "experiment" && rule.namespace && !inNamespace(id, rule.namespace))
+    return { matched: false, reason: i18n.t("flags:simulate.outsideNamespace", { namespace: rule.namespace[0] }) };
   const n = hash(rule.seed, id);
   const bucket = n.toFixed(4);
   if (rule.type === "rollout") {
@@ -66,7 +72,7 @@ export function traceEvaluation(
   const rules = payload?.features[key]?.rules ?? [];
   const steps: Array<TraceStep> = [];
   for (const [index, rule] of rules.entries()) {
-    const s = step(rule, attributes);
+    const s = step(rule, attributes, payload?.savedGroups);
     steps.push({ index, rule, ...s });
     if (s.matched) break;
   }

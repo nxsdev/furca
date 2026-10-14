@@ -1,1 +1,118 @@
-{}
+{
+  "secret": {
+    "copy": "シークレットをコピー",
+    "done": "完了"
+  },
+  "apiKeys": {
+    "title": "API キー",
+    "description": "スクリプトや CI、他のサービスから REST API を呼び出せます。キーによる変更は、キーの名前で監査ログに記録されます。",
+    "create": "API キーを作成",
+    "empty": "API キーはまだありません。デプロイパイプラインからフラグを切り替えたり、ダッシュボードで実験を読み取ったりするときに作成してください。",
+    "loadFailed": "API キーを読み込めませんでした。{{message}}",
+    "name": "名前",
+    "roleColumn": "権限",
+    "createdBy": "作成者",
+    "lastUsed": "最終使用",
+    "actions": "操作",
+    "neverUsed": "未使用",
+    "role": {
+      "admin": "管理者",
+      "readonly": "読み取り専用"
+    },
+    "roleHelp": {
+      "admin": "管理者キーは、メンバーの削除を除き、メンバーができる操作をすべて実行できます。",
+      "readonly": "読み取り専用キーは一覧と取得のみ可能で、変更はできません。"
+    },
+    "form": {
+      "name": "名前",
+      "namePlaceholder": "GitHub Actions のデプロイ",
+      "role": "権限",
+      "submit": "キーを作成"
+    },
+    "createdTitle": "{{name}} の API キー",
+    "createdWarning": "今すぐコピーして安全な場所に保管してください。この画面を閉じると二度と表示されません。",
+    "revoke": "無効化",
+    "revokedAt": "<relative/>に無効化",
+    "revoked": "{{name}} を無効化しました",
+    "revokeTitle": "{{name}} を無効化しますか？",
+    "revokeConfirm": "キーを無効化",
+    "revokeBody": "このキーを使ったリクエストはすぐに失敗するようになります。元に戻せないため、再びアクセスが必要な場合は新しいキーを作成してください。"
+  },
+  "rest": {
+    "title": "REST API",
+    "spec": "OpenAPI 仕様",
+    "description": "すべての操作は /api/v1/<area>/<operation> への POST で、JSON ボディとベアラートークンとしてのキーを送ります。",
+    "copyCurl": "curl の例をコピー"
+  },
+  "webhooks": {
+    "title": "Webhook",
+    "description": "フラグの変更、実験の開始・停止、SDK ペイロードの更新を、自社サービスや Slack チャンネルに通知します。",
+    "create": "Webhook を作成",
+    "empty": "Webhook はまだありません。Slack の Incoming Webhook を追加すると、実験の開始と停止をチームに知らせられます。",
+    "loadFailed": "Webhook を読み込めませんでした。{{message}}",
+    "name": "名前",
+    "eventsColumn": "イベント",
+    "lastDelivery": "最終配信",
+    "actions": "操作",
+    "neverDelivered": "未送信",
+    "delivered": "配信済み（{{status}}）",
+    "failed": "失敗: {{error}}",
+    "paused": "一時停止中",
+    "test": "テスト送信",
+    "testOk": "テストを配信しました（{{status}}）",
+    "testFailed": "テスト配信に失敗しました",
+    "edit": "{{name}} を編集",
+    "delete": "{{name}} を削除",
+    "created": "Webhook を作成しました",
+    "saved": "{{name}} を保存しました",
+    "deleted": "{{name}} を削除しました",
+    "deleteTitle": "{{name}} を削除しますか？",
+    "deleteConfirm": "Webhook を削除",
+    "deleteBody": "この URL へのイベント送信を停止します。過去の配信には影響しません。",
+    "secretTitle": "署名シークレット",
+    "secretWarning": "このシークレットで furca-signature ヘッダー（生のボディの HMAC、sha256=…）を検証してください。表示されるのは今回だけです。",
+    "format": {
+      "json": "JSON",
+      "slack": "Slack"
+    },
+    "formatHelp": {
+      "json": "自社サービス向けの署名付き JSON ボディ",
+      "slack": "Slack の Incoming Webhook 向けの1行メッセージ"
+    },
+    "form": {
+      "name": "名前",
+      "namePlaceholder": "#releases",
+      "url": "URL",
+      "urlInvalid": "http(s) の URL を入力してください",
+      "format": "形式",
+      "events": "イベント",
+      "eventsHelp": "配信は1回のみで、タイムアウトは5秒です。",
+      "eventsRequired": "イベントを1つ以上選んでください",
+      "enabled": "有効",
+      "enabledHelp": "一時停止中の Webhook には、再び有効にするまで何も送信されません。テスト送信は使えます。",
+      "create": "Webhook を作成"
+    },
+    "events": {
+      "flag_updated": {
+        "label": "フラグの変更",
+        "help": "作成、編集、オン・オフ、ルールの保存、アーカイブ、削除"
+      },
+      "experiment_started": {
+        "label": "実験の開始",
+        "help": "下書きの実験が実行中になったとき"
+      },
+      "experiment_phase_started": {
+        "label": "実験の新しいフェーズ",
+        "help": "トラフィックを変更し、ユーザーを再ランダム化したとき"
+      },
+      "experiment_stopped": {
+        "label": "実験の停止",
+        "help": "採用してリリース、ロールバック、結論なし"
+      },
+      "payload_updated": {
+        "label": "SDK ペイロードの更新",
+        "help": "SDK が受け取る内容が変わったとき"
+      }
+    }
+  }
+}

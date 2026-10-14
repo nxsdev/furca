@@ -36,8 +36,7 @@
     "react-aria": "catalog:",
     "react-aria-components": "catalog:",
     "react-dom": "catalog:",
-    "react-i18next": "catalog:",
-    "recharts": "catalog:"
+    "react-i18next": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",

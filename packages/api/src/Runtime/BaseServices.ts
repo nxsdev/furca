@@ -1,5 +1,6 @@
 import { CredentialCipher } from "@furca/core/datasources/CredentialCipher";
 import { PayloadStore } from "@furca/core/environments/PayloadStore";
+import { BackgroundTasks } from "@furca/core/platform/BackgroundTasks";
 import { PersistenceError, ValidationError } from "@furca/core/shared/errors";
 import { DatabaseLive } from "@furca/database/Database";
 import { Effect, Layer } from "effect";
@@ -53,8 +54,14 @@ export const CredentialCipherAesGcm = (secret: string) => {
   });
 };
 
+/** ctx.waitUntil on Workers; inline without an ExecutionContext (tests, cron) */
+export const BackgroundTasksLive = (ctx?: ExecutionContext) =>
+  Layer.succeed(BackgroundTasks, {
+    run: (task) => (ctx === undefined ? task : Effect.sync(() => ctx.waitUntil(Effect.runPromise(task)))),
+  });
+
 /** Infrastructure services every request gets */
-export const makeBaseLayer = (env: FurcaEnv) =>
-  Layer.mergeAll(DatabaseLive(env.DB), PayloadStoreKv(env.KV), CredentialCipherAesGcm(env.ENCRYPTION_KEY));
+export const makeBaseLayer = (env: FurcaEnv, ctx?: ExecutionContext) =>
+  Layer.mergeAll(DatabaseLive(env.DB), PayloadStoreKv(env.KV), CredentialCipherAesGcm(env.ENCRYPTION_KEY), BackgroundTasksLive(ctx));
 
 export type BaseServices = Layer.Success<ReturnType<typeof makeBaseLayer>>;

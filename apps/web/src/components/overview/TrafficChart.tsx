@@ -1,7 +1,14 @@
 import { Skeleton } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
+import { areaY, defineChart, dot, lineY, whenFocused } from "@tanstack/charts";
+import { crosshair } from "@tanstack/charts/crosshair";
+import { decorative } from "@tanstack/charts/mark/decorative";
+import { Chart } from "@tanstack/charts/react";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { tooltip } from "@tanstack/charts/tooltip";
+import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { chartHostClass } from "~/components/charts/theme";
 import { hourlySeries } from "~/components/environments/Sparkline";
 import { formatCount } from "~/components/results/format";
 import { QueryError } from "~/components/ui/primitives";
@@ -25,36 +32,56 @@ const niceTicks = (max: number) => {
   return Array.from({ length: Math.ceil(max / step) + 1 }, (_, i) => i * step);
 };
 
-function ChartTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: ReadonlyArray<{ payload?: { hour: Date; exposures: number; events: number } }>;
-}) {
-  const { t } = useTranslation("overview");
-  const row = payload?.[0]?.payload;
-  if (active !== true || row === undefined) return null;
-  return (
-    <div className="min-w-36 rounded-md border border-border bg-overlay px-3 py-2 text-label shadow-overlay">
-      <p className="mb-1 text-meta text-muted">
-        {row.hour.toLocaleString(intlLocale(), { weekday: "short", hour: "numeric", minute: "2-digit" })}
-      </p>
-      {SERIES.map((s) => (
-        <p key={s.key} className="flex items-center gap-2">
-          <span aria-hidden="true" className="h-0.5 w-3 rounded-full" style={{ background: s.color }} />
-          <span className="font-mono font-medium tabular">{formatCount(row[s.key])}</span>
-          <span className="text-muted">{t(`traffic.series.${s.key}`).toLowerCase()}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
 /** Hourly exposures vs events for the last 24 hours of one environment */
 export function TrafficChart({ environmentId, environmentName }: { environmentId: string; environmentName: string }) {
   const { t } = useTranslation("overview");
+  const { t: tc } = useTranslation("charts");
   const volume = useQuery(orpc.events.volume.queryOptions({ input: { environmentId } }));
+  const series = useMemo(() => (volume.data === undefined ? [] : hourlySeries(volume.data)), [volume.data]);
+  const definition = useMemo(() => {
+    const rows = series.flatMap((s) => SERIES.map(({ key }) => ({ id: `${key}:${s.hour.getTime()}`, hour: s.hour.getTime(), key, value: s[key] })));
+    const ticks = niceTicks(Math.max(0, ...rows.map((r) => r.value)));
+    return defineChart({
+      marks: [
+        decorative(areaY(rows, { x: "hour", y1: 0, y2: "value", color: "key", fillOpacity: 0.1 })),
+        lineY(rows, { x: "hour", y: "value", color: "key", strokeWidth: 2 }),
+        whenFocused(dot(rows, { x: "hour", y: "value", color: "key", r: 4, stroke: "var(--surface)", strokeWidth: 2 }), { match: "x" }),
+        crosshair({ x: { strokeOpacity: 0.35 }, y: false }),
+      ],
+      scales: {
+        x: {
+          scale: scaleLinear,
+          axis: {
+            line: { strokeOpacity: 0.25 },
+            // Every 6 hours on the local clock: 12 AM, 6 AM, 12 PM, 6 PM
+            ticks: { values: series.filter((s) => s.hour.getHours() % 6 === 0).map((s) => s.hour.getTime()), size: 0, padding: 8, format: (ms) => hourLabel(new Date(ms)) },
+          },
+        },
+        y: {
+          scale: scaleLinear().domain([0, ticks.at(-1) ?? 1]),
+          grid: { strokeOpacity: 0.1 },
+          axis: { ticks: { values: ticks, size: 0, format: compact } },
+        },
+      },
+      color: { domain: SERIES.map((s) => s.key), range: SERIES.map((s) => s.color) },
+      focus: "group-x",
+      focusRing: false,
+      maxFocusDistance: Number.POSITIVE_INFINITY,
+      tooltip: {
+        use: tooltip,
+        anchor: "group-center",
+        sort: "color-domain",
+        placement: ["right", "left", "top", "bottom"],
+        content: (points) => {
+          const hour = points[0]?.datum.hour;
+          return {
+            title: hour === undefined ? "" : new Date(hour).toLocaleString(intlLocale(), { weekday: "short", hour: "numeric", minute: "2-digit" }),
+            rows: points.map((p) => ({ label: t(`traffic.series.${p.datum.key}`), value: formatCount(p.datum.value), color: p.color })),
+          };
+        },
+      },
+    });
+  }, [series, t]);
   if (volume.isPending)
     return (
       <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t("traffic.loading")}>
@@ -69,7 +96,6 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
       </div>
     );
 
-  const series = hourlySeries(volume.data);
   const totals = {
     exposures: series.reduce((a, s) => a + s.exposures, 0),
     events: series.reduce((a, s) => a + s.events, 0),
@@ -84,7 +110,6 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
       </div>
     );
 
-  const ticks = niceTicks(Math.max(...series.map((s) => Math.max(s.exposures, s.events))));
   return (
     <div className="flex flex-col gap-3 px-5 pt-4 pb-3">
       <ul className="flex flex-wrap gap-x-6 gap-y-1" aria-label={t("traffic.totals")}>
@@ -96,66 +121,36 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
           </li>
         ))}
       </ul>
-      <div className="h-[160px]" aria-hidden="true">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="var(--separator)" />
-            <XAxis
-              dataKey="hour"
-              tickFormatter={(d: Date) => hourLabel(d)}
-              interval={5}
-              tickLine={false}
-              axisLine={{ stroke: "var(--border)" }}
-              tick={{ fill: "var(--muted)", fontSize: 11 }}
-              tickMargin={6}
-            />
-            <YAxis
-              ticks={ticks}
-              domain={[0, ticks.at(-1) ?? 1]}
-              interval={0}
-              tickFormatter={compact}
-              width={36}
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "var(--muted)", fontSize: 11 }}
-            />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--muted)", strokeWidth: 1 }} isAnimationActive={false} />
-            {SERIES.map((s) => (
-              <Area
-                key={s.key}
-                dataKey={s.key}
-                name={t(`traffic.series.${s.key}`)}
-                type="monotone"
-                stroke={s.color}
-                strokeWidth={2}
-                fill={s.color}
-                fillOpacity={0.1}
-                activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--surface)" }}
-                isAnimationActive={false}
-              />
-            ))}
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      <table className="sr-only">
-        <caption>{t("traffic.tableCaption", { name: environmentName })}</caption>
-        <thead>
-          <tr>
-            <th>{t("traffic.hour")}</th>
-            <th>{t("traffic.series.exposures")}</th>
-            <th>{t("traffic.series.events")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {series.map((s) => (
-            <tr key={s.hour.getTime()}>
-              <td>{hourLabel(s.hour)}</td>
-              <td>{s.exposures}</td>
-              <td>{s.events}</td>
+      <Chart
+        definition={definition}
+        height={160}
+        initialWidth={640}
+        ariaLabel={tc("traffic.label", { name: environmentName })}
+        ariaDescription={`${tc("traffic.description")} ${tc("keyboardHint")}`}
+        className={chartHostClass}
+      />
+      {/* sr-only on the table itself doesn't shrink it (tables size to content) and widens the page on phones */}
+      <div className="sr-only">
+        <table>
+          <caption>{t("traffic.tableCaption", { name: environmentName })}</caption>
+          <thead>
+            <tr>
+              <th>{t("traffic.hour")}</th>
+              <th>{t("traffic.series.exposures")}</th>
+              <th>{t("traffic.series.events")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {series.map((s) => (
+              <tr key={s.hour.getTime()}>
+                <td>{hourLabel(s.hour)}</td>
+                <td>{s.exposures}</td>
+                <td>{s.events}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

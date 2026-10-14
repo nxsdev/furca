@@ -130,10 +130,18 @@ function EntityLink({ entry }: { entry: AuditLog }) {
           {label}
         </Link>
       );
-    // TODO(targeting): link saved groups and namespaces once their pages exist
     case "savedGroup":
+      return (
+        <Link to="/saved-groups/$savedGroupId" params={{ savedGroupId: entry.entityId }} className={linkCls}>
+          {label}
+        </Link>
+      );
     case "namespace":
-      return label;
+      return (
+        <Link to="/namespaces" className={linkCls}>
+          {label}
+        </Link>
+      );
   }
 }
 

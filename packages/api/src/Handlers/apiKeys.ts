@@ -1,13 +1,14 @@
-import { ORPCError } from "@orpc/server";
+import { ApiKeyService } from "@furca/core/platform/ApiKeyService";
 import { authed } from "../Runtime/orpc";
 
-// TODO: replace stubs with Effect handlers
-const notImplemented = () => {
-  throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
-};
-
 export const apiKeysRouter = {
-  list: authed.apiKeys.list.handler(notImplemented),
-  create: authed.apiKeys.create.handler(notImplemented),
-  revoke: authed.apiKeys.revoke.handler(notImplemented),
+  list: authed.apiKeys.list.effect(function* () {
+    return yield* (yield* ApiKeyService).list;
+  }),
+  create: authed.apiKeys.create.effect(function* ({ context }, input) {
+    return yield* (yield* ApiKeyService).create(input, context.user);
+  }),
+  revoke: authed.apiKeys.revoke.effect(function* ({ context }, { id }) {
+    return yield* (yield* ApiKeyService).revoke(id, context.user);
+  }),
 };

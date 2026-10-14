@@ -5,7 +5,9 @@ import {
   evaluateConditions,
   getBucketRanges,
   hash,
+  inNamespace,
   type ConditionOperator,
+  type ExperimentPayloadRule,
   type PayloadFeature,
   type PayloadRule,
   type SdkPayload,
@@ -21,6 +23,34 @@ const GB_HASH_V2: Array<[string, string, number]> = [
   ["89123klj", "8952klfjas09ujkasdf", 0.124],
   ["90850943850283058242805", "123", 0.7516],
   ["()**(%$##$%#$#", '___)((*":&', 0.0128],
+];
+const GB_HASH_V1: Array<[string, string, number]> = [
+  ["", "a", 0.22],
+  ["", "b", 0.077],
+  ["b", "a", 0.946],
+  ["ef", "d", 0.652],
+  ["asdf", "8952klfjas09ujk", 0.549],
+  ["", "123", 0.011],
+  ["", '___)((*":&', 0.563],
+];
+// [id, namespace, expected]
+const GB_IN_NAMESPACE: Array<[string, [string, number, number], boolean]> = [
+  ["1", ["namespace1", 0, 0.4], false],
+  ["1", ["namespace1", 0.4, 1], true],
+  ["1", ["namespace2", 0, 0.4], false],
+  ["1", ["namespace2", 0.4, 1], true],
+  ["2", ["namespace1", 0, 0.4], false],
+  ["2", ["namespace1", 0.4, 1], true],
+  ["2", ["namespace2", 0, 0.4], false],
+  ["2", ["namespace2", 0.4, 1], true],
+  ["3", ["namespace1", 0, 0.4], false],
+  ["3", ["namespace1", 0.4, 1], true],
+  ["3", ["namespace2", 0, 0.4], true],
+  ["3", ["namespace2", 0.4, 1], false],
+  ["4", ["namespace1", 0, 0.4], false],
+  ["4", ["namespace1", 0.4, 1], true],
+  ["4", ["namespace2", 0, 0.4], true],
+  ["4", ["namespace2", 0.4, 1], false],
 ];
 const GB_BUCKET_RANGES: Array<[string, [number, number, number[] | null], Array<[number, number]>]> = [
   ["normal 50/50", [2, 1, null], [[0, 0.5], [0.5, 1]]],
@@ -60,6 +90,27 @@ describe("GrowthBook compatibility", () => {
     expect(hash(seed, value)).toBe(expected);
   });
 
+  test.each(GB_HASH_V1)("hash(%p, %p, 1) = %p", (seed, value, expected) => {
+    expect(hash(seed, value, 1)).toBe(expected);
+  });
+
+  test.each(GB_IN_NAMESPACE)("inNamespace(%p, %p) = %p", (id, namespace, expected) => {
+    expect(inNamespace(id, namespace)).toBe(expected);
+  });
+
+  // GrowthBook `run` "Experiment namespace - pass/fail" and `feature` "skips experiment on namespace"
+  test.each([
+    ["inside the namespace range enters", "1", ["namespace", 0.1, 1], "experiment"],
+    ["outside the namespace range falls through", "1", ["namespace", 0, 0.1], "force"],
+    ["outside a 1% namespace falls through", "123", ["pricing", 0, 0.01], "force"],
+  ] as const)("experiment namespace: %s", (_, id, namespace, source) => {
+    const payload = feature({
+      defaultValue: 0,
+      rules: [{ ...experiment({ values: [0, 1, 2, 3] }), namespace }, { type: "force", conditions: [], value: 3 }],
+    });
+    expect(evaluate(payload, "f", { id }).source).toBe(source);
+  });
+
   test.each(GB_BUCKET_RANGES)("getBucketRanges: %s", (_, [n, coverage, weights], expected) => {
     expect(getBucketRanges(n, coverage, weights ?? undefined).map((r) => r.map(round))).toEqual(expected);
   });
@@ -87,7 +138,7 @@ function feature(f: PayloadFeature): SdkPayload {
   return { version: 1, environment: "production", generatedAt: "2026-01-01T00:00:00Z", features: { f } };
 }
 
-function experiment(o: { seed?: string; coverage?: number; weights?: number[]; values?: unknown[]; conditions?: PayloadRule["conditions"] }): PayloadRule {
+function experiment(o: { seed?: string; coverage?: number; weights?: number[]; values?: unknown[]; conditions?: PayloadRule["conditions"] }): ExperimentPayloadRule {
   const values = o.values ?? ["a", "b"];
   return {
     type: "experiment",
@@ -223,6 +274,48 @@ describe("operators", () => {
     expect(evaluateConditions(conditions, { country: "jp", plan: "free" })).toBe(false);
     expect(evaluateConditions([], {})).toBe(true);
     expect(evaluateConditions(cond("toString", "exists"), {})).toBe(false);
+  });
+});
+
+describe("saved groups", () => {
+  const savedGroups: SdkPayload["savedGroups"] = {
+    beta: { type: "list", attribute: "email", values: ["a@x.dev", "42"] },
+    japan: { type: "condition", conditions: cond("country", "eq", "jp") },
+    nested: { type: "condition", conditions: cond("", "in_group", "japan") },
+  };
+  const group = (operator: "in_group" | "not_in_group", id: string, attributes: Record<string, unknown>) =>
+    evaluateConditions(cond("ignored", operator, id), attributes, savedGroups);
+
+  test("list group: String(attribute) is one of the values", () => {
+    expect(group("in_group", "beta", { email: "a@x.dev" })).toBe(true);
+    expect(group("in_group", "beta", { email: 42 })).toBe(true);
+    expect(group("in_group", "beta", { email: "b@x.dev" })).toBe(false);
+    expect(group("in_group", "beta", {})).toBe(false);
+    expect(group("not_in_group", "beta", { email: "a@x.dev" })).toBe(false);
+    expect(group("not_in_group", "beta", {})).toBe(true);
+  });
+
+  test("condition group: all of its conditions match", () => {
+    expect(group("in_group", "japan", { country: "jp" })).toBe(true);
+    expect(group("in_group", "japan", { country: "us" })).toBe(false);
+    expect(group("not_in_group", "japan", { country: "us" })).toBe(true);
+  });
+
+  test("missing group: in_group false, not_in_group true; nested group references never resolve", () => {
+    expect(group("in_group", "deleted", { email: "a@x.dev" })).toBe(false);
+    expect(group("not_in_group", "deleted", {})).toBe(true);
+    expect(group("in_group", "toString", {})).toBe(false);
+    expect(evaluateConditions(cond("", "in_group", "beta"), { email: "a@x.dev" })).toBe(false); // no savedGroups passed
+    expect(group("in_group", "nested", { country: "jp" })).toBe(false);
+  });
+
+  test("evaluate resolves groups from payload.savedGroups", () => {
+    const p: SdkPayload = {
+      ...feature({ defaultValue: "off", rules: [{ type: "force", conditions: cond("", "in_group", "beta"), value: "on" }] }),
+      savedGroups,
+    };
+    expect(evaluate(p, "f", { email: "a@x.dev" }).value).toBe("on");
+    expect(evaluate(p, "f", { email: "c@x.dev" }).value).toBe("off");
   });
 });
 

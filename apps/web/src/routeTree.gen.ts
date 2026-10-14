@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppAuditRouteImport } from './routes/_app/audit'
 import { Route as AppEnvironmentsRouteImport } from './routes/_app/environments'
+import { Route as AppNamespacesRouteImport } from './routes/_app/namespaces'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
@@ -26,6 +27,8 @@ import { Route as AppFlagsIndexRouteImport } from './routes/_app/flags/index'
 import { Route as AppFlagsFeatureIdRouteImport } from './routes/_app/flags/$featureId'
 import { Route as AppMetricsIndexRouteImport } from './routes/_app/metrics/index'
 import { Route as AppMetricsMetricIdRouteImport } from './routes/_app/metrics/$metricId'
+import { Route as AppSavedGroupsIndexRouteImport } from './routes/_app/saved-groups/index'
+import { Route as AppSavedGroupsSavedGroupIdRouteImport } from './routes/_app/saved-groups/$savedGroupId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -49,6 +52,11 @@ const AppAuditRoute = AppAuditRouteImport.update({
 const AppEnvironmentsRoute = AppEnvironmentsRouteImport.update({
   id: '/environments',
   path: '/environments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNamespacesRoute = AppNamespacesRouteImport.update({
+  id: '/namespaces',
+  path: '/namespaces',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOverviewRoute = AppOverviewRouteImport.update({
@@ -113,12 +121,24 @@ const AppMetricsMetricIdRoute = AppMetricsMetricIdRouteImport.update({
   path: '/metrics/$metricId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSavedGroupsIndexRoute = AppSavedGroupsIndexRouteImport.update({
+  id: '/saved-groups/',
+  path: '/saved-groups/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSavedGroupsSavedGroupIdRoute =
+  AppSavedGroupsSavedGroupIdRouteImport.update({
+    id: '/saved-groups/$savedGroupId',
+    path: '/saved-groups/$savedGroupId',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/audit': typeof AppAuditRoute
   '/environments': typeof AppEnvironmentsRoute
+  '/namespaces': typeof AppNamespacesRoute
   '/overview': typeof AppOverviewRoute
   '/settings': typeof AppSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -127,16 +147,19 @@ export interface FileRoutesByFullPath {
   '/experiments/new': typeof AppExperimentsNewRoute
   '/flags/$featureId': typeof AppFlagsFeatureIdRoute
   '/metrics/$metricId': typeof AppMetricsMetricIdRoute
+  '/saved-groups/$savedGroupId': typeof AppSavedGroupsSavedGroupIdRoute
   '/data-sources/': typeof AppDataSourcesIndexRoute
   '/experiments/': typeof AppExperimentsIndexRoute
   '/flags/': typeof AppFlagsIndexRoute
   '/metrics/': typeof AppMetricsIndexRoute
+  '/saved-groups/': typeof AppSavedGroupsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/audit': typeof AppAuditRoute
   '/environments': typeof AppEnvironmentsRoute
+  '/namespaces': typeof AppNamespacesRoute
   '/overview': typeof AppOverviewRoute
   '/settings': typeof AppSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -145,10 +168,12 @@ export interface FileRoutesByTo {
   '/experiments/new': typeof AppExperimentsNewRoute
   '/flags/$featureId': typeof AppFlagsFeatureIdRoute
   '/metrics/$metricId': typeof AppMetricsMetricIdRoute
+  '/saved-groups/$savedGroupId': typeof AppSavedGroupsSavedGroupIdRoute
   '/data-sources': typeof AppDataSourcesIndexRoute
   '/experiments': typeof AppExperimentsIndexRoute
   '/flags': typeof AppFlagsIndexRoute
   '/metrics': typeof AppMetricsIndexRoute
+  '/saved-groups': typeof AppSavedGroupsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,6 +182,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/audit': typeof AppAuditRoute
   '/_app/environments': typeof AppEnvironmentsRoute
+  '/_app/namespaces': typeof AppNamespacesRoute
   '/_app/overview': typeof AppOverviewRoute
   '/_app/settings': typeof AppSettingsRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -165,10 +191,12 @@ export interface FileRoutesById {
   '/_app/experiments/new': typeof AppExperimentsNewRoute
   '/_app/flags/$featureId': typeof AppFlagsFeatureIdRoute
   '/_app/metrics/$metricId': typeof AppMetricsMetricIdRoute
+  '/_app/saved-groups/$savedGroupId': typeof AppSavedGroupsSavedGroupIdRoute
   '/_app/data-sources/': typeof AppDataSourcesIndexRoute
   '/_app/experiments/': typeof AppExperimentsIndexRoute
   '/_app/flags/': typeof AppFlagsIndexRoute
   '/_app/metrics/': typeof AppMetricsIndexRoute
+  '/_app/saved-groups/': typeof AppSavedGroupsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -177,6 +205,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/audit'
     | '/environments'
+    | '/namespaces'
     | '/overview'
     | '/settings'
     | '/invite/$token'
@@ -185,16 +214,19 @@ export interface FileRouteTypes {
     | '/experiments/new'
     | '/flags/$featureId'
     | '/metrics/$metricId'
+    | '/saved-groups/$savedGroupId'
     | '/data-sources/'
     | '/experiments/'
     | '/flags/'
     | '/metrics/'
+    | '/saved-groups/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/audit'
     | '/environments'
+    | '/namespaces'
     | '/overview'
     | '/settings'
     | '/invite/$token'
@@ -203,10 +235,12 @@ export interface FileRouteTypes {
     | '/experiments/new'
     | '/flags/$featureId'
     | '/metrics/$metricId'
+    | '/saved-groups/$savedGroupId'
     | '/data-sources'
     | '/experiments'
     | '/flags'
     | '/metrics'
+    | '/saved-groups'
   id:
     | '__root__'
     | '/'
@@ -214,6 +248,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/audit'
     | '/_app/environments'
+    | '/_app/namespaces'
     | '/_app/overview'
     | '/_app/settings'
     | '/invite/$token'
@@ -222,10 +257,12 @@ export interface FileRouteTypes {
     | '/_app/experiments/new'
     | '/_app/flags/$featureId'
     | '/_app/metrics/$metricId'
+    | '/_app/saved-groups/$savedGroupId'
     | '/_app/data-sources/'
     | '/_app/experiments/'
     | '/_app/flags/'
     | '/_app/metrics/'
+    | '/_app/saved-groups/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -270,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/environments'
       fullPath: '/environments'
       preLoaderRoute: typeof AppEnvironmentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/namespaces': {
+      id: '/_app/namespaces'
+      path: '/namespaces'
+      fullPath: '/namespaces'
+      preLoaderRoute: typeof AppNamespacesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/overview': {
@@ -356,12 +400,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMetricsMetricIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/saved-groups/': {
+      id: '/_app/saved-groups/'
+      path: '/saved-groups'
+      fullPath: '/saved-groups/'
+      preLoaderRoute: typeof AppSavedGroupsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/saved-groups/$savedGroupId': {
+      id: '/_app/saved-groups/$savedGroupId'
+      path: '/saved-groups/$savedGroupId'
+      fullPath: '/saved-groups/$savedGroupId'
+      preLoaderRoute: typeof AppSavedGroupsSavedGroupIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppAuditRoute: typeof AppAuditRoute
   AppEnvironmentsRoute: typeof AppEnvironmentsRoute
+  AppNamespacesRoute: typeof AppNamespacesRoute
   AppOverviewRoute: typeof AppOverviewRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppDataSourcesDataSourceIdRoute: typeof AppDataSourcesDataSourceIdRoute
@@ -369,15 +428,18 @@ interface AppRouteChildren {
   AppExperimentsNewRoute: typeof AppExperimentsNewRoute
   AppFlagsFeatureIdRoute: typeof AppFlagsFeatureIdRoute
   AppMetricsMetricIdRoute: typeof AppMetricsMetricIdRoute
+  AppSavedGroupsSavedGroupIdRoute: typeof AppSavedGroupsSavedGroupIdRoute
   AppDataSourcesIndexRoute: typeof AppDataSourcesIndexRoute
   AppExperimentsIndexRoute: typeof AppExperimentsIndexRoute
   AppFlagsIndexRoute: typeof AppFlagsIndexRoute
   AppMetricsIndexRoute: typeof AppMetricsIndexRoute
+  AppSavedGroupsIndexRoute: typeof AppSavedGroupsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAuditRoute: AppAuditRoute,
   AppEnvironmentsRoute: AppEnvironmentsRoute,
+  AppNamespacesRoute: AppNamespacesRoute,
   AppOverviewRoute: AppOverviewRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppDataSourcesDataSourceIdRoute: AppDataSourcesDataSourceIdRoute,
@@ -385,10 +447,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppExperimentsNewRoute: AppExperimentsNewRoute,
   AppFlagsFeatureIdRoute: AppFlagsFeatureIdRoute,
   AppMetricsMetricIdRoute: AppMetricsMetricIdRoute,
+  AppSavedGroupsSavedGroupIdRoute: AppSavedGroupsSavedGroupIdRoute,
   AppDataSourcesIndexRoute: AppDataSourcesIndexRoute,
   AppExperimentsIndexRoute: AppExperimentsIndexRoute,
   AppFlagsIndexRoute: AppFlagsIndexRoute,
   AppMetricsIndexRoute: AppMetricsIndexRoute,
+  AppSavedGroupsIndexRoute: AppSavedGroupsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

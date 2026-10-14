@@ -1,8 +1,11 @@
 import "@orpc/experimental-effect/extensions/effect";
 import { user } from "@furca/database/schema/index";
 import { makeDrizzle } from "@furca/database/Database";
-import type { WithEffectContext } from "@orpc/experimental-effect";
+import type { ApiKeyRole } from "@furca/core/platform/ApiKey";
+import { ApiKeyService } from "@furca/core/platform/ApiKeyService";
+import { runPromise, type WithEffectContext } from "@orpc/experimental-effect";
 import { implement, ORPCError } from "@orpc/server";
+import { Effect } from "effect";
 import { contract } from "../contract";
 import type { Auth } from "./Auth";
 import type { FurcaEnv } from "./Env";
@@ -13,6 +16,7 @@ export interface RequestContext extends WithEffectContext<AppServices> {
   readonly headers: Headers;
   readonly env: FurcaEnv;
   readonly auth: Auth;
+  readonly ctx: ExecutionContext;
 }
 
 export interface CurrentUser {
@@ -20,6 +24,12 @@ export interface CurrentUser {
   readonly email: string;
   /** The first account ever created */
   readonly isOwner: boolean;
+}
+
+/** The API key a request authenticated with */
+export interface RequestApiKey {
+  readonly id: string;
+  readonly role: ApiKeyRole;
 }
 
 const errorStatus = {
@@ -71,15 +81,34 @@ export const pub = implement(contract)
     }
   });
 
-/** Procedures that require a Better Auth session; adds `context.user` */
-export const authed = pub.use(async ({ context, next }) => {
+/** What a readonly API key may call: the last path segment of the procedure */
+const READ_PROCEDURES = new Set(["list", "get", "latest", "names", "volume", "properties", "dimension", "payload", "me"]);
+
+const authenticate = async (
+  context: RequestContext,
+  path: ReadonlyArray<string>,
+): Promise<{ readonly user: CurrentUser; readonly apiKey: RequestApiKey | null }> => {
+  const bearer = /^Bearer\s+(\S+)$/i.exec(context.headers.get("authorization") ?? "")?.[1];
+  if (bearer !== undefined) {
+    const key = await runPromise(ApiKeyService.use((s) => s.authenticate(bearer)).pipe(Effect.provide(context["effect/context"])));
+    if (key === null) throw new ORPCError("UNAUTHORIZED", { message: "Invalid or revoked API key" });
+    if (key.role === "readonly" && !READ_PROCEDURES.has(path.at(-1) ?? "")) {
+      throw new ORPCError("FORBIDDEN", { message: "This API key is read-only" });
+    }
+    return { user: { id: `apikey:${key.id}`, email: `api-key:${key.name}`, isOwner: false }, apiKey: { id: key.id, role: key.role } };
+  }
   const session = await context.auth.api.getSession({ headers: context.headers });
   if (session === null) throw new ORPCError("UNAUTHORIZED", { message: "Sign in required" });
   const [first] = await makeDrizzle(context.env.DB).select({ id: user.id }).from(user).orderBy(user.createdAt).limit(1);
-  const current: CurrentUser = {
-    id: session.user.id,
-    email: session.user.email,
-    isOwner: first?.id === session.user.id,
-  };
-  return next({ context: { user: current } });
+  return { user: { id: session.user.id, email: session.user.email, isOwner: first?.id === session.user.id }, apiKey: null };
+};
+
+/**
+ * Procedures that require a signed-in member: a Better Auth session cookie, or
+ * `Authorization: Bearer furca_…` (an API key acts as `apikey:<id>` / `api-key:<name>` in audit logs).
+ * Adds `context.user` and `context.apiKey` (null for sessions)
+ */
+export const authed = pub.use(async ({ context, next, path }) => {
+  const { user, apiKey } = await authenticate(context, path);
+  return next({ context: { user, apiKey } });
 });

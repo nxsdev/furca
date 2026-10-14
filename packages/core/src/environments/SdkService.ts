@@ -10,8 +10,17 @@ export interface IngestBatch {
     readonly phase: number;
     readonly userId: string;
     readonly ts: number;
+    /** Values of the experiment's dimension attributes (at most 5, strings) */
+    readonly dimensions: Readonly<Record<string, string>> | null;
   }>;
-  readonly events: ReadonlyArray<{ readonly name: string; readonly userId: string; readonly value: number | null; readonly ts: number }>;
+  readonly events: ReadonlyArray<{
+    readonly name: string;
+    readonly userId: string;
+    readonly value: number | null;
+    readonly ts: number;
+    /** Flat properties for metric filters (at most 20) */
+    readonly properties: Readonly<Record<string, string | number | boolean>> | null;
+  }>;
 }
 
 /** Public SDK endpoints. NotFoundError = unknown SDK key */

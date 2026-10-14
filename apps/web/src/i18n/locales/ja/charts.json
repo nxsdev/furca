@@ -1,1 +1,16 @@
-{}
+{
+  "interval": {
+    "description": "リフト {{lift}}、区間 {{ci}}",
+    "empty": "推定値はまだありません"
+  },
+  "keyboardHint": "グラフにフォーカスし、矢印キーで各値を確認できます。",
+  "lift": {
+    "label": "初回露出日ごとの累積リフト",
+    "description": "線は各バリエーションの {{control}} に対するリフト、帯はその区間です。値は各日までの累積です。",
+    "tooltipTitle_other": "{{date}} · {{users}} ユーザー"
+  },
+  "traffic": {
+    "label": "{{name}} の過去24時間の SDK トラフィック（1時間ごと）",
+    "description": "1時間ごとの露出数とイベント数です。"
+  }
+}

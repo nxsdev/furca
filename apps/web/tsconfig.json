@@ -3,7 +3,12 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "types": ["vite/client", "@cloudflare/workers-types"],
-    "paths": { "~/*": ["./src/*"] }
+    "paths": {
+      "~/*": ["./src/*"],
+      // Same as tsconfig.base.json (these replace its paths): workspace packages resolve to src/, not dist/
+      "@furca/sdk": ["../../packages/sdk/src/index.ts"],
+      "@furca/sdk/*": ["../../packages/sdk/src/*.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

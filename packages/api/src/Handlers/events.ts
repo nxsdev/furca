@@ -1,5 +1,4 @@
 import { EventStatsService } from "@furca/core/analysis/Analysis";
-import { ORPCError } from "@orpc/server";
 import { authed } from "../Runtime/orpc";
 
 export const eventsRouter = {
@@ -9,8 +8,7 @@ export const eventsRouter = {
   volume: authed.events.volume.effect(function* (_opts, { environmentId }) {
     return yield* (yield* EventStatsService).volume(environmentId);
   }),
-  // TODO(analytics): property keys for metric filters
-  properties: authed.events.properties.handler(() => {
-    throw new ORPCError("NOT_IMPLEMENTED", { message: "Not implemented yet" });
+  properties: authed.events.properties.effect(function* (_opts, { environmentId, event }) {
+    return yield* (yield* EventStatsService).properties(environmentId, event);
   }),
 };

@@ -21,6 +21,14 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "types": ["bun"],
+    // Published packages export dist/; inside the repo TS, Bun and Vite (resolve.tsconfigPaths) read src/ instead.
+    // A tsconfig that sets its own `paths` replaces these, so apps/web repeats them
+    "paths": {
+      "@furca/sdk": ["./packages/sdk/src/index.ts"],
+      "@furca/sdk/*": ["./packages/sdk/src/*.ts"],
+      "@furca/react": ["./packages/react/src/index.tsx"],
+      "@furca/openfeature/*": ["./packages/openfeature/src/*.ts"]
+    },
     "plugins": [
       {
         "name": "@effect/language-service",

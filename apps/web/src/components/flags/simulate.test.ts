@@ -43,6 +43,44 @@ describe("traceEvaluation", () => {
     const { steps } = traceEvaluation(payload, "checkout", {});
     expect(steps[1]!.reason).toBe("No id attribute to bucket by");
   });
+
+  it("agrees with evaluate on saved groups and namespaces", () => {
+    const withTargeting: SdkPayload = {
+      ...payload,
+      savedGroups: { g1: { type: "list", attribute: "id", values: ["vip"] } },
+      features: {
+        checkout: {
+          defaultValue: false,
+          rules: [
+            { type: "force", conditions: [{ attribute: "", operator: "in_group", values: ["g1"] }], value: true },
+            {
+              type: "experiment",
+              key: "exp",
+              conditions: [],
+              coverage: 1,
+              hashAttribute: "id",
+              seed: "exp",
+              phase: 0,
+              namespace: ["ns", 0, 0],
+              variations: [
+                { key: "control", value: false },
+                { key: "treatment", value: true },
+              ],
+              weights: [0.5, 0.5],
+            },
+          ],
+        },
+      },
+    };
+    const vip = traceEvaluation(withTargeting, "checkout", { id: "vip" });
+    expect(vip.evaluation.ruleIndex).toBe(0);
+    expect(vip.steps.map((s) => s.matched)).toEqual([true]);
+    const other = traceEvaluation(withTargeting, "checkout", { id: "someone" });
+    expect(other.evaluation.source).toBe("default");
+    expect(other.steps[0]!.reason).toStartWith("Needs ");
+    expect(other.steps[0]!.reason).not.toContain("not set");
+    expect(other.steps[1]!.reason).toBe("Outside this experiment's slice of namespace ns");
+  });
 });
 
 describe("alignRules", () => {

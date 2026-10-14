@@ -44,7 +44,8 @@
       "absolute": "、ユーザーごとの上限は{{value}}",
       "percentile": "、ユーザーごとの上限は{{percentile}}パーセンタイル"
     },
-    "tail": "（{{when}}{{cap}}）。"
+    "tail": "（{{when}}{{cap}}）。",
+    "filters": "<c>{{event}}</c> は {{filters}} のイベントだけを数えます。"
   },
   "list": {
     "title": "指標",
@@ -224,6 +225,25 @@
       "type": "種類",
       "goal": "目標",
       "source": "データソース"
+    },
+    "filters": {
+      "where": "条件",
+      "and": "かつ",
+      "add": "プロパティで絞り込む",
+      "property": "プロパティ",
+      "operator": "演算子",
+      "value": "値",
+      "values": "値の一覧",
+      "valuesPlaceholder": "入力して Enter",
+      "noValue": "値は不要です",
+      "remove": "フィルター {{number}} を削除",
+      "seen_other": "{{events}} 件",
+      "errors": {
+        "property": "すべてのフィルターでプロパティを選んでください",
+        "unsupported": "\" や \\ を含むプロパティ名では絞り込めません",
+        "value": "すべてのフィルターに値を入力してください",
+        "number": "大小の比較は数値で行います。数値を入力してください"
+      }
     }
   }
 }

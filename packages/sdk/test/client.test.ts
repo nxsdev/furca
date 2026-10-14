@@ -194,7 +194,67 @@ describe("client", () => {
     expect(c.isOn("flag")).toBe(true); // keeps last known payload
   });
 
-  test("subscribe fires only when the payload changes", async () => {
+  test("track sends valid properties and drops invalid ones", async () => {
+    const s = fakeServer();
+    const c = make({ fetch: s.fetch, payload: payload() });
+    const many = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [`k${i}`, i]));
+    c.track("purchase", 10, { plan: "pro", seats: 3, trial: false, note: "x".repeat(300) });
+    c.track("bad", null, {
+      ok: "yes",
+      nested: { a: 1 } as never,
+      list: [1] as never,
+      nan: Number.NaN,
+      nil: null as never,
+      ["k".repeat(65)]: "long key",
+    });
+    c.track("many", null, many);
+    c.track("none", null, { nested: {} as never });
+    await c.flush();
+    const [purchase, bad, manyEvent, none] = s.posts[0]!.events!;
+    expect(purchase!.properties).toEqual({ plan: "pro", seats: 3, trial: false, note: "x".repeat(200) });
+    expect(bad!.properties).toEqual({ ok: "yes" });
+    expect(Object.keys(manyEvent!.properties!)).toHaveLength(20);
+    expect(none).not.toHaveProperty("properties");
+  });
+
+  test("exposures carry the rule's dimensions from the current attributes", async () => {
+    const s = fakeServer();
+    const p = payload();
+    (p.features.exp!.rules[0] as { dimensions?: string[] }).dimensions = ["country", "plan", "missing", "long"];
+    const c = make({ fetch: s.fetch, payload: p, attributes: { id: "u", country: "jp", plan: 3, missing: null, long: "y".repeat(150) } });
+    c.evaluate("exp");
+    await c.flush();
+    expect(s.posts[0]!.exposures![0]!.dimensions).toEqual({ country: "jp", plan: "3", long: "y".repeat(100) });
+    const c2 = make({ fetch: s.fetch, payload: payload() }); // rule without dimensions → no field
+    c2.evaluate("exp");
+    await c2.flush();
+    expect(s.posts.at(-1)!.exposures![0]).not.toHaveProperty("dimensions");
+  });
+
+  test("evaluate(key, attributes) evaluates and exposes another user without changing the client's attributes", async () => {
+    const s = fakeServer();
+    const c = make({ fetch: s.fetch, payload: payload() });
+    c.evaluate("exp", { id: "request-user" });
+    expect(c.getAttributes()).toEqual({ id: "user-1" });
+    await c.flush();
+    expect(s.posts[0]!.exposures!.map((e) => e.userId)).toEqual(["request-user"]);
+  });
+
+  test("subscribe fires when attributes change, once a payload is loaded", async () => {
+    const s = fakeServer();
+    const c = make({ fetch: s.fetch });
+    let n = 0;
+    c.subscribe(() => n++);
+    c.setAttributes({ id: "x" }); // no payload yet: nothing would change
+    expect(n).toBe(0);
+    await c.ready();
+    expect(n).toBe(1);
+    c.setAttributes({ id: "y" });
+    c.updateAttributes({ plan: "pro" });
+    expect(n).toBe(3);
+  });
+
+  test("subscribe fires when the payload changes, not on identical refreshes", async () => {
     const s = fakeServer();
     const c = make({ fetch: s.fetch });
     const got: string[] = [];

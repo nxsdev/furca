@@ -37,7 +37,8 @@ What is deliberately **not** built (visual editor, bandits, holdouts, quantile m
   SRM χ² check, multiple-exposure exclusion, percentile / absolute capping, cumulative timeseries
 - **Metrics**: conversion, mean (count / sum), ratio; conversion windows and delays; lower-is-better
 - **Data sources**: built-in event store (D1) or BigQuery with your own SQL (GA4 / Segment templates)
-- **SDK**: zero-dependency TypeScript SDK with local evaluation for browsers, Workers, Node, Bun, Deno
+- **SDK**: zero-dependency TypeScript SDK with local evaluation for browsers, Workers, Node, Bun, Deno;
+  React bindings and OpenFeature providers
 - **Team**: email + password, first account is the owner, invitations, full audit log
 
 ## Architecture
@@ -55,7 +56,7 @@ furca Worker (one deploy)
 └── cron       hourly results refresh (built-in D1 or BigQuery)
 ```
 
-Monorepo: `apps/web` (UI + Worker entry), `packages/{core,database,persistence,api,integrations,stats,sdk,infra}`.
+Monorepo: `apps/web` (UI + Worker entry), `packages/{core,database,persistence,api,integrations,stats,sdk,react,openfeature,infra}`.
 See [CLAUDE.md](CLAUDE.md) for conventions.
 
 ## Deploy to your Cloudflare account
@@ -108,11 +109,35 @@ await furca.ready();
 
 if (furca.isOn("new-checkout")) renderNewCheckout();
 const color = furca.getValue("button-color", "blue");
-furca.track("purchase", 42.5);
+furca.track("purchase", 42.5, { plan: "pro" });
 ```
 
 Exposures are sent automatically the first time a user is assigned to a variation. On Workers, call
 `ctx.waitUntil(furca.flush())`. More: [packages/sdk/README.md](packages/sdk/README.md).
+
+| Package | |
+|---|---|
+| [`@furca/sdk`](packages/sdk/README.md) | Core client, zero dependencies, GrowthBook-compatible bucketing |
+| [`@furca/react`](packages/react/README.md) | `<FurcaProvider>`, `useFeatureValue`, `useFeatureIsOn`, `useEvaluation` (SSR-safe) |
+| [`@furca/openfeature`](packages/openfeature/README.md) | OpenFeature providers for `@openfeature/web-sdk` and `@openfeature/server-sdk` |
+
+Releases: push a tag `sdk-v<version>` and `.github/workflows/release.yml` publishes all three with npm provenance
+(needs the `NPM_TOKEN` secret).
+
+## REST API
+
+Everything the admin UI does is also a REST call. Create a key in **Settings > API keys** (`readonly` keys
+can only list / get), then `POST /api/v1/<area>/<operation>` with a JSON body:
+
+```sh
+curl -X POST https://furca.example.com/api/v1/features/setEnabled \
+  -H "Authorization: Bearer furca_…" -H "content-type: application/json" \
+  -d '{"id":"<flag id>","environmentId":"<environment id>","enabled":true}'
+```
+
+The OpenAPI 3.1 spec is at `GET /api/v1/openapi.json`. Changes made with a key show up in the audit log
+as `api-key:<name>`. Webhooks (**Settings > Webhooks**) POST signed JSON (`furca-signature: sha256=<HMAC
+of the body>`) or Slack messages when flags change, experiments start / stop, or SDK payloads update.
 
 ## License
 

@@ -27,8 +27,10 @@ await furca.ready(); // never rejects; on failure every flag returns your fallba
 if (furca.isOn("new-checkout")) showNewCheckout();
 const color = furca.getValue("button-color", "blue");
 
-furca.track("purchase", 4980); // needs an `id` attribute
+furca.track("purchase", 4980, { plan: "pro", coupon: true }); // needs an `id` attribute
 ```
+
+`track(name, value?, properties?)`: `properties` are flat (string, number or boolean values) for metric filters, at most 20 keys of up to 64 characters; strings are cut to 200 characters. Anything else is dropped with a one-time console warning.
 
 Events and exposures are batched: they are sent every `flushInterval` ms (default 2000) or when `maxBatchSize` (default 100) items are queued. When the page is hidden or unloaded the queue goes out with `navigator.sendBeacon`. Network errors are logged once and never thrown.
 
@@ -71,36 +73,32 @@ export default {
 
 Calling furca through a service binding? Pass `fetch: (url, init) => env.FURCA.fetch(url, init)`.
 
-## React
+## React and OpenFeature
 
-No React dependency ships with the SDK. This hook is all you need:
+- [`@furca/react`](../react/README.md): `<FurcaProvider>`, `useFeatureValue`, `useFeatureIsOn`, `useEvaluation`, `<IfFeatureEnabled>`. Re-renders on payload refreshes and attribute changes, SSR-safe.
+- [`@furca/openfeature`](../openfeature/README.md): OpenFeature providers for `@openfeature/web-sdk` and `@openfeature/server-sdk`.
 
-```tsx
-import { useSyncExternalStore } from "react";
-import { createClient } from "@furca/sdk";
+`subscribe(listener)` fires when a refresh brings a new payload and when `setAttributes` / `updateAttributes` change the attributes (once a payload is loaded), so a UI binding only needs this one signal.
 
-export const furca = createClient({ apiHost: "https://furca.example.com", sdkKey: "sdk_prod_xxx", attributes: { id: userId } });
-void furca.ready();
+## Servers: one client, many users
 
-export function useFeature<T>(key: string, fallback: T): T {
-  return useSyncExternalStore(
-    furca.subscribe,                     // re-renders when the payload changes
-    () => furca.getValue(key, fallback), // keep `fallback` a primitive or a stable reference
-    () => fallback,                     // SSR
-  );
-}
+`evaluate(key, attributes)` evaluates for the given user without touching the client's own attributes, and records that user's exposure. A long-lived Node / Bun server can keep one client (with `refreshInterval`) for all requests:
 
-function BuyButton() {
-  const color = useFeature("button-color", "blue");
-  return <button style={{ background: color }}>Buy</button>;
-}
+```ts
+const furca = createClient({ apiHost, sdkKey, refreshInterval: 30_000 });
+await furca.ready();
+
+app.get("/pricing", (req, res) => {
+  const { value } = furca.evaluate("new-pricing", { id: req.user.id, country: req.country });
+  res.send(value === true ? renderNewPricing() : renderPricing());
+});
 ```
-
-`subscribe` fires on payload changes only. After `setAttributes()` (e.g. on login), re-render the tree yourself.
 
 ## Sending exposures to GA4 / Segment
 
 `onExposure` is called once per experiment phase, variation and user per client, when the user is first evaluated into an experiment. It runs even with `trackExposures: false`.
+
+When the experiment lists breakdown `dimensions` (e.g. `country`, `plan`), each exposure carries those attributes' values at exposure time (`String()`, up to 100 characters, missing ones left out), so results can be split by them.
 
 ```ts
 const furca = createClient({
@@ -122,8 +120,9 @@ fetchPayload({ apiHost, sdkKey, fetch? }): Promise<SdkPayload>   // throws on fa
 
 // Pure helpers (server-side evaluation, admin "test a user" simulator)
 evaluate(payload: SdkPayload | null | undefined, key: string, attributes: Attributes): Evaluation
-evaluateConditions(conditions: PayloadCondition[], attributes: Attributes): boolean
-hash(seed: string, value: string): number                         // [0, 1), GrowthBook hash v2
+evaluateConditions(conditions: PayloadCondition[], attributes: Attributes, savedGroups?: SdkPayload["savedGroups"]): boolean
+hash(seed: string, value: string, version: 1 | 2 = 2): number    // [0, 1), GrowthBook hash v2 (v1: namespaces)
+inNamespace(hashValue: string, namespace: [key, start, end]): boolean  // GrowthBook inNamespace
 getBucketRanges(numVariations: number, coverage?: number, weights?: number[]): [number, number][]
 chooseVariation(n: number, ranges: [number, number][]): number
 ```
@@ -141,7 +140,7 @@ chooseVariation(n: number, ranges: [number, number][]): number
 | `onExposure` | — | `(exposure) => void` |
 | `fetch` | `globalThis.fetch` | Called unbound |
 
-`FurcaClient`: `ready()`, `isOn(key)`, `getValue(key, fallback)`, `evaluate(key)`, `setAttributes(attrs)`, `updateAttributes(partial)`, `getAttributes()`, `getPayload()`, `track(name, value?)`, `flush()`, `refresh()`, `subscribe(listener) → unsubscribe`, `destroy()`.
+`FurcaClient`: `ready()`, `isOn(key)`, `getValue(key, fallback)`, `evaluate(key, attributes?)`, `setAttributes(attrs)`, `updateAttributes(partial)`, `getAttributes()`, `getPayload()`, `track(name, value?, properties?)`, `flush()`, `refresh()`, `subscribe(listener) → unsubscribe`, `destroy()`.
 
 ## Evaluation rules
 
@@ -149,5 +148,6 @@ chooseVariation(n: number, ranges: [number, number][]): number
 - Rules run top to bottom and the first one that applies wins. If none applies you get the feature's `defaultValue` (`source: "default"`).
 - Conditions in a rule are AND-ed. Attribute values are compared as `String(value)`, except numeric (`gt`/`gte`/`lt`/`lte`: `Number()` on both sides, NaN or empty string never matches) and semver operators (semver 2.0 precedence including prereleases, leading `v` and missing minor/patch allowed, invalid never matches). `in`/`not_in`, `contains`/`not_contains`, `starts_with` and `ends_with` match any of the listed values. An invalid `regex` never matches.
 - **Missing attributes** (`undefined` or `null`) match only the negative operators: `neq`, `not_in`, `not_contains` and `not_exists`. All other operators are false.
+- **Saved groups**: `in_group` / `not_in_group` ignore the condition's attribute and look up `payload.savedGroups[values[0]]`. A list group matches when `String(attributes[group.attribute])` is one of its values (a missing attribute never matches); a condition group matches when all of its conditions do. A group missing from the payload is never matched (`in_group` false, `not_in_group` true).
 - `rollout`: users without the hash attribute (missing or empty string) skip the rule. Otherwise the value is served if `hash(seed, id) < coverage`, and the next rule is tried if not.
-- `experiment`: users without the hash attribute skip the rule. Otherwise `hash(seed, id)` picks a GrowthBook-style bucket range. Users outside coverage fall through to the next rule.
+- `experiment`: users without the hash attribute skip the rule. With a `namespace` `[key, start, end]` (mutually exclusive experiments), only users whose GrowthBook v1 hash of `"__" + key` falls in `[start, end)` enter; the rest fall through, exactly like GrowthBook's `inNamespace`. Then `hash(seed, id)` picks a GrowthBook-style bucket range. Users outside coverage fall through to the next rule.
