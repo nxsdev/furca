@@ -13,74 +13,75 @@ import {
   type SdkPayload,
 } from "../src/index.ts";
 
-// Vectors from GrowthBook's official SDK spec (MIT):
-// https://github.com/growthbook/growthbook/blob/main/packages/sdk-js/test/cases.json (specVersion 0.9.0)
+// Our own inputs; expected values computed once with @growthbook/growthbook 1.8.0's hash / inNamespace /
+// getBucketRanges / chooseVariation, so a match means GrowthBook buckets the same users the same way
 const GB_HASH_V2: Array<[string, string, number]> = [
-  ["seed", "a", 0.0505],
-  ["seed", "b", 0.2696],
-  ["foo", "ab", 0.2575],
-  ["foo", "def", 0.2019],
-  ["89123klj", "8952klfjas09ujkasdf", 0.124],
-  ["90850943850283058242805", "123", 0.7516],
-  ["()**(%$##$%#$#", '___)((*":&', 0.0128],
+  ["furca", "user-1", 0.0463],
+  ["furca", "user-2", 0.2168],
+  ["checkout", "42", 0.4063],
+  ["checkout", "4242424242", 0.0146],
+  ["新しい料金", "ユーザー", 0.1383],
+  ["emoji-🙂", "👩‍💻", 0.193],
+  ["", "anonymous", 0.6947],
+  ["a b\tc", "line\nbreak", 0.4721],
 ];
 const GB_HASH_V1: Array<[string, string, number]> = [
-  ["", "a", 0.22],
-  ["", "b", 0.077],
-  ["b", "a", 0.946],
-  ["ef", "d", 0.652],
-  ["asdf", "8952klfjas09ujk", 0.549],
-  ["", "123", 0.011],
-  ["", '___)((*":&', 0.563],
+  ["", "user-1", 0.5],
+  ["", "user-2", 0.357],
+  ["checkout", "42", 0.135],
+  ["x", "y", 0.444],
+  ["新", "ユーザー", 0.359],
+  ["", "👩‍💻", 0.882],
+  ["long-seed-0123456789", "id-9876543210", 0.146],
 ];
 // [id, namespace, expected]
 const GB_IN_NAMESPACE: Array<[string, [string, number, number], boolean]> = [
-  ["1", ["namespace1", 0, 0.4], false],
-  ["1", ["namespace1", 0.4, 1], true],
-  ["1", ["namespace2", 0, 0.4], false],
-  ["1", ["namespace2", 0.4, 1], true],
-  ["2", ["namespace1", 0, 0.4], false],
-  ["2", ["namespace1", 0.4, 1], true],
-  ["2", ["namespace2", 0, 0.4], false],
-  ["2", ["namespace2", 0.4, 1], true],
-  ["3", ["namespace1", 0, 0.4], false],
-  ["3", ["namespace1", 0.4, 1], true],
-  ["3", ["namespace2", 0, 0.4], true],
-  ["3", ["namespace2", 0.4, 1], false],
-  ["4", ["namespace1", 0, 0.4], false],
-  ["4", ["namespace1", 0.4, 1], true],
-  ["4", ["namespace2", 0, 0.4], true],
-  ["4", ["namespace2", 0.4, 1], false],
+  ["user-1", ["pricing", 0, 0.5], true],
+  ["user-1", ["pricing", 0.5, 1], false],
+  ["user-1", ["onboarding", 0, 0.3], true],
+  ["user-1", ["onboarding", 0.3, 1], false],
+  ["user-2", ["pricing", 0, 0.5], true],
+  ["user-2", ["pricing", 0.5, 1], false],
+  ["user-2", ["onboarding", 0, 0.3], false],
+  ["user-2", ["onboarding", 0.3, 1], true],
+  ["user-3", ["pricing", 0, 0.5], true],
+  ["user-3", ["pricing", 0.5, 1], false],
+  ["user-3", ["onboarding", 0, 0.3], true],
+  ["user-3", ["onboarding", 0.3, 1], false],
+  ["user-4", ["pricing", 0, 0.5], false],
+  ["user-4", ["pricing", 0.5, 1], true],
+  ["user-4", ["onboarding", 0, 0.3], true],
+  ["user-4", ["onboarding", 0.3, 1], false],
 ];
 const GB_BUCKET_RANGES: Array<[string, [number, number, number[] | null], Array<[number, number]>]> = [
-  ["normal 50/50", [2, 1, null], [[0, 0.5], [0.5, 1]]],
-  ["reduced coverage", [2, 0.5, null], [[0, 0.25], [0.5, 0.75]]],
-  ["zero coverage", [2, 0, null], [[0, 0], [0.5, 0.5]]],
-  ["4 variations", [4, 1, null], [[0, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 1]]],
-  ["uneven weights", [2, 1, [0.4, 0.6]], [[0, 0.4], [0.4, 1]]],
-  ["uneven weights, 3 variations", [3, 1, [0.2, 0.3, 0.5]], [[0, 0.2], [0.2, 0.5], [0.5, 1]]],
-  ["uneven weights, reduced coverage, 3 variations", [3, 0.2, [0.2, 0.3, 0.5]], [[0, 0.04], [0.2, 0.26], [0.5, 0.6]]],
-  ["negative coverage", [2, -0.2, null], [[0, 0], [0.5, 0.5]]],
-  ["coverage above 1", [2, 1.5, null], [[0, 0.5], [0.5, 1]]],
-  ["weights sum below 1", [2, 1, [0.4, 0.1]], [[0, 0.5], [0.5, 1]]],
-  ["weights sum above 1", [2, 1, [0.7, 0.6]], [[0, 0.5], [0.5, 1]]],
-  ["weights.length not equal to num variations", [4, 1, [0.4, 0.4, 0.2]], [[0, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 1]]],
-  ["weights sum almost equals 1", [2, 1, [0.4, 0.5999]], [[0, 0.4], [0.4, 0.9999]]],
+  ["even 3-way", [3, 1, null], [[0, 0.333333], [0.333333, 0.666667], [0.666667, 1]]],
+  ["half coverage, 3-way", [3, 0.5, null], [[0, 0.166667], [0.333333, 0.5], [0.666667, 0.833333]]],
+  ["zero coverage", [3, 0, null], [[0, 0], [0.333333, 0.333333], [0.666667, 0.666667]]],
+  ["5 variations", [5, 1, null], [[0, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 1]]],
+  ["uneven weights", [2, 1, [0.3, 0.7]], [[0, 0.3], [0.3, 1]]],
+  ["uneven weights, 4 variations", [4, 1, [0.1, 0.2, 0.3, 0.4]], [[0, 0.1], [0.1, 0.3], [0.3, 0.6], [0.6, 1]]],
+  ["uneven weights, reduced coverage", [3, 0.6, [0.5, 0.25, 0.25]], [[0, 0.3], [0.5, 0.65], [0.75, 0.9]]],
+  ["negative coverage", [3, -1, null], [[0, 0], [0.333333, 0.333333], [0.666667, 0.666667]]],
+  ["coverage above 1", [3, 2, null], [[0, 0.333333], [0.333333, 0.666667], [0.666667, 1]]],
+  ["weights sum below 1", [3, 1, [0.2, 0.2, 0.2]], [[0, 0.333333], [0.333333, 0.666667], [0.666667, 1]]],
+  ["weights sum above 1", [2, 1, [0.9, 0.9]], [[0, 0.5], [0.5, 1]]],
+  ["weights length mismatch", [3, 1, [0.5, 0.5]], [[0, 0.333333], [0.333333, 0.666667], [0.666667, 1]]],
+  ["weights sum almost 1", [3, 1, [0.2, 0.3, 0.4999]], [[0, 0.2], [0.2, 0.5], [0.5, 0.9999]]],
 ];
+const THIRDS: Array<[number, number]> = [[0, 0.333333], [0.333333, 0.666667], [0.666667, 1]];
+const GAPPED: Array<[number, number]> = [[0, 0.2], [0.4, 0.6]];
 const GB_CHOOSE_VARIATION: Array<[string, number, Array<[number, number]>, number]> = [
-  ["even range, 0.2", 0.2, [[0, 0.5], [0.5, 1]], 0],
-  ["even range, 0.4", 0.4, [[0, 0.5], [0.5, 1]], 0],
-  ["even range, 0.6", 0.6, [[0, 0.5], [0.5, 1]], 1],
-  ["even range, 0.8", 0.8, [[0, 0.5], [0.5, 1]], 1],
-  ["even range, 0", 0, [[0, 0.5], [0.5, 1]], 0],
-  ["even range, 0.5", 0.5, [[0, 0.5], [0.5, 1]], 1],
-  ["reduced range, 0.2", 0.2, [[0, 0.25], [0.5, 0.75]], 0],
-  ["reduced range, 0.4", 0.4, [[0, 0.25], [0.5, 0.75]], -1],
-  ["reduced range, 0.6", 0.6, [[0, 0.25], [0.5, 0.75]], 1],
-  ["reduced range, 0.8", 0.8, [[0, 0.25], [0.5, 0.75]], -1],
-  ["reduced range, 0.25", 0.25, [[0, 0.25], [0.5, 0.75]], -1],
-  ["reduced range, 0.5", 0.5, [[0, 0.25], [0.5, 0.75]], 1],
-  ["zero range", 0.5, [[0, 0.5], [0.5, 0.5], [0.5, 1]], 2],
+  ["three-way, 0.1", 0.1, THIRDS, 0],
+  ["three-way, 0.5", 0.5, THIRDS, 1],
+  ["three-way, 0.9", 0.9, THIRDS, 2],
+  ["three-way, start of 2nd range", 0.333333, THIRDS, 1],
+  ["gapped, 0.1", 0.1, GAPPED, 0],
+  ["gapped, end of 1st range", 0.2, GAPPED, -1],
+  ["gapped, 0.3", 0.3, GAPPED, -1],
+  ["gapped, start of 2nd range", 0.4, GAPPED, 1],
+  ["gapped, 0.7", 0.7, GAPPED, -1],
+  ["empty range skipped", 0.3, [[0, 0.3], [0.3, 0.3], [0.3, 1]], 2],
+  ["1 is outside every range", 1, [[0, 0.5], [0.5, 1]], -1],
 ];
 
 const round = (n: number) => Math.round(n * 1e6) / 1e6;
@@ -98,11 +99,12 @@ describe("GrowthBook compatibility", () => {
     expect(inNamespace(id, namespace)).toBe(expected);
   });
 
-  // GrowthBook `run` "Experiment namespace - pass/fail" and `feature` "skips experiment on namespace"
+  // Namespace membership from GB_IN_NAMESPACE / @growthbook/growthbook 1.8.0 inNamespace
   test.each([
-    ["inside the namespace range enters", "1", ["namespace", 0.1, 1], "experiment"],
-    ["outside the namespace range falls through", "1", ["namespace", 0, 0.1], "force"],
-    ["outside a 1% namespace falls through", "123", ["pricing", 0, 0.01], "force"],
+    ["inside the namespace range enters", "user-1", ["pricing", 0, 0.5], "experiment"],
+    ["outside the namespace range falls through", "user-4", ["pricing", 0, 0.5], "force"],
+    ["inside a 1% namespace enters", "user-54", ["tiny", 0, 0.01], "experiment"],
+    ["outside a 1% namespace falls through", "user-2", ["tiny", 0, 0.01], "force"],
   ] as const)("experiment namespace: %s", (_, id, namespace, source) => {
     const payload = feature({
       defaultValue: 0,
@@ -119,16 +121,18 @@ describe("GrowthBook compatibility", () => {
     expect(chooseVariation(n, ranges)).toBe(expected);
   });
 
-  // GrowthBook `run` cases that use hash v2: { key, seed: "foo", variations: [0, 1] }, id "1" → variation 1
+  // seed "furca-seed": @growthbook/growthbook 1.8.0 puts user-1 in variation 0 and user-2 in variation 1
   test.each([
-    ["default weights/coverage", 1, [0.5, 0.5]],
-    ["weights/coverage", 0.99, [0.5, 0.5]],
-  ] as const)("experiment with seed: %s", (_, coverage, weights) => {
+    ["full coverage", "user-1", 1, 0],
+    ["full coverage", "user-2", 1, 1],
+    ["99% coverage", "user-1", 0.99, 0],
+    ["99% coverage", "user-2", 0.99, 1],
+  ] as const)("experiment with seed: %s, %s", (_, id, coverage, expected) => {
     const payload = feature({
       defaultValue: -1,
-      rules: [experiment({ seed: "foo", coverage, weights: [...weights], values: [0, 1] })],
+      rules: [experiment({ seed: "furca-seed", coverage, weights: [0.5, 0.5], values: [0, 1] })],
     });
-    expect(evaluate(payload, "f", { id: "1" }).value).toBe(1);
+    expect(evaluate(payload, "f", { id }).value).toBe(expected);
   });
 });
 
