@@ -29,7 +29,7 @@ furca Worker
 | API | oRPC v2 + Effect 4 | 契約（`packages/api/src/contract.ts`）をブラウザと共有。`.effect()` ハンドラで Effect サービスを注入 |
 | ORM | Drizzle 1.0 (RQB v2) | zcareer と同じ書き味。マイグレーションは drizzle-kit v1 形式で Alchemy が直接適用 |
 | UI | TanStack Start + HeroUI v3 | React Aria ベースでアクセシビリティが担保される。テーマは OKLCH トークンで上書き |
-| 統計 | 自前の `@furca/stats`（GrowthBook gbstats の移植） | Python 不要。GrowthBook の数値ベクトルで検証済み |
+| 統計 | 自前の `@furca/stats`（標準的な統計手法の実装） | Python 不要 |
 | BigQuery | `jose` + REST | 公式 `@google-cloud/bigquery` は Workers で動かない（Node 依存・巨大）。保守されている `jose` で JWT を作る |
 | Snowflake | `jose` + SQL API v2 | キーペア認証の JWT をリクエストごとに署名。Node ドライバは Workers で動かない |
 | ClickHouse | `@clickhouse/client-web` | 公式の fetch ベースクライアント。セッション設定を送らないので readonly ユーザーでも動く |

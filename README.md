@@ -32,9 +32,9 @@ What is deliberately **not** built (visual editor, bandits, holdouts, quantile m
   rollout rules, attribute targeting (incl. semver and regex), "test a user" simulator
 - **Experiments**: hypothesis, variations and weights, targeting and coverage, phases with enforced
   re-randomization, pre-launch power calculator, ship / roll back decisions recorded and applied to the flag
-- **Statistics** (port of GrowthBook's gbstats, verified against its vectors): relative lift with the delta
-  method, sequential confidence sequences (default), Bayesian chance to win, CUPED, Holm correction,
-  SRM χ² check, multiple-exposure exclusion, percentile / absolute capping, cumulative timeseries
+- **Statistics**: relative lift with the delta method, sequential confidence sequences (default), Bayesian
+  chance to win, CUPED, Holm correction, SRM χ² check, multiple-exposure exclusion, percentile / absolute
+  capping, cumulative timeseries
 - **Metrics**: conversion, mean (count / sum), ratio; conversion windows and delays; lower-is-better
 - **Data sources**: built-in event store (D1), or BigQuery, Snowflake, ClickHouse and Postgres with your own SQL (GA4 / Segment templates)
 - **SDK**: zero-dependency TypeScript SDK with local evaluation for browsers, Workers, Node, Bun, Deno;

@@ -1,7 +1,7 @@
 import normalQuantile from "@stdlib/stats-base-dists-normal-quantile";
 
 /**
- * Fixed-horizon, two-sided power inputs (GrowthBook power-technical): relative effects,
+ * Fixed-horizon, two-sided power inputs: relative effects,
  * equal variance in both arms, per pairwise comparison without multiple-testing correction
  */
 export interface PowerInput {
@@ -37,7 +37,7 @@ export function sampleSizePerVariation(input: PowerInput & { readonly mde: numbe
 }
 
 /**
- * Smallest detectable relative lift at `usersPerVariation` (positive root of GrowthBook's quadratic);
+ * Smallest detectable relative lift at `usersPerVariation` (positive root of the power equation as a quadratic in the lift);
  * null when no MDE exists, i.e. N ≤ k²σ²/μ²
  */
 export function mdeForSampleSize(input: PowerInput & { readonly usersPerVariation: number }): number | null {

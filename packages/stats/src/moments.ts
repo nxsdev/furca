@@ -7,15 +7,15 @@ export function summarize(kind: MetricKind, m: Moments): VariationSummary {
 }
 
 /**
- * Per-unit variance of one arm, as in gbstats `models/statistics.py`:
+ * Per-unit variance of one arm:
  * proportion p(1−p), mean (Σy² − (Σy)²/n)/(n−1), ratio via the delta method
  */
 export function unitVariance(kind: MetricKind, m: Moments): number {
   if (kind !== "ratio") return baseVariance(kind, m.n, m.sum, m.sumSquares);
   const d = m.denominatorSum ?? 0;
   if (m.n <= 1 || d === 0) return 0;
-  // ponytail: numerator and denominator are always treated as sample means; gbstats types each
-  // by its own metric type, which only differs by n/(n−1) when a side is binomial
+  // ponytail: numerator and denominator are always treated as sample means; typing each by its
+  // own metric type would only differ by n/(n−1) when a side is binomial
   return varianceOfRatios(
     m.sum / m.n,
     baseVariance("mean", m.n, m.sum, m.sumSquares),
@@ -34,13 +34,13 @@ export function baseVariance(kind: "proportion" | "mean", n: number, sum: number
   return n <= 1 ? 0 : (sumSquares - (sum * sum) / n) / (n - 1);
 }
 
-/** Unit covariance from sums (gbstats `compute_covariance`) */
+/** Unit covariance from sums */
 export function covariance(kind: "proportion" | "mean", n: number, sumA: number, sumB: number, sumProducts: number): number {
   if (n <= 1) return 0;
   return kind === "proportion" ? sumProducts / n - (sumA * sumB) / (n * n) : (sumProducts - (sumA * sumB) / n) / (n - 1);
 }
 
-/** Delta-method variance of M/D (gbstats `variance_of_ratios`) */
+/** Delta-method variance of M/D */
 export function varianceOfRatios(meanM: number, varM: number, meanD: number, varD: number, cov: number): number {
   if (meanD === 0) return 0;
   return varM / meanD ** 2 + (varD * meanM ** 2) / meanD ** 4 - (2 * cov * meanM) / meanD ** 3;

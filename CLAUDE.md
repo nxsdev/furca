@@ -82,7 +82,6 @@ Bun comes from mise: prefix shells with `export PATH=~/.local/share/mise/shims:$
 ## UI (apps/web)
 
 - HeroUI v3 compound components (`@heroui/react`), React Aria props (`onPress`, `isDisabled`, `isSelected`, `value/onChange`).
-  Verified API notes: `/private/tmp/claude-501/-Users-nxs-Library-Application-Support-Claude-scratch-workspaces-34fc8685-7d60-49b6-a7bf-29e0b5f49b3f-b771a3a0-420e-405e-9d2c-27fa6e5203e9-scratch-2026-10-12-8bc0c1/84f0dea2-311a-41fb-931a-f7fde6aff10e/scratchpad/research/C-heroui.md`
 - Forms: TanStack Form (`@tanstack/react-form`) via the shared `useAppForm` + HeroUI-bound field components in
   `~/components/form`. Validate with Effect Schemas through Standard Schema (reuse contract schemas such as `Key`);
   show server errors on the field they belong to. No hand-rolled `useState` form state or uncontrolled `FormData` forms

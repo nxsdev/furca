@@ -29,7 +29,7 @@ const preOf = (m: Moments): Pre | null =>
 
 const fail = (reason: string): ComparisonOutcome => ({ ok: false, reason });
 
-/** θ = Cov(Y, X) / Var(X) pooled over both arms (gbstats `compute_theta`); 0 disables CUPED */
+/** θ = Cov(Y, X) / Var(X) pooled over both arms (CUPED, Deng et al. 2013); 0 disables CUPED */
 function cupedTheta(kind: "proportion" | "mean", a: Moments, preA: Pre, b: Moments, preB: Pre): number {
   const n = a.n + b.n;
   const postVariance = baseVariance(kind, n, a.sum + b.sum, a.sumSquares + b.sumSquares);
@@ -44,7 +44,7 @@ function sequentialRho(alpha: number, tuning: number): number {
 }
 
 /**
- * Relative lift of treatment over control with GrowthBook's (gbstats) math:
+ * Relative lift of treatment over control:
  * delta-method variance, optional CUPED, Welch t / sequential / Gaussian-prior Bayesian
  */
 export function compareVariations({ kind, inverse, control: c, treatment: t, settings }: CompareInput): ComparisonOutcome {
@@ -120,7 +120,7 @@ export function compareVariations({ kind, inverse, control: c, treatment: t, set
     return { ok: true, result: { ...base, lift, ci: [lift - halfwidth, lift + halfwidth], pValue, chanceToWin: null, standardError: se } };
   }
 
-  // Welch–Satterthwaite on per-unit variances, as gbstats does even for relative effects
+  // Welch–Satterthwaite on per-unit variances, also for relative effects
   const vC = C.adjVariance / c.n;
   const vT = T.adjVariance / t.n;
   const dof = (vT + vC) ** 2 / (vT ** 2 / (t.n - 1) + vC ** 2 / (c.n - 1));
@@ -172,7 +172,7 @@ export function holmAdjust(pValues: readonly number[]): number[] {
   return out;
 }
 
-/** Interval on lift implied by a corrected p-value (GrowthBook `adjustedCI` / `getAdjustedCI`) */
+/** lift ± z(1−α/2)·SE, with SE backed out of the corrected p-value as |lift| / z(1−p/2) */
 export function adjustedInterval(adjustedP: number, lift: number, alpha: number): [number, number] {
   if (adjustedP > 0.999999) return [-Infinity, Infinity];
   const width = normalQuantile(1 - alpha / 2, 0, 1) * Math.abs(lift / normalQuantile(1 - adjustedP / 2, 0, 1));

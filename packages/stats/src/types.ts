@@ -24,7 +24,7 @@ export type MetricKind = "proportion" | "mean" | "ratio";
 
 export interface AnalysisSettings {
   readonly engine: "frequentist" | "bayesian";
-  /** Frequentist only: always-valid confidence sequence (Waudby-Smith et al. as in GrowthBook) */
+  /** Frequentist only: always-valid confidence sequence (Waudby-Smith et al.) */
   readonly sequential: boolean;
   /** N*: total sample (both arms) where the sequence is tightest */
   readonly sequentialTuning: number;

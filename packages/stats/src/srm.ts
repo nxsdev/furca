@@ -8,7 +8,7 @@ const MIN_UNITS_PER_VARIATION = 8;
 
 /**
  * Pearson χ² goodness-of-fit of observed units per variation against configured weights
- * (df = k − 1, gbstats `check_srm`). null when there is too little traffic to judge
+ * (df = k − 1). null when there is too little traffic to judge
  */
 export function srmPValue(observed: readonly number[], weights: readonly number[]): number | null {
   const total = observed.reduce((a, b) => a + b, 0);
