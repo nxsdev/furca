@@ -107,7 +107,7 @@ const furca = createClient({
   attributes: { id: user.id },
   onExposure: (e) => {
     gtag("event", "experiment_viewed", { experiment_id: e.experimentKey, variation_id: e.variationKey });
-    // analytics.track("Experiment Viewed", { experimentId: e.experimentKey, variationId: e.variationKey });
+    // analytics.track("Experiment Viewed", { experiment_id: e.experimentKey, variation_id: e.variationKey });
   },
 });
 ```

@@ -122,7 +122,7 @@
       "startFrom": "テンプレート",
       "ga4": "GA4 エクスポート",
       "generic": "汎用",
-      "help": "露出イベントごとに1行を返し（重複は除外しないでください。furca は時刻でフェーズを分けます）、<c>user_id</c> {{text}}、<c>timestamp</c> {{time}}、<c>experiment_key</c> {{text}}、<c>variation_key</c> {{text}} の列を含めてください。必要に応じて <c>@experiment_key</c>、<c>@start_ms</c>、<c>@end_ms</c>（エポックミリ秒）で絞り込めます（パーティションの絞り込みなど）。",
+      "help": "露出イベントごとに1行を返し（重複は除外しないでください。furca は時刻でフェーズを分けます）、<c>user_id</c> {{text}}、<c>timestamp</c> {{time}}、<c>experiment_id</c> {{text}}、<c>variation_id</c> {{text}} の列を含めてください。必要に応じて <c>@experiment_id</c>、<c>@start_ms</c>、<c>@end_ms</c>（エポックミリ秒）で絞り込めます（パーティションの絞り込みなど）。",
       "templateInserted": "テンプレートを挿入しました",
       "templateInsertedDescription": "入力済みの SQL を置き換えました。",
       "undo": "元に戻す",

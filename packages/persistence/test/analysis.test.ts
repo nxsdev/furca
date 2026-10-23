@@ -195,7 +195,7 @@ describe("BigQuery moments SQL", () => {
       denominatorSql: "SELECT user_id, timestamp, 1 AS value FROM sessions",
     });
     expect(q.params).toEqual({
-      experiment_key: "checkout'; DROP TABLE x; --",
+      experiment_id: "checkout'; DROP TABLE x; --",
       start_ms: START,
       end_ms: END,
       delay_ms: H,
@@ -220,7 +220,7 @@ describe("BigQuery moments SQL", () => {
       numeratorSql: "SELECT 1",
       denominatorSql: null,
     });
-    expect(q.params).toEqual({ experiment_key: "checkout", start_ms: START, end_ms: END, delay_ms: 0, lookback_ms: LOOKBACK_MS });
+    expect(q.params).toEqual({ experiment_id: "checkout", start_ms: START, end_ms: END, delay_ms: 0, lookback_ms: LOOKBACK_MS });
     expect(q.sql).not.toContain("@window_ms");
     expect(q.sql).not.toContain("least(");
     expect(q.sql).toContain("CASE WHEN COALESCE(pr.c, 0) > 0 THEN 1 ELSE 0 END AS x0");
@@ -446,7 +446,7 @@ describe("ExperimentAnalysisService.refresh with BigQuery", () => {
     const [counts, moments] = fake.requests as Array<{ body: { query: string; queryParameters: Array<{ name: string; parameterValue: { value: string } }> } }>;
     expect(counts!.body.query).toContain("furca_exposure_source AS (\nSELECT * FROM exposures\n)");
     expect(moments!.body.query).toContain("furca_numerator_source AS (\nSELECT user_id, timestamp, 1 AS value FROM orders\n)");
-    expect(moments!.body.queryParameters.find((p) => p.name === "experiment_key")!.parameterValue.value).toBe("bq_exp");
+    expect(moments!.body.queryParameters.find((p) => p.name === "experiment_id")!.parameterValue.value).toBe("bq_exp");
   });
 
   it("stores the warehouse error message when BigQuery rejects the query", async () => {

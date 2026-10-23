@@ -227,7 +227,7 @@ FROM capped GROUP BY ${slice}variation, day`;
 // ---------------------------------------------------------------------------------------------
 // Warehouses (BigQuery, Snowflake, ClickHouse, Postgres): one builder, a small dialect per engine.
 // The data source's exposure SQL and the metric SQL are wrapped as CTEs. Parameters are written
-// `@name` and bound natively by each client; admin SQL may use @experiment_key, @start_ms and
+// `@name` and bound natively by each client; admin SQL may use @experiment_id, @start_ms and
 // @end_ms (epoch ms) too, e.g. for BigQuery wildcard-table pruning. Internal aliases never shadow a
 // column of the same name and NULL-extended join columns are read through COALESCE, so ClickHouse
 // needs no session settings (works for readonly users)
@@ -317,12 +317,12 @@ export const isWarehouseColumn = (name: string) => /^[A-Za-z_][A-Za-z0-9_]{0,299
 
 const warehouseUnits = (d: Dialect, exposureSql: string, dimension: string | null | undefined) => {
   if (dimension != null && !isWarehouseColumn(dimension)) throw new Error(`Invalid column name: ${dimension}`);
-  const units = `SELECT ${d.text("user_id")} AS unit_id, MIN(${d.text("variation_key")}) AS arm,
-    COUNT(DISTINCT ${d.text("variation_key")}) AS nv, MIN(timestamp) AS t0${
+  const units = `SELECT ${d.text("user_id")} AS unit_id, MIN(${d.text("variation_id")}) AS arm,
+    COUNT(DISTINCT ${d.text("variation_id")}) AS nv, MIN(timestamp) AS t0${
       dimension == null ? "" : `,\n    ${d.first(d.text(d.column(dimension)))} AS dim`
     }
   FROM furca_exposure_source
-  WHERE experiment_key = @experiment_key AND timestamp >= ${d.fromMs("@start_ms")} AND timestamp <= ${d.fromMs("@end_ms")}
+  WHERE experiment_id = @experiment_id AND timestamp >= ${d.fromMs("@start_ms")} AND timestamp <= ${d.fromMs("@end_ms")}
   GROUP BY 1`;
   return `furca_exposure_source AS (
 ${strip(exposureSql)}
@@ -334,7 +334,7 @@ ${
 }`;
 };
 
-const windowParams = (q: AnalysisWindow) => ({ experiment_key: q.experimentKey, start_ms: q.startMs, end_ms: q.endMs });
+const windowParams = (q: AnalysisWindow) => ({ experiment_id: q.experimentKey, start_ms: q.startMs, end_ms: q.endMs });
 
 export const warehouseExposureCountsSql = (type: WarehouseType, q: AnalysisWindow & { readonly exposureSql: string }): WarehouseQuery => ({
   sql: `WITH ${warehouseUnits(DIALECTS[type], q.exposureSql, q.dimension)}

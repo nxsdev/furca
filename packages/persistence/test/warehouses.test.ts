@@ -193,7 +193,7 @@ describe("warehouse SQL dialects", () => {
     expect(q.sql).toContain("furca_exposure_source AS (\nSELECT * FROM exposures\n)");
     expect(q.sql).toMatch(/SELECT slice, variation, .+ AS day, COUNT\(\*\) AS n,[\s\S]+MAX\(cap\) AS cap_value\nFROM furca_capped GROUP BY slice, variation, day$/);
     expect(q.params).toEqual({
-      experiment_key: "exp",
+      experiment_id: "exp",
       start_ms: START,
       end_ms: START + 10 * 24 * H,
       delay_ms: H,
@@ -368,9 +368,9 @@ describe("analysis parity across warehouses", () => {
 
     // Each warehouse got its own dialect, with parameters bound natively
     expect(bigquery.requests[0]!.body).toMatchObject({ parameterMode: "NAMED" });
-    expect(requests.snowflake![0]).toContain("experiment_key = ? AND timestamp >= TO_TIMESTAMP_LTZ(?, 3)");
-    expect(requests.clickhouse![0]).toContain("experiment_key = {experiment_key:String} AND timestamp >= fromUnixTimestamp64Milli({start_ms:Int64})");
-    expect(requests.postgres![0]).toContain("experiment_key = CAST($1 AS TEXT) AND timestamp >= to_timestamp(CAST($2 AS BIGINT) / 1000.0)");
+    expect(requests.snowflake![0]).toContain("experiment_id = ? AND timestamp >= TO_TIMESTAMP_LTZ(?, 3)");
+    expect(requests.clickhouse![0]).toContain("experiment_id = {experiment_id:String} AND timestamp >= fromUnixTimestamp64Milli({start_ms:Int64})");
+    expect(requests.postgres![0]).toContain("experiment_id = CAST($1 AS TEXT) AND timestamp >= to_timestamp(CAST($2 AS BIGINT) / 1000.0)");
     expect(requests.postgres![1]).toContain("(u.t0 - CAST($5 AS BIGINT) * INTERVAL '1 millisecond')");
   });
 });

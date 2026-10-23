@@ -123,7 +123,7 @@
       "startFrom": "Start from",
       "ga4": "GA4 export",
       "generic": "Generic",
-      "help": "One row per exposure event (don't de-duplicate; furca splits phases by time) with columns <c>user_id</c> {{text}}, <c>timestamp</c> {{time}}, <c>experiment_key</c> {{text}}, <c>variation_key</c> {{text}}. Optionally filter with <c>@experiment_key</c>, <c>@start_ms</c> and <c>@end_ms</c> (epoch ms), e.g. to prune partitions.",
+      "help": "One row per exposure event (don't de-duplicate; furca splits phases by time) with columns <c>user_id</c> {{text}}, <c>timestamp</c> {{time}}, <c>experiment_id</c> {{text}}, <c>variation_id</c> {{text}}. Optionally filter with <c>@experiment_id</c>, <c>@start_ms</c> and <c>@end_ms</c> (epoch ms), e.g. to prune partitions.",
       "templateInserted": "Template inserted",
       "templateInsertedDescription": "Your previous SQL was replaced.",
       "undo": "Undo",

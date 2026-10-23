@@ -127,13 +127,13 @@ export function CodeBlock({ code, label, className = "max-h-[440px]" }: { code: 
   );
 }
 
-/** GA4 params match the GA4 exposure SQL template on the data source page (experiment_key / variation_key) */
+/** GA4 params match the GA4 exposure SQL template on the data source page (experiment_id / variation_id, the GA4 and GrowthBook convention) */
 const ANALYTICS_SNIPPET = `const furca = createClient({
   // ...apiHost, sdkKey and attributes as above
   onExposure: (e) =>
     gtag("event", "experiment_viewed", {
-      experiment_key: e.experimentKey,
-      variation_key: e.variationKey,
+      experiment_id: e.experimentKey,
+      variation_id: e.variationKey,
     }),
 });`;
 

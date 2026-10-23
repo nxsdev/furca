@@ -69,7 +69,7 @@ export class DataSource extends Schema.Class<DataSource>("DataSource")({
   hasCredentials: Schema.Boolean,
   /**
    * Warehouse only. SQL returning one row per exposure with columns
-   * user_id, timestamp, experiment_key, variation_key
+   * user_id, timestamp, experiment_id, variation_id (same as a GrowthBook exposure query)
    */
   exposureSql: Schema.String,
   createdAt: Schema.Date,

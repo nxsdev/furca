@@ -97,8 +97,8 @@ describe("WarehouseTester", () => {
   });
 
   it("never fails: warehouse errors and missing credentials become ok=false with a message", async () => {
-    fake = fakeBigQuery([{ status: 400, body: { error: { message: "Unrecognized name: variation_key at [9:3]" } } }]);
-    expect(await test("bq")).toEqual({ ok: false, message: "BigQuery: Unrecognized name: variation_key at [9:3]", bytesProcessed: null });
+    fake = fakeBigQuery([{ status: 400, body: { error: { message: "Unrecognized name: variation_id at [9:3]" } } }]);
+    expect(await test("bq")).toEqual({ ok: false, message: "BigQuery: Unrecognized name: variation_id at [9:3]", bytesProcessed: null });
     expect(await test("bq_nokey")).toEqual({ ok: false, message: "Add a service account key JSON", bytesProcessed: null });
   });
 });

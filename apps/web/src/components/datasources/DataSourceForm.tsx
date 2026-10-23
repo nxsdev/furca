@@ -144,30 +144,30 @@ const exposureTemplate = (type: WarehouseType, t: Template, v: Values) => {
     }
   };
   if (t === "ga4")
-    return `-- GA4 export: exposures sent with gtag("event", "experiment_viewed", { experiment_key, variation_key })
+    return `-- GA4 export: exposures sent with gtag("event", "experiment_viewed", { experiment_id, variation_id })
 SELECT
   user_pseudo_id AS user_id,
   TIMESTAMP_MICROS(event_timestamp) AS timestamp,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'experiment_key') AS experiment_key,
-  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'variation_key') AS variation_key
+  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'experiment_id') AS experiment_id,
+  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'variation_id') AS variation_id
 FROM ${table("events_*")}
 WHERE event_name = 'experiment_viewed'
   AND _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', DATE(TIMESTAMP_MILLIS(@start_ms)))
                         AND FORMAT_DATE('%Y%m%d', DATE(TIMESTAMP_MILLIS(@end_ms)))`;
   if (t === "segment")
-    return `-- Segment: analytics.track("Experiment Viewed", { experimentId, variationId })
+    return `-- Segment: analytics.track("Experiment Viewed", { experiment_id, variation_id })
 SELECT
   COALESCE(user_id, anonymous_id) AS user_id,
   timestamp,
-  experiment_id AS experiment_key,
-  variation_id AS variation_key
+  experiment_id,
+  variation_id
 FROM ${table("experiment_viewed")}`;
   return `-- One row per exposure
 SELECT
   user_id,
   exposed_at AS timestamp,
-  experiment_key,
-  variation_key
+  experiment_id,
+  variation_id
 FROM ${table("exposures")}`;
 };
 
@@ -649,7 +649,7 @@ export function DataSourceForm({
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="off"
-                placeholder="SELECT user_id, timestamp, experiment_key, variation_key FROM …"
+                placeholder="SELECT user_id, timestamp, experiment_id, variation_id FROM …"
                 className="w-full resize-y font-mono text-[0.8125rem] leading-5"
               />
               <Description>
