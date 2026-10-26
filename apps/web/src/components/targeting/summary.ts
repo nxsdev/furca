@@ -28,7 +28,7 @@ export const isGroupOperator = (op: ConditionOperator) => op === "in_group" || o
 
 /** Group names seen by any mounted useConditionsSummary, so plain callers (e.g. simulate) can name groups too */
 const knownGroupNames = new Map<string, string>();
-const knownGroupName = (id: string) => knownGroupNames.get(id) ?? i18n.t("targeting:summary.unknownGroup");
+const knownGroupName = (id: string) => knownGroupNames.get(id) ?? i18n.t(($) => $.summary.unknownGroup, { ns: "targeting" });
 
 const listText = (values: ReadonlyArray<string>) =>
   values.length > 3 ? `${values.slice(0, 3).join(", ")} +${values.length - 3}` : values.join(", ");
@@ -38,21 +38,21 @@ const listText = (values: ReadonlyArray<string>) =>
  * Saved groups are shown by name (`groupName`, else names loaded by useConditionsSummary)
  */
 export function conditionsSummary(conditions: ReadonlyArray<ConditionValue>, groupName: (id: string) => string = knownGroupName): string {
-  if (conditions.length === 0) return i18n.t("targeting:summary.everyone");
+  if (conditions.length === 0) return i18n.t(($) => $.summary.everyone, { ns: "targeting" });
   return conditions
     .map(({ attribute, operator, values }) => {
       const value = isGroupOperator(operator)
         ? values[0] === undefined || values[0] === "" ? "" : groupName(values[0])
         : isListOperator(operator) ? listText(values) : (values[0] ?? "");
-      return i18n.t(`targeting:summary.${operator}`, { attribute: attribute === "" ? "…" : attribute, value: value === "" ? "…" : value });
+      return i18n.t(($) => $.summary[operator], { ns: "targeting", attribute: attribute === "" ? "…" : attribute, value: value === "" ? "…" : value });
     })
-    .join(i18n.t("targeting:summary.and"));
+    .join(i18n.t(($) => $.summary.and, { ns: "targeting" }));
 }
 
 /** conditionsSummary that re-renders with saved group names once they load */
 export function useConditionsSummary(): (conditions: ReadonlyArray<ConditionValue>) => string {
   const groups = useQuery(orpc.savedGroups.list.queryOptions());
   for (const g of groups.data ?? []) knownGroupNames.set(g.id, g.name);
-  const name = (id: string) => knownGroupNames.get(id) ?? (groups.isPending ? "…" : i18n.t("targeting:summary.unknownGroup"));
+  const name = (id: string) => knownGroupNames.get(id) ?? (groups.isPending ? "…" : i18n.t(($) => $.summary.unknownGroup, { ns: "targeting" }));
   return (conditions) => conditionsSummary(conditions, name);
 }

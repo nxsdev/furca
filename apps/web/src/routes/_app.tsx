@@ -36,9 +36,9 @@ function AppLayout() {
     if (isUnauthorized(me.error)) return <Navigate to="/login" />;
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-3 text-body">
-        <p>{t("session.loadFailed")}</p>
+        <p>{t(($) => $.session.loadFailed)}</p>
         <Button size="sm" variant="outline" onPress={() => me.refetch()}>
-          {t("common:actions.retry")}
+          {t(($) => $.actions.retry, { ns: "common" })}
         </Button>
       </div>
     );
@@ -59,7 +59,7 @@ function AppLayout() {
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-(--z-sticky) flex h-14 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
-            <Button isIconOnly variant="ghost" size="sm" aria-label={t("nav.openNavigation")} onPress={() => setDrawerOpen(true)}>
+            <Button isIconOnly variant="ghost" size="sm" aria-label={t(($) => $.nav.openNavigation)} onPress={() => setDrawerOpen(true)}>
               <MenuIcon className="size-4" />
             </Button>
             <Logo />
@@ -71,7 +71,7 @@ function AppLayout() {
       </div>
       <Drawer.Backdrop isOpen={drawerOpen} onOpenChange={setDrawerOpen}>
         <Drawer.Content placement="left" className="w-72 p-0">
-          <Drawer.Dialog aria-label={t("nav.navigation")} className="h-full p-0">
+          <Drawer.Dialog aria-label={t(($) => $.nav.navigation)} className="h-full p-0">
             <Sidebar {...sidebarProps} onNavigate={() => setDrawerOpen(false)} />
           </Drawer.Dialog>
         </Drawer.Content>

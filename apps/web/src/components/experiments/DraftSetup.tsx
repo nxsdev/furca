@@ -91,7 +91,7 @@ export function DraftSetup({
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         formApi.reset(toValues(next));
         setOpen(null);
-        toast.success(i18n.t("experiments:detail.toast.saved"));
+        toast.success(i18n.t(($) => $.detail.toast.saved, { ns: "experiments" }));
       } catch (error) {
         setServerError(formApi, error);
       }
@@ -114,7 +114,7 @@ export function DraftSetup({
 
   // ---- Saved state: summaries and the checklist describe what Start would use
   const feature = featureOf(x.featureId);
-  const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? t("setup.deletedEnvironment");
+  const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? t(($) => $.setup.deletedEnvironment);
   const flagOffIn = x.environmentIds.filter((id) => feature !== undefined && feature.environments.find((c) => c.environmentId === id)?.enabled !== true).map(envName);
   const saved = toValues(x);
   const planDays = savedPlanDays(x);
@@ -148,7 +148,7 @@ export function DraftSetup({
   // ---- One sentence per section
   const variationSummary = (
     <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-      <code className="font-mono">{feature?.key ?? t("detail.flagFallback")}</code>
+      <code className="font-mono">{feature?.key ?? t(($) => $.detail.flagFallback)}</code>
       <span aria-hidden="true" className="text-muted">·</span>
       {x.variations.map((v, i) => (
         <span key={v.key} className="inline-flex items-baseline gap-1.5">
@@ -158,39 +158,39 @@ export function DraftSetup({
           {i < x.variations.length - 1 && <span aria-hidden="true" className="text-muted">·</span>}
         </span>
       ))}
-      <span className="text-muted">{saved.evenSplit ? t("draft.summary.even") : `(${x.weights.map(weightLabel).join(" / ")})`}</span>
+      <span className="text-muted">{saved.evenSplit ? t(($) => $.draft.summary.even) : `(${x.weights.map(weightLabel).join(" / ")})`}</span>
     </span>
   );
   const targetingSummary = [
-    x.conditions.length === 0 ? t("draft.summary.everyone") : conditionsSummary(x.conditions),
+    x.conditions.length === 0 ? t(($) => $.draft.summary.everyone) : conditionsSummary(x.conditions),
     formatPercent(x.coverage, 0),
     formatList(x.environmentIds.map(envName)) || "–",
   ].join(" · ");
-  const metricName = (id: string) => metricOf(id)?.name ?? t("setup.deletedMetric");
+  const metricName = (id: string) => metricOf(id)?.name ?? t(($) => $.setup.deletedMetric);
   const metricsSummary = [
-    x.primaryMetricId === null ? t("draft.summary.primaryMissing") : t("draft.summary.primary", { name: metricName(x.primaryMetricId) }),
-    x.guardrailMetricIds.length === 0 ? t("draft.summary.noGuardrails") : t("draft.summary.guardrails", { names: formatList(x.guardrailMetricIds.map(metricName)) }),
-    x.secondaryMetricIds.length === 0 ? null : t("draft.summary.secondary", { names: formatList(x.secondaryMetricIds.map(metricName)) }),
+    x.primaryMetricId === null ? t(($) => $.draft.summary.primaryMissing) : t(($) => $.draft.summary.primary, { name: metricName(x.primaryMetricId) }),
+    x.guardrailMetricIds.length === 0 ? t(($) => $.draft.summary.noGuardrails) : t(($) => $.draft.summary.guardrails, { names: formatList(x.guardrailMetricIds.map(metricName)) }),
+    x.secondaryMetricIds.length === 0 ? null : t(($) => $.draft.summary.secondary, { names: formatList(x.secondaryMetricIds.map(metricName)) }),
   ]
     .filter((p) => p !== null)
     .join(" · ");
   const planSummary =
     x.plan.sampleSizePerVariation === null
-      ? t("draft.summary.planUnset")
+      ? t(($) => $.draft.summary.planUnset)
       : [
-          t("draft.summary.mde", { mde: formatPercent(x.plan.mde) }),
-          t("draft.summary.perVariation", { n: formatCount(x.plan.sampleSizePerVariation) }),
-          planDays === null ? null : t("draft.summary.days", { count: planDays }),
+          t(($) => $.draft.summary.mde, { mde: formatPercent(x.plan.mde) }),
+          t(($) => $.draft.summary.perVariation, { n: formatCount(x.plan.sampleSizePerVariation) }),
+          planDays === null ? null : t(($) => $.draft.summary.days, { count: planDays }),
         ]
           .filter((p) => p !== null)
           .join(" · ");
   const namespaceName = (id: string) => namespacesQuery.data?.find((n) => n.namespace.id === id)?.namespace.name ?? "…";
   const statsSummary = (s: Experiment["stats"]) =>
     [
-      s.engine === "bayesian" ? t("form.stats.bayesian") : s.sequential ? t("form.stats.sequential") : t("form.stats.fixed"),
+      s.engine === "bayesian" ? t(($) => $.form.stats.bayesian) : s.sequential ? t(($) => $.form.stats.sequential) : t(($) => $.form.stats.fixed),
       `${Math.round((1 - s.alpha) * 100)}%`,
-      s.cuped ? t("form.stats.cupedOn") : t("form.stats.cupedOff"),
-      s.engine === "frequentist" ? (s.correction === "holm" ? t("draft.summary.holmOn") : t("draft.summary.holmOff")) : null,
+      s.cuped ? t(($) => $.form.stats.cupedOn) : t(($) => $.form.stats.cupedOff),
+      s.engine === "frequentist" ? (s.correction === "holm" ? t(($) => $.draft.summary.holmOn) : t(($) => $.draft.summary.holmOff)) : null,
     ]
       .filter((p) => p !== null)
       .join(" · ");
@@ -232,20 +232,20 @@ export function DraftSetup({
             {section(
               "hypothesis",
               {
-                title: t("draft.sections.hypothesis"),
-                summary: x.hypothesis.trim() === "" ? t("draft.summary.noHypothesis") : <span className="line-clamp-3 whitespace-pre-wrap">{x.hypothesis}</span>,
+                title: t(($) => $.draft.sections.hypothesis),
+                summary: x.hypothesis.trim() === "" ? t(($) => $.draft.summary.noHypothesis) : <span className="line-clamp-3 whitespace-pre-wrap">{x.hypothesis}</span>,
                 muted: x.hypothesis.trim() === "",
-                hint: x.hypothesis.trim() === "" ? t("draft.summary.hypothesisHint") : undefined,
+                hint: x.hypothesis.trim() === "" ? t(($) => $.draft.summary.hypothesisHint) : undefined,
               },
               () => (
                 <>
-                  <form.AppField name="name">{(field) => <field.TextField label={t("form.hypothesis.name")} className="sm:max-w-md" />}</form.AppField>
+                  <form.AppField name="name">{(field) => <field.TextField label={t(($) => $.form.hypothesis.name)} className="sm:max-w-md" />}</form.AppField>
                   <form.AppField name="hypothesis">
                     {(field) => (
                       <field.TextAreaField
-                        label={t("form.hypothesis.hypothesis")}
-                        description={t("form.hypothesis.hypothesisHelp")}
-                        placeholder={t("form.hypothesis.hypothesisPlaceholder")}
+                        label={t(($) => $.form.hypothesis.hypothesis)}
+                        description={t(($) => $.form.hypothesis.hypothesisHelp)}
+                        placeholder={t(($) => $.form.hypothesis.hypothesisPlaceholder)}
                         rows={4}
                       />
                     )}
@@ -253,7 +253,7 @@ export function DraftSetup({
                 </>
               ),
             )}
-            {section("variations", { title: t("draft.sections.variations"), summary: variationSummary }, () => (
+            {section("variations", { title: t(($) => $.draft.sections.variations), summary: variationSummary }, () => (
               <>
                 <form.AppField
                   name="featureId"
@@ -279,7 +279,7 @@ export function DraftSetup({
                 {editFeature !== undefined && (
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-label font-medium">{t("form.flag.variations")}</p>
+                      <p className="text-label font-medium">{t(($) => $.form.flag.variations)}</p>
                       <form.AppField
                         name="evenSplit"
                         listeners={{
@@ -296,7 +296,7 @@ export function DraftSetup({
                               <Switch.Control>
                                 <Switch.Thumb />
                               </Switch.Control>
-                              <span className="text-label">{t("form.flag.evenSplit")}</span>
+                              <span className="text-label">{t(($) => $.form.flag.evenSplit)}</span>
                             </Switch.Content>
                           </Switch>
                         )}
@@ -311,13 +311,13 @@ export function DraftSetup({
                                 <div className="flex items-center justify-between gap-2">
                                   <p className="flex items-center gap-2 text-label font-medium">
                                     <VariationSwatch index={i} />
-                                    {i === 0 ? t("draft.variations.control") : t("form.flag.variationN", { n: i + 1 })}
+                                    {i === 0 ? t(($) => $.draft.variations.control) : t(($) => $.form.flag.variationN, { n: i + 1 })}
                                   </p>
                                   <Button
                                     isIconOnly
                                     size="sm"
                                     variant="ghost"
-                                    aria-label={t("form.flag.remove", { name: v.name || t("form.flag.variationN", { n: i + 1 }) })}
+                                    aria-label={t(($) => $.form.flag.remove, { name: v.name || t(($) => $.form.flag.variationN, { n: i + 1 }) })}
                                     isDisabled={i === 0 || d.variations.length <= 2}
                                     onPress={() => variationsField.removeValue(i)}
                                     className="text-muted"
@@ -329,7 +329,7 @@ export function DraftSetup({
                                   <form.AppField name={`variations[${i}].name`}>
                                     {(field) => (
                                       <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                                        <Label>{t("draft.variations.name")}</Label>
+                                        <Label>{t(($) => $.draft.variations.name)}</Label>
                                         <Input />
                                       </TextField>
                                     )}
@@ -340,7 +340,7 @@ export function DraftSetup({
                                       const error = errorText(field.state.meta.errors);
                                       return (
                                         <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} isInvalid={error !== ""}>
-                                          <Label>{t("draft.variations.key")}</Label>
+                                          <Label>{t(($) => $.draft.variations.key)}</Label>
                                           <Input className="font-mono" spellCheck={false} />
                                           <FieldError>{error}</FieldError>
                                         </TextField>
@@ -357,7 +357,7 @@ export function DraftSetup({
                                         maxValue={100}
                                         step={0.1}
                                       >
-                                        <Label>{t("draft.variations.weight")}</Label>
+                                        <Label>{t(($) => $.draft.variations.weight)}</Label>
                                         <NumberField.Group className="grid-cols-[1fr_auto]">
                                           <NumberField.Input className="text-right tabular" />
                                           <span className="pr-3 text-label text-muted">%</span>
@@ -373,14 +373,14 @@ export function DraftSetup({
                                         valueType={editFeature.valueType}
                                         value={field.state.value}
                                         onChange={field.handleChange}
-                                        label={i === 0 ? t("form.flag.valueBaseline") : t("form.flag.value")}
+                                        label={i === 0 ? t(($) => $.form.flag.valueBaseline) : t(($) => $.form.flag.value)}
                                       />
                                     )}
                                   </form.AppField>
                                   {i > 0 && v.value === d.variations[0]?.value && (
                                     <p className="mt-1 flex items-center gap-1.5 text-meta text-foreground">
                                       <AlertTriangle className="size-3.5 shrink-0 text-health" aria-hidden="true" />
-                                      {t("form.flag.sameValue", { name: d.variations[0]?.name || t("form.flag.controlFallback") })}
+                                      {t(($) => $.form.flag.sameValue, { name: d.variations[0]?.name || t(($) => $.form.flag.controlFallback) })}
                                     </p>
                                   )}
                                 </div>
@@ -395,7 +395,7 @@ export function DraftSetup({
                                 const n = d.variations.length;
                                 variationsField.pushValue({
                                   key: `treatment-${n}`,
-                                  name: t("form.defaults.treatmentN", { n }),
+                                  name: t(($) => $.form.defaults.treatmentN, { n }),
                                   value: d.variations[n - 1]?.value ?? defaultValueFor(editFeature.valueType),
                                   // Even split ignores it; switching even split off spreads the percentages again
                                   percent: 0,
@@ -404,13 +404,13 @@ export function DraftSetup({
                               isDisabled={d.variations.length >= MAX_VARIATIONS}
                             >
                               <Plus className="size-4" />
-                              {t("form.flag.add")}
+                              {t(($) => $.form.flag.add)}
                             </Button>
                             <p
                               className={`font-mono text-label tabular ${Math.abs(totalPercent(d) - 100) < 0.01 ? "text-muted" : "text-danger"}`}
                               aria-live="polite"
                             >
-                              {t(Math.abs(totalPercent(d) - 100) < 0.01 ? "form.flag.total" : "form.flag.totalInvalid", { percent: Number(totalPercent(d).toFixed(2)) })}
+                              {t(($) => (Math.abs(totalPercent(d) - 100) < 0.01 ? $.form.flag.total : $.form.flag.totalInvalid), { percent: Number(totalPercent(d).toFixed(2)) })}
                             </p>
                           </div>
                         </>
@@ -420,12 +420,12 @@ export function DraftSetup({
                 )}
               </>
             ))}
-            {section("targeting", { title: t("draft.sections.targeting"), summary: targetingSummary }, () => (
+            {section("targeting", { title: t(($) => $.draft.sections.targeting), summary: targetingSummary }, () => (
               <>
                 <form.AppField name="conditions">
                   {(field) => (
                     <div className="flex flex-col gap-2">
-                      <p className="text-label font-medium">{t("form.traffic.whoCanEnter")}</p>
+                      <p className="text-label font-medium">{t(($) => $.form.traffic.whoCanEnter)}</p>
                       <ConditionBuilder value={field.state.value} onChange={field.handleChange} />
                       {/* Format problems show inline in the builder; missing parts are reported once a save was tried */}
                       {attempted && field.state.meta.errors.length > 0 && <p className="text-meta text-danger">{errorText(field.state.meta.errors)}</p>}
@@ -433,7 +433,7 @@ export function DraftSetup({
                   )}
                 </form.AppField>
                 <form.AppField name="coverage">
-                  {(field) => <CoverageField value={field.state.value} onChange={field.handleChange} description={t("form.traffic.coverageHelp")} />}
+                  {(field) => <CoverageField value={field.state.value} onChange={field.handleChange} description={t(($) => $.form.traffic.coverageHelp)} />}
                 </form.AppField>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <form.AppField
@@ -449,7 +449,7 @@ export function DraftSetup({
                       const error = shownError(field.state.meta);
                       return (
                         <CheckboxGroup value={[...field.state.value]} onChange={field.handleChange} isInvalid={error !== null}>
-                          <Label>{t("form.traffic.environments")}</Label>
+                          <Label>{t(($) => $.form.traffic.environments)}</Label>
                           {environments.map((e) => (
                             <Checkbox key={e.id} value={e.id}>
                               <Checkbox.Content>
@@ -460,7 +460,7 @@ export function DraftSetup({
                               </Checkbox.Content>
                             </Checkbox>
                           ))}
-                          <Description>{t("form.traffic.environmentsHelp")}</Description>
+                          <Description>{t(($) => $.form.traffic.environmentsHelp)}</Description>
                           <FieldError>{error}</FieldError>
                         </CheckboxGroup>
                       );
@@ -470,8 +470,8 @@ export function DraftSetup({
                     <form.AppField name="analysisEnvironmentId">
                       {(field) => (
                         <field.SelectField
-                          label={t("form.traffic.analyzeFrom")}
-                          description={t("form.traffic.analyzeHelp")}
+                          label={t(($) => $.form.traffic.analyzeFrom)}
+                          description={t(($) => $.form.traffic.analyzeHelp)}
                           isDisabled={d.environmentIds.length === 0}
                           options={environments.filter((e) => d.environmentIds.includes(e.id)).map((e) => ({ id: e.id, label: e.name, textValue: e.name }))}
                         />
@@ -483,11 +483,11 @@ export function DraftSetup({
                         return (
                           <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} isInvalid={error !== null} isRequired>
                             <div className="flex items-center gap-0.5">
-                              <Label>{t("form.traffic.assignBy")}</Label>
-                              <HelpTip term={t("form.traffic.assignBy")}>{t("draft.help.hashAttribute")}</HelpTip>
+                              <Label>{t(($) => $.form.traffic.assignBy)}</Label>
+                              <HelpTip term={t(($) => $.form.traffic.assignBy)}>{t(($) => $.draft.help.hashAttribute)}</HelpTip>
                             </div>
                             <Input className="font-mono" spellCheck={false} />
-                            <Description>{t("form.traffic.assignByHelp")}</Description>
+                            <Description>{t(($) => $.form.traffic.assignByHelp)}</Description>
                             <FieldError>{error}</FieldError>
                           </TextField>
                         );
@@ -499,15 +499,15 @@ export function DraftSetup({
             ))}
             {section(
               "metrics",
-              { title: t("draft.sections.metrics"), help: t("draft.help.metrics"), summary: metricsSummary, hint: x.guardrailMetricIds.length === 0 ? t("draft.summary.guardrailsHint") : undefined },
+              { title: t(($) => $.draft.sections.metrics), help: t(($) => $.draft.help.metrics), summary: metricsSummary, hint: x.guardrailMetricIds.length === 0 ? t(($) => $.draft.summary.guardrailsHint) : undefined },
               () => (
                 <>
                   <form.AppField name="primaryMetricId">
                     {(field) => (
                       <MetricPicker
-                        label={t("form.metrics.primary")}
-                        description={t("form.metrics.primaryHelp")}
-                        help={t("draft.help.primary")}
+                        label={t(($) => $.form.metrics.primary)}
+                        description={t(($) => $.form.metrics.primaryHelp)}
+                        help={t(($) => $.draft.help.primary)}
                         value={field.state.value}
                         onChange={field.handleChange}
                         metrics={metrics}
@@ -518,9 +518,9 @@ export function DraftSetup({
                   <form.AppField name="guardrailMetricIds">
                     {(field) => (
                       <MetricListPicker
-                        label={t("form.metrics.guardrails")}
-                        description={t("form.metrics.guardrailsHelp")}
-                        help={t("draft.help.guardrail")}
+                        label={t(($) => $.form.metrics.guardrails)}
+                        description={t(($) => $.form.metrics.guardrailsHelp)}
+                        help={t(($) => $.draft.help.guardrail)}
                         value={field.state.value}
                         onChange={field.handleChange}
                         options={sameSource.filter((m) => m.id !== d.primaryMetricId && !d.secondaryMetricIds.includes(m.id))}
@@ -532,8 +532,8 @@ export function DraftSetup({
                   <form.AppField name="secondaryMetricIds">
                     {(field) => (
                       <MetricListPicker
-                        label={t("form.metrics.secondary")}
-                        description={t("form.metrics.secondaryHelp")}
+                        label={t(($) => $.form.metrics.secondary)}
+                        description={t(($) => $.form.metrics.secondaryHelp)}
                         value={field.state.value}
                         onChange={field.handleChange}
                         options={sameSource.filter((m) => m.id !== d.primaryMetricId && !d.guardrailMetricIds.includes(m.id))}
@@ -548,11 +548,11 @@ export function DraftSetup({
             {section(
               "plan",
               {
-                title: t("draft.sections.plan"),
-                help: t("draft.help.plan"),
+                title: t(($) => $.draft.sections.plan),
+                help: t(($) => $.draft.help.plan),
                 summary: planSummary,
                 muted: x.plan.sampleSizePerVariation === null,
-                hint: x.plan.sampleSizePerVariation === null ? t("draft.summary.planHint") : undefined,
+                hint: x.plan.sampleSizePerVariation === null ? t(($) => $.draft.summary.planHint) : undefined,
               },
               () => (
                 <>
@@ -561,23 +561,23 @@ export function DraftSetup({
                       <form.AppField name="baselineRate">
                         {(field) => (
                           <PlanNumber
-                            label={t("form.plan.baselineRate")}
+                            label={t(($) => $.form.plan.baselineRate)}
                             value={field.state.value}
                             onChange={field.handleChange}
                             suffix="%"
                             step={0.1}
-                            description={primary === undefined ? t("form.plan.baselineRateHelp") : t("form.plan.baselineRateOf", { metric: primary.name })}
+                            description={primary === undefined ? t(($) => $.form.plan.baselineRateHelp) : t(($) => $.form.plan.baselineRateOf, { metric: primary.name })}
                           />
                         )}
                       </form.AppField>
                     ) : (
                       <>
                         <form.AppField name="baselineMean">
-                          {(field) => <PlanNumber label={t("form.plan.baselineMean")} value={field.state.value} onChange={field.handleChange} step={0.1} />}
+                          {(field) => <PlanNumber label={t(($) => $.form.plan.baselineMean)} value={field.state.value} onChange={field.handleChange} step={0.1} />}
                         </form.AppField>
                         <form.AppField name="baselineStdDev">
                           {(field) => (
-                            <PlanNumber label={t("form.plan.stdDev")} value={field.state.value} onChange={field.handleChange} step={0.1} description={t("form.plan.stdDevHelp")} />
+                            <PlanNumber label={t(($) => $.form.plan.stdDev)} value={field.state.value} onChange={field.handleChange} step={0.1} description={t(($) => $.form.plan.stdDevHelp)} />
                           )}
                         </form.AppField>
                       </>
@@ -585,39 +585,39 @@ export function DraftSetup({
                     <form.AppField name="dailyTraffic">
                       {(field) => (
                         <PlanNumber
-                          label={t("form.plan.dailyUsers")}
+                          label={t(($) => $.form.plan.dailyUsers)}
                           value={field.state.value}
                           onChange={field.handleChange}
-                          suffix={t("form.plan.perDay")}
-                          description={t("form.plan.dailyUsersHelp")}
+                          suffix={t(($) => $.form.plan.perDay)}
+                          description={t(($) => $.form.plan.dailyUsersHelp)}
                         />
                       )}
                     </form.AppField>
                     <form.AppField name="mdePercent">
                       {(field) => (
                         <PlanNumber
-                          label={t("form.plan.mde")}
+                          label={t(($) => $.form.plan.mde)}
                           value={field.state.value}
                           onChange={field.handleChange}
-                          suffix={t("form.plan.relative")}
+                          suffix={t(($) => $.form.plan.relative)}
                           step={0.5}
-                          description={t("form.plan.mdeHelp")}
+                          description={t(($) => $.form.plan.mdeHelp)}
                         />
                       )}
                     </form.AppField>
                   </PowerPlanner>
                   <p className="text-meta text-muted" aria-live="polite">
                     {primary === undefined
-                      ? t("draft.plan.noPrimary")
+                      ? t(($) => $.draft.plan.noPrimary)
                       : !measurable
                         ? primary.dataSourceId === BUILTIN_DATA_SOURCE_ID
-                          ? t("draft.plan.ratio")
-                          : t("draft.plan.warehouse")
+                          ? t(($) => $.draft.plan.ratio)
+                          : t(($) => $.draft.plan.warehouse)
                         : baseline.isPending
-                          ? t("draft.plan.loading")
+                          ? t(($) => $.draft.plan.loading)
                           : baseline.data == null
-                            ? t("draft.plan.noData", { environment: envName(d.analysisEnvironmentId) })
-                            : t("draft.plan.fromData", {
+                            ? t(($) => $.draft.plan.noData, { environment: envName(d.analysisEnvironmentId) })
+                            : t(($) => $.draft.plan.fromData, {
                                 count: baseline.data.days,
                                 environment: envName(d.analysisEnvironmentId),
                                 users: formatCount(baseline.data.users),
@@ -631,17 +631,17 @@ export function DraftSetup({
 
         <Panel>
           <div className="border-b border-border px-5 py-3">
-            <h2 className="text-label font-medium">{t("draft.sections.advanced")}</h2>
-            <p className="text-meta text-muted">{t("draft.sections.advancedDescription")}</p>
+            <h2 className="text-label font-medium">{t(($) => $.draft.sections.advanced)}</h2>
+            <p className="text-meta text-muted">{t(($) => $.draft.sections.advancedDescription)}</p>
           </div>
           <ul className="divide-y divide-border">
             {section(
               "breakdowns",
               {
-                title: t("draft.sections.breakdowns"),
-                summary: x.dimensions.length === 0 ? t("draft.summary.breakdownsDefault") : <span className="font-mono">{formatList(x.dimensions)}</span>,
+                title: t(($) => $.draft.sections.breakdowns),
+                summary: x.dimensions.length === 0 ? t(($) => $.draft.summary.breakdownsDefault) : <span className="font-mono">{formatList(x.dimensions)}</span>,
                 muted: x.dimensions.length === 0,
-                hint: t("draft.summary.breakdownsHint"),
+                hint: t(($) => $.draft.summary.breakdownsHint),
               },
               () => (
                 <form.AppField name="dimensions">
@@ -660,14 +660,14 @@ export function DraftSetup({
             {section(
               "namespace",
               {
-                title: t("draft.sections.namespace"),
-                help: t("draft.help.namespace"),
+                title: t(($) => $.draft.sections.namespace),
+                help: t(($) => $.draft.help.namespace),
                 summary:
                   x.namespace === null
-                    ? t("draft.summary.namespaceDefault")
+                    ? t(($) => $.draft.summary.namespaceDefault)
                     : `${namespaceName(x.namespace.namespaceId)} · ${formatPercent(x.namespace.start, 0)}–${formatPercent(x.namespace.end, 0)}`,
                 muted: x.namespace === null,
-                hint: t("draft.summary.namespaceHint"),
+                hint: t(($) => $.draft.summary.namespaceHint),
               },
               () => (
                 <form.AppField name="namespace">
@@ -678,10 +678,10 @@ export function DraftSetup({
             {section(
               "stats",
               {
-                title: t("draft.sections.stats"),
-                summary: statsAreDefault ? t("draft.summary.statsDefault", { settings: statsSummary(x.stats) }) : statsSummary(x.stats),
+                title: t(($) => $.draft.sections.stats),
+                summary: statsAreDefault ? t(($) => $.draft.summary.statsDefault, { settings: statsSummary(x.stats) }) : statsSummary(x.stats),
                 muted: statsAreDefault,
-                hint: t("draft.summary.statsHint"),
+                hint: t(($) => $.draft.summary.statsHint),
               },
               () => <form.AppField name="stats">{(field) => <StatsFields stats={field.state.value} onChange={field.handleChange} />}</form.AppField>,
             )}
@@ -740,7 +740,7 @@ function Section({
               {title}
             </h3>
             {help !== undefined && <HelpTip term={title}>{help}</HelpTip>}
-            {attention && !isOpen && <AlertTriangle className="ml-1 size-3.5 shrink-0 text-health" aria-label={t("draft.needsAttention")} />}
+            {attention && !isOpen && <AlertTriangle className="ml-1 size-3.5 shrink-0 text-health" aria-label={t(($) => $.draft.needsAttention)} />}
           </div>
           {!isOpen && (
             <div className="mt-1 min-w-0 flex-1 sm:mt-0">
@@ -750,8 +750,8 @@ function Section({
           )}
         </div>
         {canEdit && !isOpen && (
-          <Button size="sm" variant="outline" onPress={onOpen} isDisabled={isLocked} aria-label={t("draft.changeSection", { section: title })} className="shrink-0">
-            {t("common:actions.change")}
+          <Button size="sm" variant="outline" onPress={onOpen} isDisabled={isLocked} aria-label={t(($) => $.draft.changeSection, { section: title })} className="shrink-0">
+            {t(($) => $.actions.change, { ns: "common" })}
           </Button>
         )}
       </div>
@@ -761,10 +761,10 @@ function Section({
           {footer}
           <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Button size="sm" variant="ghost" onPress={onCancel} isDisabled={isSubmitting}>
-              {t("common:actions.cancel")}
+              {t(($) => $.actions.cancel, { ns: "common" })}
             </Button>
             <Button type="submit" size="sm" isPending={isSubmitting}>
-              {t("common:actions.save")}
+              {t(($) => $.actions.save, { ns: "common" })}
             </Button>
           </div>
         </div>
@@ -800,30 +800,30 @@ function Checklist({ checks, onOpen }: { checks: ReturnType<typeof startChecks>;
     <aside aria-labelledby="draft-checklist" className="flex flex-col gap-4 rounded-[10px] border border-border bg-surface p-5 lg:sticky lg:top-8">
       <div>
         <h2 id="draft-checklist" className="text-label font-medium">
-          {t("draft.checks.title")}
+          {t(($) => $.draft.checks.title)}
         </h2>
         {checks.blockers.length === 0 ? (
           <p className="mt-2 flex items-center gap-2 text-label">
             <Check className="size-3.5 shrink-0 text-win" aria-hidden="true" />
-            {t("draft.checks.ready")}
+            {t(($) => $.draft.checks.ready)}
           </p>
         ) : (
           <>
-            <p className="mt-1 text-meta text-muted">{t("draft.checks.blocked")}</p>
+            <p className="mt-1 text-meta text-muted">{t(($) => $.draft.checks.blocked)}</p>
             <ul className="mt-2 flex flex-col gap-1.5">
               {checks.blockers.map((c) =>
-                item(c.id, c.section, <Circle className="mt-0.5 size-3.5 shrink-0 text-danger" aria-label={t("form.checks.required")} />, c.message),
+                item(c.id, c.section, <Circle className="mt-0.5 size-3.5 shrink-0 text-danger" aria-label={t(($) => $.form.checks.required)} />, c.message),
               )}
             </ul>
           </>
         )}
       </div>
       <div className="border-t border-border pt-4">
-        <h3 className="text-label font-medium">{t("draft.checks.adviceTitle")}</h3>
+        <h3 className="text-label font-medium">{t(($) => $.draft.checks.adviceTitle)}</h3>
         {checks.advice.length === 0 ? (
           <p className="mt-2 flex items-center gap-2 text-label text-muted">
             <Check className="size-3.5 shrink-0 text-win" aria-hidden="true" />
-            {t("draft.checks.adviceDone")}
+            {t(($) => $.draft.checks.adviceDone)}
           </p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1.5">
@@ -832,9 +832,9 @@ function Checklist({ checks, onOpen }: { checks: ReturnType<typeof startChecks>;
                 c.id,
                 c.section,
                 warn.has(c.id) ? (
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-health" aria-label={t("draft.needsAttention")} />
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-health" aria-label={t(($) => $.draft.needsAttention)} />
                 ) : (
-                  <Circle className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label={t("form.checks.recommended")} />
+                  <Circle className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label={t(($) => $.form.checks.recommended)} />
                 ),
                 c.message,
               ),
@@ -867,16 +867,16 @@ function Breakdowns({
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
         <p id="breakdowns-label" className="text-label font-medium">
-          {t("form.breakdowns.title")}
+          {t(($) => $.form.breakdowns.title)}
         </p>
         <span className="font-mono text-meta text-muted tabular">
           {value.length} / {MAX_DIMENSIONS}
         </span>
       </div>
-      <TagInput aria-label={t("form.breakdowns.title")} values={value} onChange={(next) => onChange(next.slice(0, MAX_DIMENSIONS))} className="font-mono" />
+      <TagInput aria-label={t(($) => $.form.breakdowns.title)} values={value} onChange={(next) => onChange(next.slice(0, MAX_DIMENSIONS))} className="font-mono" />
       {suggested.length > 0 && !full && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-meta text-muted">{t("form.breakdowns.suggested")}</span>
+          <span className="text-meta text-muted">{t(($) => $.form.breakdowns.suggested)}</span>
           {suggested.map((a) => (
             <Button key={a} size="sm" variant="outline" className="h-6 px-2 font-mono text-meta" onPress={() => onChange([...value, a])}>
               <Plus className="size-3" aria-hidden="true" />
@@ -886,8 +886,8 @@ function Breakdowns({
         </div>
       )}
       <p className="text-meta text-muted">
-        {t("form.breakdowns.description")}
-        {warehouse && ` ${t("form.breakdowns.warehouse")}`}
+        {t(($) => $.form.breakdowns.description)}
+        {warehouse && ` ${t(($) => $.form.breakdowns.warehouse)}`}
       </p>
     </div>
   );
@@ -937,7 +937,7 @@ function PowerPlanner({
   const option = (mde: number | null, weeks: 2 | 4) =>
     mde === null ? null : (
       <Button size="sm" variant="outline" onPress={() => onUseMde(Number((mde * 100).toFixed(1)))}>
-        {t("draft.plan.useMde", { mde: formatPercent(mde), weeks })}
+        {t(($) => $.draft.plan.useMde, { mde: formatPercent(mde), weeks })}
       </Button>
     );
   return (
@@ -946,28 +946,28 @@ function PowerPlanner({
         <div className="grid content-start gap-4 sm:grid-cols-2">{children}</div>
         <div className="flex flex-col gap-3 rounded-lg bg-surface-secondary p-4" aria-live="polite">
           <div>
-            <p className="text-meta text-muted">{t("form.plan.usersPerVariation")}</p>
+            <p className="text-meta text-muted">{t(($) => $.form.plan.usersPerVariation)}</p>
             <p className="text-figure font-semibold tracking-tight tabular">{plan.perVariation === null ? "–" : formatCount(plan.perVariation)}</p>
-            {plan.total !== null && <p className="text-meta text-muted">{t("form.plan.acrossVariations", { total: formatCount(plan.total), n: variations })}</p>}
+            {plan.total !== null && <p className="text-meta text-muted">{t(($) => $.form.plan.acrossVariations, { total: formatCount(plan.total), n: variations })}</p>}
           </div>
           <div>
-            <p className="text-meta text-muted">{t("form.plan.duration")}</p>
+            <p className="text-meta text-muted">{t(($) => $.form.plan.duration)}</p>
             <p className={`text-section font-medium tabular ${long ? "text-health" : ""}`}>
-              {plan.days === null ? "–" : t("form.plan.days", { count: plan.days, days: formatCount(plan.days) })}
+              {plan.days === null ? "–" : t(($) => $.form.plan.days, { count: plan.days, days: formatCount(plan.days) })}
             </p>
-            {plan.days !== null && plan.days < 7 && <p className="text-meta text-muted">{t("form.plan.minWeek")}</p>}
+            {plan.days !== null && plan.days < 7 && <p className="text-meta text-muted">{t(($) => $.form.plan.minWeek)}</p>}
           </div>
           {plan.mdeIn14 !== null && !long && (
             <p className="border-t border-border pt-3 text-meta text-muted">
               <Trans
                 t={t}
-                i18nKey="form.plan.in14Days"
+                i18nKey={($) => $.form.plan.in14Days}
                 values={{ mde: formatPercent(plan.mdeIn14) }}
                 components={{ value: <span className="font-mono text-foreground tabular" /> }}
               />
             </p>
           )}
-          <p className="text-meta text-muted">{plan.perVariation === null ? t("form.plan.fillIn") : t("form.plan.assumptions")}</p>
+          <p className="text-meta text-muted">{plan.perVariation === null ? t(($) => $.form.plan.fillIn) : t(($) => $.form.plan.assumptions)}</p>
         </div>
       </div>
       {long && (
@@ -975,8 +975,8 @@ function PowerPlanner({
           <p className="flex items-start gap-2 text-label">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-health" aria-hidden="true" />
             <span>
-              <span className="block font-medium">{t("draft.plan.long", { count: plan.days ?? 0 })}</span>
-              {plan.mdeIn14 !== null || plan.mdeIn28 !== null ? t("draft.plan.longSuggest") : t("draft.plan.longNoSuggest")}
+              <span className="block font-medium">{t(($) => $.draft.plan.long, { count: plan.days ?? 0 })}</span>
+              {plan.mdeIn14 !== null || plan.mdeIn28 !== null ? t(($) => $.draft.plan.longSuggest) : t(($) => $.draft.plan.longNoSuggest)}
             </span>
           </p>
           {(plan.mdeIn14 !== null || plan.mdeIn28 !== null) && (
@@ -1009,32 +1009,32 @@ function StatsFields({ stats, onChange }: { stats: Experiment["stats"]; onChange
   return (
     <>
       <Segmented
-        label={t("form.stats.engine")}
+        label={t(($) => $.form.stats.engine)}
         value={stats.engine}
         onChange={(engine) => patch({ engine })}
         tilesClassName="sm:grid-cols-2"
         options={[
-          { value: "frequentist", label: t("form.stats.frequentist"), description: t("form.stats.frequentistHelp") },
-          { value: "bayesian", label: t("form.stats.bayesian"), description: t("form.stats.bayesianHelp") },
+          { value: "frequentist", label: t(($) => $.form.stats.frequentist), description: t(($) => $.form.stats.frequentistHelp) },
+          { value: "bayesian", label: t(($) => $.form.stats.bayesian), description: t(($) => $.form.stats.bayesianHelp) },
         ]}
       />
       {toggle(
-        t("form.stats.sequentialTesting"),
-        frequentist ? t("form.stats.sequentialHelp") : t("form.stats.frequentistOnly"),
+        t(($) => $.form.stats.sequentialTesting),
+        frequentist ? t(($) => $.form.stats.sequentialHelp) : t(($) => $.form.stats.frequentistOnly),
         stats.sequential,
         (sequential) => patch({ sequential }),
         !frequentist,
       )}
-      {toggle(t("form.stats.cuped"), t("form.stats.cupedHelp"), stats.cuped, (cuped) => patch({ cuped }))}
+      {toggle(t(($) => $.form.stats.cuped), t(($) => $.form.stats.cupedHelp), stats.cuped, (cuped) => patch({ cuped }))}
       {toggle(
-        t("form.stats.holm"),
-        frequentist ? t("form.stats.holmHelp") : t("form.stats.frequentistOnly"),
+        t(($) => $.form.stats.holm),
+        frequentist ? t(($) => $.form.stats.holmHelp) : t(($) => $.form.stats.frequentistOnly),
         stats.correction === "holm",
         (on) => patch({ correction: on ? "holm" : "none" }),
         !frequentist,
       )}
       <Segmented
-        label={t("form.stats.confidence")}
+        label={t(($) => $.form.stats.confidence)}
         value={String(stats.alpha) as "0.01" | "0.05" | "0.1"}
         onChange={(a) => patch({ alpha: Number(a) })}
         options={[
@@ -1042,7 +1042,7 @@ function StatsFields({ stats, onChange }: { stats: Experiment["stats"]; onChange
           { value: "0.05", label: "95%" },
           { value: "0.01", label: "99%" },
         ]}
-        description={t("form.stats.confidenceHelp")}
+        description={t(($) => $.form.stats.confidenceHelp)}
       />
     </>
   );

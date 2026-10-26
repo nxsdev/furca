@@ -11,7 +11,7 @@ export function HelpTip({ term, children }: { term: string; children: ReactNode 
   const { t } = useTranslation();
   return (
     <Popover>
-      <Button isIconOnly size="sm" variant="ghost" aria-label={t("help.about", { term })} className="size-6 min-w-6 rounded-full text-muted">
+      <Button isIconOnly size="sm" variant="ghost" aria-label={t(($) => $.help.about, { term })} className="size-6 min-w-6 rounded-full text-muted">
         <CircleHelp className="size-3.5" />
       </Button>
       <Popover.Content placement="top" className="max-w-[min(20rem,calc(100vw-32px))]">

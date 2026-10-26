@@ -64,18 +64,18 @@ ${usage(feature, "    ")}
   return (
     <Panel>
       <PanelHeader
-        title={t("implementation.title")}
+        title={t(($) => $.implementation.title)}
         description={
           <Trans
             t={t}
-            i18nKey="implementation.description"
+            i18nKey={($) => $.implementation.description}
             components={{ code: <code className="rounded-[4px] bg-default px-1 font-mono text-meta" /> }}
           />
         }
         actions={
           environments.length > 1 && (
             <Segmented
-              aria-label={t("implementation.environment")}
+              aria-label={t(($) => $.implementation.environment)}
               value={env?.id ?? ""}
               onChange={setEnvId}
               options={environments.map((e) => ({ id: e.id, label: e.name }))}
@@ -84,9 +84,9 @@ ${usage(feature, "    ")}
         }
       />
       <div className="flex flex-col gap-4 p-4 sm:p-5">
-        <CodeBlock title={t("implementation.browser")} code={browser} />
+        <CodeBlock title={t(($) => $.implementation.browser)} code={browser} />
         <CodeBlock title="Cloudflare Worker" code={worker} />
-        <p className="text-meta text-muted">{t("implementation.sdkKeyNote")}</p>
+        <p className="text-meta text-muted">{t(($) => $.implementation.sdkKeyNote)}</p>
       </div>
     </Panel>
   );

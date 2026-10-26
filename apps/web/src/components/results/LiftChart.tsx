@@ -23,7 +23,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
   const { t } = useTranslation("results");
   const { t: tc } = useTranslation("charts");
   const treatments = experiment.variations.map((v, index) => ({ ...v, index })).slice(1);
-  const control = experiment.variations[0]?.name ?? t("table.controlFallback");
+  const control = experiment.variations[0]?.name ?? t(($) => $.table.controlFallback);
 
   const definition = useMemo(() => {
     const rows = result.timeseries.flatMap((p) =>
@@ -84,7 +84,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
             title:
               first === undefined
                 ? ""
-                : tc("lift.tooltipTitle", { count: first.users, date: shortDate(first.day), users: formatCount(first.users) }),
+                : tc(($) => $.lift.tooltipTitle, { count: first.users, date: shortDate(first.day), users: formatCount(first.users) }),
             rows: points.map((p) => ({
               label: p.datum.name,
               value: `${p.datum.lift === null ? "–" : formatLift(p.datum.lift)}  ${p.datum.low === null || p.datum.high === null ? "" : formatCi([p.datum.low, p.datum.high])}`,
@@ -99,7 +99,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
   if (result.timeseries.length < 2) {
     return (
       <p className="px-5 py-10 text-center text-body text-muted">
-        {t("chart.tooFewDays")}
+        {t(($) => $.chart.tooFewDays)}
       </p>
     );
   }
@@ -107,7 +107,7 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
   return (
     <div className="flex flex-col gap-3 px-2 pt-4 pb-2 sm:px-4">
       {treatments.length > 1 && (
-        <ul className="flex flex-wrap gap-x-4 gap-y-1 px-3 text-meta text-muted" aria-label={t("chart.legend")}>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 px-3 text-meta text-muted" aria-label={t(($) => $.chart.legend)}>
           {treatments.map((t) => (
             <li key={t.key} className="inline-flex items-center gap-1.5">
               <VariationSwatch index={t.index} />
@@ -120,20 +120,20 @@ export function LiftChart({ experiment, result }: { experiment: Experiment; resu
         definition={definition}
         height={256}
         initialWidth={720}
-        ariaLabel={tc("lift.label")}
-        ariaDescription={`${tc("lift.description", { control })} ${tc("keyboardHint")}`}
+        ariaLabel={tc(($) => $.lift.label)}
+        ariaDescription={`${tc(($) => $.lift.description, { control })} ${tc(($) => $.keyboardHint)}`}
         className={chartHostClass}
       />
       <details className="group px-3 pb-2 text-meta">
         <summary className="cursor-pointer select-none text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus">
-          {t("chart.showTable")}
+          {t(($) => $.chart.showTable)}
         </summary>
         <div className="mt-2 max-h-64 overflow-auto">
           <table className="w-full font-mono tabular">
             <thead className="text-muted">
               <tr className="[&>th]:py-1 [&>th]:pr-4 [&>th]:text-left [&>th]:font-normal">
-                <th scope="col" className="font-sans">{t("chart.firstExposure")}</th>
-                <th scope="col" className="font-sans">{t("chart.users")}</th>
+                <th scope="col" className="font-sans">{t(($) => $.chart.firstExposure)}</th>
+                <th scope="col" className="font-sans">{t(($) => $.chart.users)}</th>
                 {treatments.map((t) => (
                   <th key={t.key} scope="col" className="font-sans">
                     {t.name}

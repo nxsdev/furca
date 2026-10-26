@@ -33,11 +33,14 @@ const errorData = (error: unknown): { readonly code: string; readonly params: Pa
 export const errorField = (error: unknown): string | undefined => errorData(error)?.field;
 
 /** errors:<code> in the current language; a `reason` param is itself a code (`Rule 2: Expected a number`) */
-const translate = (code: string, { reason, ...params }: Params): string =>
-  i18n.t(`errors:${code}` as "errors:common.unexpected", {
+const translate = (code: string, { reason, ...params }: Params): string => {
+  const key = `errors:${code}`;
+  if (!i18n.exists(key)) return code;
+  return i18n.t(key, {
     ...params,
     ...(typeof reason === "string" ? { reason: translate(reason, params) } : {}),
   });
+};
 
 /**
  * A message safe to show in the UI for any thrown API / network error: coded server errors in the
@@ -46,8 +49,8 @@ const translate = (code: string, { reason, ...params }: Params): string =>
 export const errorMessage = (error: unknown): string => {
   const data = errorData(error);
   if (data !== undefined && i18n.exists(`errors:${data.code}`)) return translate(data.code, data.params);
-  if (error instanceof ORPCError) return error.message || i18n.t("common:errors.requestFailed");
-  if (error instanceof TypeError) return i18n.t("common:errors.network");
+  if (error instanceof ORPCError) return error.message || i18n.t(($) => $.errors.requestFailed, { ns: "common" });
+  if (error instanceof TypeError) return i18n.t(($) => $.errors.network, { ns: "common" });
   return error instanceof Error ? error.message : String(error);
 };
 

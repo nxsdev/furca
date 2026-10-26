@@ -84,11 +84,11 @@ function NavLink({ item, onNavigate, badge = 0 }: { item: NavItem; onNavigate?: 
       }`}
     >
       <Icon className={`size-4 shrink-0 ${active ? "text-foreground" : "text-muted group-hover:text-foreground"}`} />
-      {t(`nav.${item.label}`)}
+      {t(($) => $.nav[item.label])}
       {badge > 0 && (
         <span className="ml-auto rounded-full bg-default px-1.5 font-mono text-meta leading-[18px] tabular text-foreground">
           {badge}
-          <span className="sr-only"> {t("nav.openReviews", { count: badge })}</span>
+          <span className="sr-only"> {t(($) => $.nav.openReviews, { count: badge })}</span>
         </span>
       )}
     </Link>
@@ -101,7 +101,7 @@ function EnvironmentSwitcher() {
   if (current === null) return <div className="h-9" />;
   return (
     <Select
-      aria-label={t("environment.label")}
+      aria-label={t(($) => $.environment.label)}
       value={current.id}
       onChange={(id) => typeof id === "string" && select(id)}
       className="w-full"
@@ -141,12 +141,12 @@ function UserMenu({ me, onSignOut }: { me: Member; onSignOut: () => void }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-label font-medium">{me.name || me.email}</span>
-          <span className="block truncate text-meta text-muted">{t(`account.roles.${me.role}`)}</span>
+          <span className="block truncate text-meta text-muted">{t(($) => $.account.roles[me.role])}</span>
         </span>
       </Dropdown.Trigger>
       <Dropdown.Popover placement="top start" className="min-w-56">
         <Dropdown.Menu
-          aria-label={t("account.menu")}
+          aria-label={t(($) => $.account.menu)}
           onAction={(key) => {
             if (key === "signout") onSignOut();
             else if (key === "lang:en" || key === "lang:ja") setLocale(key === "lang:ja" ? "ja" : "en");
@@ -154,22 +154,22 @@ function UserMenu({ me, onSignOut }: { me: Member; onSignOut: () => void }) {
           }}
         >
           <Dropdown.Section>
-            <Dropdown.Item id="light" textValue={t("account.lightTheme")}>
+            <Dropdown.Item id="light" textValue={t(($) => $.account.lightTheme)}>
               <Sun className="size-4" />
-              <Label>{t("account.light")}{theme === "light" ? " ✓" : ""}</Label>
+              <Label>{t(($) => $.account.light)}{theme === "light" ? " ✓" : ""}</Label>
             </Dropdown.Item>
-            <Dropdown.Item id="dark" textValue={t("account.darkTheme")}>
+            <Dropdown.Item id="dark" textValue={t(($) => $.account.darkTheme)}>
               <Moon className="size-4" />
-              <Label>{t("account.dark")}{theme === "dark" ? " ✓" : ""}</Label>
+              <Label>{t(($) => $.account.dark)}{theme === "dark" ? " ✓" : ""}</Label>
             </Dropdown.Item>
-            <Dropdown.Item id="system" textValue={t("account.systemTheme")}>
+            <Dropdown.Item id="system" textValue={t(($) => $.account.systemTheme)}>
               <Monitor className="size-4" />
-              <Label>{t("account.system")}{theme === "system" ? " ✓" : ""}</Label>
+              <Label>{t(($) => $.account.system)}{theme === "system" ? " ✓" : ""}</Label>
             </Dropdown.Item>
           </Dropdown.Section>
           <Separator />
           {/* Language names are always shown in their own language */}
-          <Dropdown.Section aria-label={t("account.language")}>
+          <Dropdown.Section aria-label={t(($) => $.account.language)}>
             <Dropdown.Item id="lang:en" textValue="English">
               <Languages className="size-4" />
               <Label>English{locale === "en" ? " ✓" : ""}</Label>
@@ -180,9 +180,9 @@ function UserMenu({ me, onSignOut }: { me: Member; onSignOut: () => void }) {
             </Dropdown.Item>
           </Dropdown.Section>
           <Separator />
-          <Dropdown.Item id="signout" textValue={t("account.signOut")}>
+          <Dropdown.Item id="signout" textValue={t(($) => $.account.signOut)}>
             <LogOut className="size-4" />
-            <Label>{t("account.signOut")}</Label>
+            <Label>{t(($) => $.account.signOut)}</Label>
           </Dropdown.Item>
         </Dropdown.Menu>
       </Dropdown.Popover>
@@ -204,9 +204,9 @@ export function Sidebar({
   const { t } = useTranslation("shell");
   const reviews = useQuery({ ...orpc.changeRequests.list.queryOptions({ input: { status: "open" } }), staleTime: 30_000 });
   return (
-    <nav aria-label={t("nav.main")} className="flex h-full flex-col gap-4 bg-surface-secondary px-3 py-4">
+    <nav aria-label={t(($) => $.nav.main)} className="flex h-full flex-col gap-4 bg-surface-secondary px-3 py-4">
       <div className="px-1">
-        <Link to="/overview" onClick={onNavigate} aria-label={t("nav.home")} className="inline-flex rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus">
+        <Link to="/overview" onClick={onNavigate} aria-label={t(($) => $.nav.home)} className="inline-flex rounded-md outline-none focus-visible:ring-2 focus-visible:ring-focus">
           <Logo />
         </Link>
       </div>
@@ -217,7 +217,7 @@ export function Sidebar({
         className="flex h-8 items-center gap-2 rounded-md border border-border bg-surface px-2.5 text-label text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
       >
         <Search className="size-3.5" />
-        <span className="flex-1 text-left">{t("search.button")}</span>
+        <span className="flex-1 text-left">{t(($) => $.search.button)}</span>
         <Kbd className="text-meta">
           <Kbd.Abbr keyValue="command" />
           <Kbd.Content>K</Kbd.Content>

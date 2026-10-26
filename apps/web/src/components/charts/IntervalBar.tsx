@@ -96,7 +96,7 @@ export function IntervalBar({
       initialWidth={160}
       ariaLabel={label}
       ariaDescription={
-        lift === null || ci === null ? t("interval.empty") : t("interval.description", { lift: formatLift(lift), ci: formatCi(ci) })
+        lift === null || ci === null ? t(($) => $.interval.empty) : t(($) => $.interval.description, { lift: formatLift(lift), ci: formatCi(ci) })
       }
       className="text-muted"
     />

@@ -24,8 +24,8 @@ export function AllocationBar({
 }) {
   const { t } = useTranslation("namespaces");
   const pos = (s: Slice) => ({ left: `${s.start * 100}%`, width: `${(s.end - s.start) * 100}%` });
-  const describe = (a: Allocation) => `${a.experimentName} · ${t(`status.${a.status}`)} · ${rangeLabel(a)}`;
-  const summary = allocations.length === 0 ? t("bar.empty") : allocations.map(describe).join("; ");
+  const describe = (a: Allocation) => `${a.experimentName} · ${t(($) => $.status[a.status])} · ${rangeLabel(a)}`;
+  const summary = allocations.length === 0 ? t(($) => $.bar.empty) : allocations.map(describe).join("; ");
   return (
     <div className="flex flex-col gap-1">
       <div role="img" aria-label={summary} className="relative h-7 overflow-hidden rounded-md border border-border bg-default/40">

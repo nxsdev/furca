@@ -75,7 +75,7 @@ export function CreateExperimentForm({
           <div className="flex flex-col gap-2">
             <form.AppField
               name="name"
-              validators={{ onChange: ({ value }) => (value.trim() === "" ? t("form.hypothesis.nameError") : undefined) }}
+              validators={{ onChange: ({ value }) => (value.trim() === "" ? t(($) => $.form.hypothesis.nameError) : undefined) }}
               listeners={{
                 onChange: ({ value }) => {
                   // The key follows the name until the user edits it; Japanese names get "exp-" + a short hash
@@ -83,21 +83,21 @@ export function CreateExperimentForm({
                 },
               }}
             >
-              {(field) => <field.TextField label={t("create.name")} description={t("create.nameHelp")} />}
+              {(field) => <field.TextField label={t(($) => $.create.name)} description={t(($) => $.create.nameHelp)} />}
             </form.AppField>
             <form.AppField
               name="key"
               validators={{
                 // An empty name already has its own error; the key follows it
                 onChange: ({ value, fieldApi }) =>
-                  value === "" && fieldApi.form.getFieldValue("name").trim() === "" ? undefined : isKey(value) ? undefined : t("form.hypothesis.keyError"),
+                  value === "" && fieldApi.form.getFieldValue("name").trim() === "" ? undefined : isKey(value) ? undefined : t(($) => $.form.hypothesis.keyError),
               }}
             >
-              {(field) => <field.KeyField label={t("form.hypothesis.key")} description={t("form.hypothesis.keyHelp")} format={(v) => v.toLowerCase()} />}
+              {(field) => <field.KeyField label={t(($) => $.form.hypothesis.key)} description={t(($) => $.form.hypothesis.keyHelp)} format={(v) => v.toLowerCase()} />}
             </form.AppField>
           </div>
 
-          <form.AppField name="featureId" validators={{ onChange: ({ value }) => (value === null ? t("form.flag.error") : undefined) }}>
+          <form.AppField name="featureId" validators={{ onChange: ({ value }) => (value === null ? t(($) => $.form.flag.error) : undefined) }}>
             {(field) => (
               <div className="flex flex-col gap-2">
                 <FlagPicker
@@ -117,9 +117,9 @@ export function CreateExperimentForm({
           <form.AppField name="primaryMetricId">
             {(field) => (
               <MetricPicker
-                label={t("form.metrics.primary")}
-                description={t("create.primaryHelp")}
-                help={t("draft.help.primary")}
+                label={t(($) => $.form.metrics.primary)}
+                description={t(($) => $.create.primaryHelp)}
+                help={t(($) => $.draft.help.primary)}
                 value={field.state.value}
                 onChange={field.handleChange}
                 metrics={metrics}
@@ -129,13 +129,13 @@ export function CreateExperimentForm({
           </form.AppField>
         </div>
         <div className="flex flex-col-reverse gap-3 border-t border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-meta text-muted">{t("create.note")}</p>
+          <p className="text-meta text-muted">{t(($) => $.create.note)}</p>
           <div className="flex shrink-0 gap-2">
             <Button size="sm" variant="ghost" onPress={onCancel}>
-              {t("common:actions.cancel")}
+              {t(($) => $.actions.cancel, { ns: "common" })}
             </Button>
             <form.AppForm>
-              <form.SubmitButton size="sm" label={t("create.submit")} />
+              <form.SubmitButton size="sm" label={t(($) => $.create.submit)} />
             </form.AppForm>
           </div>
         </div>
@@ -158,7 +158,7 @@ function DefaultsPreview({ feature }: { feature: Feature }) {
     <p className="rounded-md bg-surface-secondary px-3 py-2 text-label text-muted">
       <Trans
         t={t}
-        i18nKey={feature.valueType === "boolean" ? "create.defaultsBoolean" : "create.defaultsOther"}
+        i18nKey={($) => (feature.valueType === "boolean" ? $.create.defaultsBoolean : $.create.defaultsOther)}
         values={{ control: control?.value ?? "", treatment: treatment?.value ?? "", environments: names }}
         components={{ code }}
       />
@@ -194,13 +194,13 @@ export function FlagPicker({
       isRequired
       className="sm:max-w-md"
     >
-      <Label>{t("form.flag.label")}</Label>
+      <Label>{t(($) => $.form.flag.label)}</Label>
       <ComboBox.InputGroup>
-        <Input className="font-mono placeholder:font-sans" placeholder={isPending ? t("form.flag.loading") : undefined} />
+        <Input className="font-mono placeholder:font-sans" placeholder={isPending ? t(($) => $.form.flag.loading) : undefined} />
         <ComboBox.Trigger />
       </ComboBox.InputGroup>
       <ComboBox.Popover>
-        <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t("form.flag.noMatch")}</p>}>
+        <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t(($) => $.form.flag.noMatch)}</p>}>
           {features.map((f) => (
             <ListBox.Item key={f.id} id={f.id} textValue={f.key}>
               <span className="flex-1 truncate font-mono text-label">{f.key}</span>
@@ -214,10 +214,10 @@ export function FlagPicker({
         <p className="text-meta text-danger">{loadError}</p>
       ) : features.length === 0 && !isPending ? (
         <Description>
-          <Trans t={t} i18nKey="form.flag.noFlags" components={{ link: <Link to="/flags" search={{ new: "1" }} className="text-link hover:underline" /> }} />
+          <Trans t={t} i18nKey={($) => $.form.flag.noFlags} components={{ link: <Link to="/flags" search={{ new: "1" }} className="text-link hover:underline" /> }} />
         </Description>
       ) : (
-        <Description>{t("form.flag.help")}</Description>
+        <Description>{t(($) => $.form.flag.help)}</Description>
       )}
       <FieldError>{error}</FieldError>
     </ComboBox>
@@ -237,12 +237,12 @@ const metricFilter = (metrics: ReadonlyArray<Metric>) => {
 function MetricItems({ metrics }: { metrics: ReadonlyArray<Metric> }) {
   const { t } = useTranslation("experiments");
   return (
-    <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t("form.metrics.noMatch")}</p>}>
+    <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t(($) => $.form.metrics.noMatch)}</p>}>
       {metrics.map((m) => (
         <ListBox.Item key={m.id} id={m.id} textValue={m.name} className="gap-3">
           <span className="min-w-0 flex-1 truncate">{m.name}</span>
           <span className="hidden max-w-40 truncate font-mono text-meta text-muted sm:inline">{m.key}</span>
-          <span className="shrink-0 text-meta text-muted">{t(`form.metrics.types.${m.type}`)}</span>
+          <span className="shrink-0 text-meta text-muted">{t(($) => $.form.metrics.types[m.type])}</span>
           <ListBox.ItemIndicator />
         </ListBox.Item>
       ))}
@@ -286,13 +286,13 @@ export function MetricPicker({
           <Label>{label}</Label>
         </LabelRow>
         <ComboBox.InputGroup>
-          <Input placeholder={isPending ? t("form.metrics.loading") : undefined} />
+          <Input placeholder={isPending ? t(($) => $.form.metrics.loading) : undefined} />
           <ComboBox.Trigger />
         </ComboBox.InputGroup>
         <ComboBox.Popover>
           <MetricItems metrics={metrics} />
         </ComboBox.Popover>
-        <Description>{metrics.length === 0 && !isPending ? t("form.metrics.noMetricsInline") : description}</Description>
+        <Description>{metrics.length === 0 && !isPending ? t(($) => $.form.metrics.noMetricsInline) : description}</Description>
       </ComboBox>
       {creating ? (
         <NewMetricInline
@@ -357,7 +357,7 @@ export function MetricListPicker({
           <Label>{label}</Label>
         </LabelRow>
         <ComboBox.InputGroup>
-          <Input placeholder={t("form.metrics.addPlaceholder")} />
+          <Input placeholder={t(($) => $.form.metrics.addPlaceholder)} />
           <ComboBox.Trigger />
         </ComboBox.InputGroup>
         <ComboBox.Popover>
@@ -369,7 +369,7 @@ export function MetricListPicker({
         <ul aria-label={label} className="flex flex-col divide-y divide-border rounded-md border border-border sm:max-w-md">
           {value.map((id) => {
             const m = all.find((x) => x.id === id);
-            const name = m?.name ?? t("setup.deletedMetric");
+            const name = m?.name ?? t(($) => $.setup.deletedMetric);
             return (
               <li key={id} className="flex items-center gap-3 py-1 pr-1 pl-3 text-label">
                 <span className="min-w-0 flex-1 truncate">{name}</span>
@@ -378,7 +378,7 @@ export function MetricListPicker({
                   isIconOnly
                   size="sm"
                   variant="ghost"
-                  aria-label={t("form.metrics.remove", { name })}
+                  aria-label={t(($) => $.form.metrics.remove, { name })}
                   onPress={() => onChange(value.filter((x) => x !== id))}
                   className="text-muted"
                 >
@@ -391,7 +391,7 @@ export function MetricListPicker({
       )}
       {!canCreate ? (
         <a href="/metrics?new=1" target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-1 text-label text-link hover:underline">
-          {t("form.metrics.newMetric")}
+          {t(($) => $.form.metrics.newMetric)}
           <ExternalLink className="size-3.5" aria-hidden="true" />
         </a>
       ) : creating ? (
@@ -415,7 +415,7 @@ function NewMetricButton({ onPress }: { onPress: () => void }) {
   return (
     <Button size="sm" variant="ghost" onPress={onPress} className="w-fit px-1.5 text-label">
       <Plus className="size-3.5" aria-hidden="true" />
-      {t("newMetric.open")}
+      {t(($) => $.newMetric.open)}
     </Button>
   );
 }
@@ -486,18 +486,18 @@ function NewMetricInline({ metrics, onCreated, onCancel }: { metrics: ReadonlyAr
     void form.handleSubmit();
   };
   return (
-    <div role="group" aria-label={t("newMetric.title")} onKeyDown={onKeyDown} className="flex flex-col gap-4 rounded-lg border border-border bg-surface-secondary p-4 sm:max-w-xl">
+    <div role="group" aria-label={t(($) => $.newMetric.title)} onKeyDown={onKeyDown} className="flex flex-col gap-4 rounded-lg border border-border bg-surface-secondary p-4 sm:max-w-xl">
       <div>
-        <p className="text-label font-medium">{t("newMetric.title")}</p>
-        <p className="text-meta text-muted">{t("newMetric.description")}</p>
+        <p className="text-label font-medium">{t(($) => $.newMetric.title)}</p>
+        <p className="text-meta text-muted">{t(($) => $.newMetric.description)}</p>
       </div>
       <form.AppField name="template" listeners={{ onChange: suggestName }}>
         {(field) => (
           <Segmented
-            label={t("metrics:form.templates.label")}
+            label={t(($) => $.form.templates.label, { ns: "metrics" })}
             value={field.state.value}
             onChange={field.handleChange}
-            options={TEMPLATES.map((x) => ({ value: x, label: t(`metrics:form.templates.${x}.label`), description: t(`metrics:form.templates.${x}.description`) }))}
+            options={TEMPLATES.map((x) => ({ value: x, label: t(($) => $.form.templates[x].label, { ns: "metrics" }), description: t(($) => $.form.templates[x].description, { ns: "metrics" }) }))}
           />
         )}
       </form.AppField>
@@ -514,13 +514,13 @@ function NewMetricInline({ metrics, onCreated, onCancel }: { metrics: ReadonlyAr
               isInvalid={error !== undefined}
               className="sm:max-w-sm"
             >
-              <Label>{t("newMetric.event")}</Label>
+              <Label>{t(($) => $.newMetric.event)}</Label>
               <ComboBox.InputGroup>
                 <Input spellCheck={false} autoComplete="off" className="font-mono" />
                 <ComboBox.Trigger />
               </ComboBox.InputGroup>
               <ComboBox.Popover>
-                <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t("newMetric.noEvents")}</p>}>
+                <ListBox renderEmptyState={() => <p className="px-3 py-4 text-label text-muted">{t(($) => $.newMetric.noEvents)}</p>}>
                   {(events.data ?? []).map((n) => (
                     <ListBox.Item key={n.name} id={n.name} textValue={n.name}>
                       <span className="font-mono text-label">{n.name}</span>
@@ -528,26 +528,26 @@ function NewMetricInline({ metrics, onCreated, onCancel }: { metrics: ReadonlyAr
                   ))}
                 </ListBox>
               </ComboBox.Popover>
-              <Description>{t(template === "lowerIsBetter" ? "newMetric.eventHelpValue" : template === "revenue" ? "newMetric.eventHelpSum" : "newMetric.eventHelp")}</Description>
+              <Description>{t(($) => (template === "lowerIsBetter" ? $.newMetric.eventHelpValue : template === "revenue" ? $.newMetric.eventHelpSum : $.newMetric.eventHelp))}</Description>
               <FieldError>{error}</FieldError>
             </ComboBox>
           );
         }}
       </form.AppField>
       <form.AppField name="name">
-        {(field) => <field.TextField label={t("newMetric.name")} description={t("newMetric.nameHelp")} className="sm:max-w-sm" />}
+        {(field) => <field.TextField label={t(($) => $.newMetric.name)} description={t(($) => $.newMetric.nameHelp)} className="sm:max-w-sm" />}
       </form.AppField>
       <form.AppForm>
         <form.FormError />
       </form.AppForm>
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onPress={onCancel}>
-          {t("common:actions.cancel")}
+          {t(($) => $.actions.cancel, { ns: "common" })}
         </Button>
         <form.Subscribe selector={(s) => s.isSubmitting}>
           {(isSubmitting) => (
             <Button size="sm" onPress={() => void form.handleSubmit()} isPending={isSubmitting}>
-              {t("newMetric.create")}
+              {t(($) => $.newMetric.create)}
             </Button>
           )}
         </form.Subscribe>

@@ -42,16 +42,16 @@ export const formatMetricValue = (type: MetricType, mean: number): string => {
 /** Unit after a per-variation value: "/user" for means, "/<denominator event>" for event ratios; rates already carry % */
 export const metricUnit = (metric: Metric | undefined): string => {
   if (metric === undefined || metric.type === "proportion") return "";
-  if (metric.type === "mean") return i18n.t("results:units.perUser");
+  if (metric.type === "mean") return i18n.t(($) => $.units.perUser, { ns: "results" });
   const denominator = metric.definition._tag === "event" ? metric.definition.denominator?.event : undefined;
-  return denominator === undefined ? "" : i18n.t("results:units.per", { unit: denominator });
+  return denominator === undefined ? "" : i18n.t(($) => $.units.per, { ns: "results", unit: denominator });
 };
 
 /** "3 days", "1 day", "<1 day" between two dates */
 export const formatDuration = (from: Date, to: Date): string => {
   const days = Math.floor((to.getTime() - from.getTime()) / 86_400_000);
-  if (days < 1) return i18n.t("results:duration.lessThanDay");
-  return i18n.t("results:duration.days", { count: days, days: formatCount(days) });
+  if (days < 1) return i18n.t(($) => $.duration.lessThanDay, { ns: "results" });
+  return i18n.t(($) => $.duration.days, { ns: "results", count: days, days: formatCount(days) });
 };
 
 /** Oct 13, 2026, 2:14 AM */

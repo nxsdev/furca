@@ -32,7 +32,7 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
   const refresh = useMutation(
     orpc.results.refresh.mutationOptions({
       onSuccess: (snapshot) => queryClient.setQueryData(latestOptions.queryKey, snapshot),
-      onError: (error) => toast.danger(i18n.t("results:view.refreshFailed"), { description: errorMessage(error) }),
+      onError: (error) => toast.danger(i18n.t(($) => $.view.refreshFailed, { ns: "results" }), { description: errorMessage(error) }),
     }),
   );
   // Viewers read the scheduled snapshots; re-running the analysis is an editor action
@@ -62,12 +62,12 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
       <div className="flex flex-col gap-4">
         {refreshBar}
         <div role="alert" className="rounded-[10px] border border-danger/30 bg-danger/5 px-5 py-4">
-          <p className="font-medium">{t("view.failedTitle")}</p>
-          <p className="mt-1 text-body text-muted">{snapshot.error ?? t("view.unknownError")}</p>
-          <p className="mt-2 text-label text-muted">{t("view.failedHelp")}</p>
+          <p className="font-medium">{t(($) => $.view.failedTitle)}</p>
+          <p className="mt-1 text-body text-muted">{snapshot.error ?? t(($) => $.view.unknownError)}</p>
+          <p className="mt-2 text-label text-muted">{t(($) => $.view.failedHelp)}</p>
           {onRefresh !== undefined && (
             <Button size="sm" variant="outline" className="mt-3" onPress={onRefresh} isPending={refresh.isPending}>
-              {t("view.tryAgain")}
+              {t(($) => $.view.tryAgain)}
             </Button>
           )}
         </div>
@@ -82,8 +82,8 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
       {snapshot.health !== null && <HealthStrip experiment={experiment} health={snapshot.health} />}
       <Panel>
         <PanelHeader
-          title={t("view.metricsTitle")}
-          description={t("view.metricsDescription", { control: experiment.variations[0]?.name ?? t("view.controlFallback") })}
+          title={t(($) => $.view.metricsTitle)}
+          description={t(($) => $.view.metricsDescription, { control: experiment.variations[0]?.name ?? t(($) => $.view.controlFallback) })}
         />
         {metricsQuery.isPending ? (
           <div className="p-5">
@@ -108,7 +108,7 @@ export function ResultsView({ experiment, feature }: { experiment: Experiment; f
 function ResultsSkeleton() {
   const { t } = useTranslation("results");
   return (
-    <div className="flex flex-col gap-4" aria-busy="true" aria-label={t("view.loading")}>
+    <div className="flex flex-col gap-4" aria-busy="true" aria-label={t(($) => $.view.loading)}>
       <Skeleton className="h-8 w-56 rounded-md" />
       <Skeleton className="h-32 rounded-[10px]" />
       <Skeleton className="h-12 rounded-[10px]" />
@@ -134,17 +134,17 @@ function RefreshBar({
     <div className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-label text-muted">
         {snapshot === null ? (
-          t("view.notAnalyzed")
+          t(($) => $.view.notAnalyzed)
         ) : (
-          <Trans t={t} i18nKey="view.updated" components={{ time: <RelativeTime date={snapshot.computedAt} /> }} />
+          <Trans t={t} i18nKey={($) => $.view.updated} components={{ time: <RelativeTime date={snapshot.computedAt} /> }} />
         )}
-        {phase > 1 && t("view.phaseOnly", { n: phase })}
-        {experiment.status === "stopped" && experiment.stoppedAt !== null && t("view.final")}
+        {phase > 1 && t(($) => $.view.phaseOnly, { n: phase })}
+        {experiment.status === "stopped" && experiment.stoppedAt !== null && t(($) => $.view.final)}
       </p>
       {onRefresh !== undefined && (experiment.status === "running" || snapshot === null) && (
         <Button size="sm" variant="outline" onPress={onRefresh} isPending={isPending}>
           <RefreshCw className={`size-3.5 ${isPending ? "animate-spin" : ""}`} aria-hidden="true" />
-          {isPending ? t("view.analyzing") : t("common:actions.refresh")}
+          {isPending ? t(($) => $.view.analyzing) : t(($) => $.actions.refresh, { ns: "common" })}
         </Button>
       )}
     </div>
@@ -155,18 +155,18 @@ const methodText = (experiment: Experiment, primaryComparisons: number, secondar
   const s = experiment.stats;
   // Mirrors the analysis: primary and secondary metrics are separate Holm families; guardrails are uncorrected
   const families = [
-    primaryComparisons > 1 ? i18n.t("results:method.primaryAcross", { n: primaryComparisons }) : null,
-    secondaryComparisons > 1 ? i18n.t("results:method.secondaryComparisons", { n: secondaryComparisons }) : null,
+    primaryComparisons > 1 ? i18n.t(($) => $.method.primaryAcross, { ns: "results", n: primaryComparisons }) : null,
+    secondaryComparisons > 1 ? i18n.t(($) => $.method.secondaryComparisons, { ns: "results", n: secondaryComparisons }) : null,
   ].filter((f) => f !== null);
   const parts =
     s.engine === "bayesian"
-      ? [i18n.t("results:method.bayesian")]
+      ? [i18n.t(($) => $.method.bayesian, { ns: "results" })]
       : [
-          s.sequential ? i18n.t("results:method.sequential") : i18n.t("results:method.fixed"),
+          s.sequential ? i18n.t(($) => $.method.sequential, { ns: "results" }) : i18n.t(($) => $.method.fixed, { ns: "results" }),
           `α = ${s.alpha}`,
-          s.correction === "holm" && families.length > 0 ? i18n.t("results:method.holm", { families: formatList(families) }) : null,
+          s.correction === "holm" && families.length > 0 ? i18n.t(($) => $.method.holm, { ns: "results", families: formatList(families) }) : null,
         ];
-  return [...parts, s.cuped ? i18n.t("results:method.cuped") : null].filter((p) => p !== null).join(" · ");
+  return [...parts, s.cuped ? i18n.t(($) => $.method.cuped, { ns: "results" }) : null].filter((p) => p !== null).join(" · ");
 };
 
 export function healthProblem(experiment: Experiment, health: ExperimentHealth): string {
@@ -176,11 +176,11 @@ export function healthProblem(experiment: Experiment, health: ExperimentHealth):
     const worst = health.srm.observed
       .map((o, i) => ({ i, o, e: ((health.srm.expectedWeights[i] ?? 0) / weightSum) * total }))
       .sort((a, b) => Math.abs(b.o - b.e) - Math.abs(a.o - a.e))[0];
-    if (worst === undefined) return i18n.t("results:health.srmGeneric");
-    const name = experiment.variations[worst.i]?.name ?? i18n.t("results:health.variationN", { n: worst.i });
-    return i18n.t("results:health.srmDetail", { name, observed: formatCount(worst.o), expected: formatCount(worst.e) });
+    if (worst === undefined) return i18n.t(($) => $.health.srmGeneric, { ns: "results" });
+    const name = experiment.variations[worst.i]?.name ?? i18n.t(($) => $.health.variationN, { ns: "results", n: worst.i });
+    return i18n.t(($) => $.health.srmDetail, { ns: "results", name, observed: formatCount(worst.o), expected: formatCount(worst.e) });
   }
-  return i18n.t("results:health.multipleShare", { percent: formatPercent(multipleShare(health)) });
+  return i18n.t(($) => $.health.multipleShare, { ns: "results", percent: formatPercent(multipleShare(health)) });
 }
 
 const multipleShare = (h: ExperimentHealth) =>
@@ -207,9 +207,9 @@ function VerdictBanner({
   const progress = progressOf(experiment, health?.totalUsers ?? 0, snapshot.computedAt, new Date());
   const finished = experiment.status === "stopped" || (progress.fraction ?? 0) >= 1;
   const { headline, guardrails } = verdictText(a, experiment, metrics, finished);
-  const metricName = (primary === undefined ? undefined : metrics.get(primary.metricId)?.name) ?? t("banner.primaryFallback");
+  const metricName = (primary === undefined ? undefined : metrics.get(primary.metricId)?.name) ?? t(($) => $.banner.primaryFallback);
   const level = `${Math.round((1 - experiment.stats.alpha) * 100)}%`;
-  const control = experiment.variations[0]?.name ?? t("banner.controlFallback");
+  const control = experiment.variations[0]?.name ?? t(($) => $.banner.controlFallback);
   const bayesian = experiment.stats.engine === "bayesian";
   // Under a day of data nothing is colored as a win or loss: it would invite an early call
   const early = progress.early && a.kind !== "unhealthy" && a.kind !== "noData";
@@ -239,22 +239,22 @@ function VerdictBanner({
     comparison === null
       ? null
       : bayesian && comparison.chanceToWin !== null
-        ? t("banner.chanceToBeat", { percent: formatPercent(comparison.chanceToWin), control })
+        ? t(($) => $.banner.chanceToBeat, { percent: formatPercent(comparison.chanceToWin), control })
         : a.kind === "winning" || a.kind === "losing"
-          ? t("banner.significant", { alpha: formatPercent(experiment.stats.alpha, 0) })
+          ? t(($) => $.banner.significant, { alpha: formatPercent(experiment.stats.alpha, 0) })
           : null;
   const detail =
     a.kind === "unhealthy" && health !== null
-      ? t("banner.untrustworthyDetail", { problem: healthProblem(experiment, health) })
+      ? t(($) => $.banner.untrustworthyDetail, { problem: healthProblem(experiment, health) })
       : a.kind === "noPrimary"
-        ? (primary?.error ?? t("banner.noPrimaryDetail"))
+        ? (primary?.error ?? t(($) => $.banner.noPrimaryDetail))
         : a.kind === "error"
           ? primary?.error
           : a.kind === "inconclusive"
-            ? (comparison?.message ?? t("banner.notEnoughDataDetail"))
+            ? (comparison?.message ?? t(($) => $.banner.notEnoughDataDetail))
             : a.kind === "neutral" && comparison !== null && comparison.lift !== null
               ? // The point estimate stays small and grey: it is not a result
-                [t("banner.estimate", { effect: effectText(comparison) }), evidence].filter(Boolean).join(" ")
+                [t(($) => $.banner.estimate, { effect: effectText(comparison) }), evidence].filter(Boolean).join(" ")
               : evidence;
   const toneClass = {
     win: "border-win/40 [&_.verdict-icon]:text-win",
@@ -264,7 +264,7 @@ function VerdictBanner({
   }[tone];
 
   return (
-    <section aria-label={t("banner.label")} className={`rounded-[10px] border bg-surface ${toneClass}`}>
+    <section aria-label={t(($) => $.banner.label)} className={`rounded-[10px] border bg-surface ${toneClass}`}>
       <div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 gap-3">
           <span className="verdict-icon mt-0.5 shrink-0">
@@ -272,12 +272,12 @@ function VerdictBanner({
           </span>
           <div className="min-w-0">
             <p className="text-meta text-muted">
-              {t("banner.primaryMetric")} · {metricName}
+              {t(($) => $.banner.primaryMetric)} · {metricName}
             </p>
             {early && (
               <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-meta font-medium">
                 <Hourglass className="size-3.5 text-muted" aria-hidden="true" />
-                {t("banner.early")}
+                {t(($) => $.banner.early)}
               </p>
             )}
             <h2 className="mt-1 text-section font-semibold text-balance [word-break:auto-phrase]">{headline}</h2>
@@ -289,17 +289,17 @@ function VerdictBanner({
               </p>
             )}
             {detail != null && detail !== "" && <p className="mt-1 text-label text-muted">{detail}</p>}
-            {early && <p className="mt-1 text-label text-muted">{t("banner.earlyDetail")}</p>}
+            {early && <p className="mt-1 text-label text-muted">{t(($) => $.banner.earlyDetail)}</p>}
           </div>
         </div>
         {health !== null && (
           <div className="shrink-0 sm:w-56 sm:text-right">
-            <p className="text-body font-medium tabular">{t("users", { count: health.totalUsers, users: formatCount(health.totalUsers) })}</p>
+            <p className="text-body font-medium tabular">{t(($) => $.users, { count: health.totalUsers, users: formatCount(health.totalUsers) })}</p>
             {progress.fraction !== null && (
               <div
                 className="mt-1.5 h-1 overflow-hidden rounded-full bg-default"
                 role="progressbar"
-                aria-label={t("banner.progressLabel")}
+                aria-label={t(($) => $.banner.progressLabel)}
                 aria-valuenow={Math.round(Math.min(progress.fraction, 1) * 100)}
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -315,7 +315,7 @@ function VerdictBanner({
                 search={{ tab: "setup" }}
                 className="text-meta text-focus hover:underline"
               >
-                {t("banner.noPlan")}
+                {t(($) => $.banner.noPlan)}
               </Link>
             )}
           </div>
@@ -330,13 +330,13 @@ function VerdictBanner({
               <li key={m.metricId} className="flex flex-wrap items-baseline gap-x-2">
                 <span className="inline-flex items-center gap-1 font-medium text-lose">
                   <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-                  {t("banner.guardrailRegressed")}
+                  {t(($) => $.banner.guardrailRegressed)}
                 </span>
                 <span>
-                  {metrics.get(m.metricId)?.name ?? t("banner.guardrailFallback")}{" "}
+                  {metrics.get(m.metricId)?.name ?? t(($) => $.banner.guardrailFallback)}{" "}
                   <span className="tabular">{worst?.lift == null ? "" : formatLift(worst.lift)}</span>
                   {ci !== null && <span className="tabular text-muted"> [{formatLift(ci[0])}, {formatLift(ci[1])}]</span>}
-                  <span className="text-muted">{t("banner.weigh")}</span>
+                  <span className="text-muted">{t(($) => $.banner.weigh)}</span>
                 </span>
               </li>
             );
@@ -346,14 +346,14 @@ function VerdictBanner({
       {/* Raw statistics for whoever wants to check the work; the verdict above never needs them */}
       <details className="group border-t border-border px-5 py-2 text-meta text-muted">
         <summary className="w-fit cursor-pointer select-none rounded-sm hover:text-foreground focus-visible:outline-2 focus-visible:outline-focus">
-          {t("banner.details")}
+          {t(($) => $.banner.details)}
         </summary>
         <p className="mt-1.5 tabular">
           {[
             comparison?.ci == null
               ? null
-              : t(bayesian ? "banner.ciBayesian" : "banner.ciFrequentist", { level, lo: formatLift(comparison.ci[0]), hi: formatLift(comparison.ci[1]) }),
-            comparison?.pValue == null ? null : t("banner.pValue", { p: formatPValue(comparison.pValue) }),
+              : t(($) => (bayesian ? $.banner.ciBayesian : $.banner.ciFrequentist), { level, lo: formatLift(comparison.ci[0]), hi: formatLift(comparison.ci[1]) }),
+            comparison?.pValue == null ? null : t(($) => $.banner.pValue, { p: formatPValue(comparison.pValue) }),
             methodText(experiment, primaryComparisons, secondaryComparisons),
           ]
             .filter((p) => p !== null)
@@ -392,35 +392,35 @@ function HealthStrip({ experiment, health }: { experiment: Experiment; health: E
   );
 
   return (
-    <section aria-label={t("health.label")} className={`rounded-[10px] border bg-surface ${srm.ok && health.multipleExposuresOk ? "border-border" : "border-health/60"}`}>
+    <section aria-label={t(($) => $.health.label)} className={`rounded-[10px] border bg-surface ${srm.ok && health.multipleExposuresOk ? "border-border" : "border-health/60"}`}>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
         {item(
           srm.pValue === null ? null : srm.ok,
-          srm.pValue === null ? t("health.sampleRatio") : srm.ok ? t("health.sampleRatioOk") : t("health.sampleRatioMismatch"),
-          srm.pValue === null ? t("health.sampleRatioPending") : pText(srm.pValue),
+          srm.pValue === null ? t(($) => $.health.sampleRatio) : srm.ok ? t(($) => $.health.sampleRatioOk) : t(($) => $.health.sampleRatioMismatch),
+          srm.pValue === null ? t(($) => $.health.sampleRatioPending) : pText(srm.pValue),
         )}
         {item(
           health.multipleExposuresOk,
-          health.multipleExposuresOk ? t("health.multipleExposures") : t("health.tooManyMultiple"),
-          t("health.excluded", { percent: formatPercent(share), users: formatCount(health.multipleExposureUsers) }),
+          health.multipleExposuresOk ? t(($) => $.health.multipleExposures) : t(($) => $.health.tooManyMultiple),
+          t(($) => $.health.excluded, { percent: formatPercent(share), users: formatCount(health.multipleExposureUsers) }),
         )}
         <Button size="sm" variant="ghost" className="ml-auto" onPress={() => setOpen(!open)} aria-expanded={open}>
-          {open ? t("health.hideDetails") : t("health.details")}
+          {open ? t(($) => $.health.hideDetails) : t(($) => $.health.details)}
         </Button>
       </div>
       {open && (
         <div className="grid gap-6 border-t border-border px-5 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div>
-            <h3 className="text-label font-medium">{t("health.usersPerVariation")}</h3>
-            <p className="mt-0.5 text-meta text-muted">{t("health.chiSquare")}</p>
+            <h3 className="text-label font-medium">{t(($) => $.health.usersPerVariation)}</h3>
+            <p className="mt-0.5 text-meta text-muted">{t(($) => $.health.chiSquare)}</p>
             <table className="mt-3 w-full text-label">
               <thead>
                 <tr className="text-meta text-muted [&>th]:pb-1.5 [&>th]:font-normal [&>th+th]:pl-3">
-                  <th scope="col" className="text-left">{t("health.columns.variation")}</th>
-                  <th scope="col" className="text-right">{t("health.columns.split")}</th>
-                  <th scope="col" className="text-right">{t("health.columns.expected")}</th>
-                  <th scope="col" className="text-right">{t("health.columns.observed")}</th>
-                  <th scope="col" className="text-right">{t("health.columns.diff")}</th>
+                  <th scope="col" className="text-left">{t(($) => $.health.columns.variation)}</th>
+                  <th scope="col" className="text-right">{t(($) => $.health.columns.split)}</th>
+                  <th scope="col" className="text-right">{t(($) => $.health.columns.expected)}</th>
+                  <th scope="col" className="text-right">{t(($) => $.health.columns.observed)}</th>
+                  <th scope="col" className="text-right">{t(($) => $.health.columns.diff)}</th>
                 </tr>
               </thead>
               <tbody className="font-mono tabular">
@@ -433,7 +433,7 @@ function HealthStrip({ experiment, health }: { experiment: Experiment; health: E
                       <td className="font-sans">
                         <span className="inline-flex items-center gap-2">
                           <VariationSwatch index={i} />
-                          {experiment.variations[i]?.name ?? t("health.variationN", { n: i })}
+                          {experiment.variations[i]?.name ?? t(($) => $.health.variationN, { n: i })}
                         </span>
                       </td>
                       <td className="text-right">{weightLabel(w)}</td>
@@ -447,13 +447,13 @@ function HealthStrip({ experiment, health }: { experiment: Experiment; health: E
             </table>
           </div>
           <div>
-            <h3 className="text-label font-medium">{srm.ok ? t("health.checkIfFails") : t("health.checkCauses")}</h3>
+            <h3 className="text-label font-medium">{srm.ok ? t(($) => $.health.checkIfFails) : t(($) => $.health.checkCauses)}</h3>
             <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4 text-label text-muted marker:text-border">
               {srmCauses.map((c) => (
-                <li key={c}>{t(`health.causes.${c}`)}</li>
+                <li key={c}>{t(($) => $.health.causes[c])}</li>
               ))}
             </ul>
-            <p className="mt-3 text-meta text-muted">{t("health.multipleNote")}</p>
+            <p className="mt-3 text-meta text-muted">{t(($) => $.health.multipleNote)}</p>
           </div>
         </div>
       )}
@@ -478,16 +478,16 @@ function TrendPanel({
   return (
     <Panel>
       <PanelHeader
-        title={t("trend.title")}
-        description={t("trend.description")}
+        title={t(($) => $.trend.title)}
+        description={t(($) => $.trend.description)}
         actions={
           <Select
-            aria-label={t("trend.metric")}
+            aria-label={t(($) => $.trend.metric)}
             value={result.metricId}
             onChange={(k) => typeof k === "string" && setSelected(k)}
             className="w-44 shrink-0 sm:w-56"
           >
-            <Label className="sr-only">{t("trend.metric")}</Label>
+            <Label className="sr-only">{t(($) => $.trend.metric)}</Label>
             <Select.Trigger className="h-8">
               <Select.Value className="truncate text-label" />
               <Select.Indicator />
@@ -549,16 +549,16 @@ ${event === null ? "" : `\n// Later, when the user converts\nfurca.track("${even
   return (
     <Panel>
       <PanelHeader
-        title={experiment.phases.length > 1 ? t("waiting.phaseNoExposures", { n: experiment.phases.length }) : t("waiting.title")}
-        description={t("waiting.description", { environment: env?.name ?? t("waiting.analysisEnvironment"), flag: flagKey })}
+        title={experiment.phases.length > 1 ? t(($) => $.waiting.phaseNoExposures, { n: experiment.phases.length }) : t(($) => $.waiting.title)}
+        description={t(($) => $.waiting.description, { environment: env?.name ?? t(($) => $.waiting.analysisEnvironment), flag: flagKey })}
       />
       <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <CodeBlock code={snippet} title={t("waiting.codeTitle")} />
+        <CodeBlock code={snippet} title={t(($) => $.waiting.codeTitle)} />
         <ol className="flex flex-col gap-4 text-label">
           {[
-            [t("waiting.steps.assigned.title"), t("waiting.steps.assigned.body", { attribute: experiment.hashAttribute })],
-            [t("waiting.steps.arrive.title"), t("waiting.steps.arrive.body")],
-            [t("waiting.steps.refresh.title"), t("waiting.steps.refresh.body")],
+            [t(($) => $.waiting.steps.assigned.title), t(($) => $.waiting.steps.assigned.body, { attribute: experiment.hashAttribute })],
+            [t(($) => $.waiting.steps.arrive.title), t(($) => $.waiting.steps.arrive.body)],
+            [t(($) => $.waiting.steps.refresh.title), t(($) => $.waiting.steps.refresh.body)],
           ].map(([title, body], i) => (
             <li key={title} className="flex gap-3">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border font-mono text-meta tabular">

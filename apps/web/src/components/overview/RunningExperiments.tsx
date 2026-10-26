@@ -38,18 +38,18 @@ function PrimaryStatus({ experiment }: { experiment: Experiment }) {
   if (latest.isPending) return <Skeleton className="h-4 w-28 rounded-md" />;
   if (latest.isError) return <span className="text-muted">—</span>;
   const snap = latest.data;
-  if (snap === null) return <Muted>{t("running.notAnalyzed")}</Muted>;
-  if (snap.status === "error") return <Muted icon={CircleAlert}>{t("running.analysisFailed")}</Muted>;
+  if (snap === null) return <Muted>{t(($) => $.running.notAnalyzed)}</Muted>;
+  if (snap.status === "error") return <Muted icon={CircleAlert}>{t(($) => $.running.analysisFailed)}</Muted>;
   if (!isHealthy(snap.health))
     return (
       <span className="inline-flex items-center gap-1 whitespace-nowrap text-label font-medium text-health">
         <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-        {snap.health?.srm.ok === false ? t("running.srm") : t("running.multipleExposures")}
+        {snap.health?.srm.ok === false ? t(($) => $.running.srm) : t(($) => $.running.multipleExposures)}
       </span>
     );
   const primary = snap.metrics.find((m) => m.role === "primary");
   const c = primary === undefined ? null : headlineComparison(primary);
-  if (c === null) return <Muted>{t("running.noPrimaryResult")}</Muted>;
+  if (c === null) return <Muted>{t(($) => $.running.noPrimaryResult)}</Muted>;
   return (
     <span className="inline-flex items-center gap-2">
       <VerdictLabel verdict={c.verdict} />
@@ -57,7 +57,7 @@ function PrimaryStatus({ experiment }: { experiment: Experiment }) {
       {regressedGuardrails(snap.metrics).length > 0 && (
         <span className="inline-flex items-center gap-1 whitespace-nowrap text-label text-lose">
           <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-          {t("running.guardrailRegressed")}
+          {t(($) => $.running.guardrailRegressed)}
         </span>
       )}
     </span>
@@ -71,27 +71,27 @@ export function RunningExperiments({ experiments }: { experiments: ReadonlyArray
   return (
     <Panel>
       <PanelHeader
-        title={t("running.title")}
-        description={t("running.description")}
+        title={t(($) => $.running.title)}
+        description={t(($) => $.running.description)}
         actions={
           <Link to="/experiments" className={`${linkCls} shrink-0`}>
-            {t("running.all")}
+            {t(($) => $.running.all)}
           </Link>
         }
       />
       {running.length === 0 ? (
         <p className="px-5 py-6 text-body text-muted">
-          <Trans t={t} i18nKey="running.empty" components={{ action: <Link to="/experiments/new" className={linkCls} /> }} />
+          <Trans t={t} i18nKey={($) => $.running.empty} components={{ action: <Link to="/experiments/new" className={linkCls} /> }} />
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className={tbl.table}>
             <thead>
               <tr>
-                <th className={tbl.th}>{t("running.experiment")}</th>
-                <th className={`${tbl.th} hidden sm:table-cell`}>{t("running.runningFor")}</th>
-                <th className={`${tbl.th} hidden text-right md:table-cell`}>{t("running.users")}</th>
-                <th className={tbl.th}>{t("running.primaryMetric")}</th>
+                <th className={tbl.th}>{t(($) => $.running.experiment)}</th>
+                <th className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.running.runningFor)}</th>
+                <th className={`${tbl.th} hidden text-right md:table-cell`}>{t(($) => $.running.users)}</th>
+                <th className={tbl.th}>{t(($) => $.running.primaryMetric)}</th>
               </tr>
             </thead>
             <tbody>
@@ -101,7 +101,7 @@ export function RunningExperiments({ experiments }: { experiments: ReadonlyArray
                     <Link to="/experiments/$experimentId" params={{ experimentId: x.id }} className={`${tbl.rowLink} block truncate`}>
                       {x.name}
                     </Link>
-                    {x.phases.length > 1 && <span className="block text-meta text-muted">{t("running.phase", { number: x.phases.length })}</span>}
+                    {x.phases.length > 1 && <span className="block text-meta text-muted">{t(($) => $.running.phase, { number: x.phases.length })}</span>}
                   </td>
                   <td className={`${tbl.td} hidden whitespace-nowrap tabular sm:table-cell`}>
                     {x.startedAt === null ? "—" : formatDuration(new Date(x.startedAt), now)}

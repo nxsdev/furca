@@ -62,8 +62,8 @@ export const variationsFor = (feature: Pick<Feature, "valueType" | "defaultValue
   const [control, treatment] =
     feature === undefined ? ["", ""] : feature.valueType === "boolean" ? ["false", "true"] : [feature.defaultValue, feature.defaultValue];
   return [
-    { key: "control", name: i18n.t("experiments:form.defaults.control"), value: control, percent: 50 },
-    { key: "treatment", name: i18n.t("experiments:form.defaults.treatment"), value: treatment, percent: 50 },
+    { key: "control", name: i18n.t(($) => $.form.defaults.control, { ns: "experiments" }), value: control, percent: 50 },
+    { key: "treatment", name: i18n.t(($) => $.form.defaults.treatment, { ns: "experiments" }), value: treatment, percent: 50 },
   ];
 };
 
@@ -235,27 +235,27 @@ const isKey = Schema.is(Key);
 export function draftIssues(v: ExperimentValues, ctx: { readonly isEdit: boolean; readonly valueType: FeatureValueType | undefined }): Array<Issue> {
   const issues: Array<Issue> = [];
   const add = (check: CheckId, field: string, message: string) => void issues.push({ check, field, message });
-  if (v.name.trim() === "") add("name", "name", i18n.t("experiments:form.hypothesis.nameError"));
-  if (!ctx.isEdit && !isKey(v.key)) add("key", "key", v.key === "" ? i18n.t("common:form.required") : i18n.t("experiments:form.hypothesis.keyError"));
+  if (v.name.trim() === "") add("name", "name", i18n.t(($) => $.form.hypothesis.nameError, { ns: "experiments" }));
+  if (!ctx.isEdit && !isKey(v.key)) add("key", "key", v.key === "" ? i18n.t(($) => $.form.required, { ns: "common" }) : i18n.t(($) => $.form.hypothesis.keyError, { ns: "experiments" }));
   if (ctx.valueType === undefined) {
-    add("flag", "featureId", i18n.t("experiments:form.flag.error"));
+    add("flag", "featureId", i18n.t(($) => $.form.flag.error, { ns: "experiments" }));
     // Values can only be checked against a flag's type
-    add("values", "featureId", i18n.t("experiments:form.flag.error"));
+    add("values", "featureId", i18n.t(($) => $.form.flag.error, { ns: "experiments" }));
   }
   v.variations.forEach((x, i) => {
     const valueError = ctx.valueType === undefined ? null : valueIssue(ctx.valueType, x.value);
     if (valueError !== null) add("values", `variations[${i}].value`, valueError);
-    if (!isKey(x.key)) add("keys", `variations[${i}].key`, i18n.t("experiments:form.flag.keyFormat"));
-    else if (v.variations.findIndex((y) => y.key === x.key) !== i) add("keys", `variations[${i}].key`, i18n.t("experiments:form.flag.keyUsed"));
+    if (!isKey(x.key)) add("keys", `variations[${i}].key`, i18n.t(($) => $.form.flag.keyFormat, { ns: "experiments" }));
+    else if (v.variations.findIndex((y) => y.key === x.key) !== i) add("keys", `variations[${i}].key`, i18n.t(($) => $.form.flag.keyUsed, { ns: "experiments" }));
   });
   if (Math.abs(totalPercent(v) - 100) >= 0.01 || weightsOf(v).some((w) => !(w > 0)))
-    add("weights", "variations", i18n.t("experiments:form.checks.weights"));
+    add("weights", "variations", i18n.t(($) => $.form.checks.weights, { ns: "experiments" }));
   const condition = v.conditions.map((c) => conditionIssue(c)).find((m) => m !== null);
   if (condition != null) add("targeting", "conditions", condition);
   const ns = v.namespace;
-  if (ns !== null && !(ns.start >= 0 && ns.start < ns.end && ns.end <= 1)) add("targeting", "namespace", i18n.t("namespaces:experimentForm.rangeInvalid"));
-  if (v.environmentIds.length === 0) add("envs", "environmentIds", i18n.t("experiments:form.traffic.environmentsError"));
-  if (v.hashAttribute.trim() === "") add("hash", "hashAttribute", i18n.t("common:form.required"));
+  if (ns !== null && !(ns.start >= 0 && ns.start < ns.end && ns.end <= 1)) add("targeting", "namespace", i18n.t(($) => $.experimentForm.rangeInvalid, { ns: "namespaces" }));
+  if (v.environmentIds.length === 0) add("envs", "environmentIds", i18n.t(($) => $.form.traffic.environmentsError, { ns: "experiments" }));
+  if (v.hashAttribute.trim() === "") add("hash", "hashAttribute", i18n.t(($) => $.form.required, { ns: "common" }));
   return issues;
 }
 
@@ -291,19 +291,19 @@ export function startChecks(
   const blockers: Array<StartCheck<CheckId | "primary">> = [];
   for (const issue of draftIssues(v, { isEdit: true, valueType: ctx.valueType }))
     if (!blockers.some((b) => b.id === issue.check))
-      blockers.push({ id: issue.check, section: sectionOf(issue), message: i18n.t(`experiments:form.checks.${issue.check}`) });
-  if (v.primaryMetricId === null) blockers.push({ id: "primary", section: "metrics", message: i18n.t("experiments:draft.checks.primary") });
+      blockers.push({ id: issue.check, section: sectionOf(issue), message: i18n.t(($) => $.form.checks[issue.check], { ns: "experiments" }) });
+  if (v.primaryMetricId === null) blockers.push({ id: "primary", section: "metrics", message: i18n.t(($) => $.draft.checks.primary, { ns: "experiments" }) });
 
   const advice: Array<StartCheck<AdviceId>> = [];
   const control = v.variations[0];
   if (ctx.valueType !== undefined && control !== undefined && v.variations.slice(1).some((x) => x.value === control.value))
-    advice.push({ id: "sameValue", section: "variations", message: i18n.t("experiments:draft.checks.sameValue") });
+    advice.push({ id: "sameValue", section: "variations", message: i18n.t(($) => $.draft.checks.sameValue, { ns: "experiments" }) });
   if (ctx.flagOffIn.length > 0)
-    advice.push({ id: "flagOff", section: "targeting", message: i18n.t("experiments:draft.checks.flagOff", { environments: ctx.flagOffIn.join(", ") }) });
-  if (v.guardrailMetricIds.length === 0) advice.push({ id: "guardrail", section: "metrics", message: i18n.t("experiments:draft.checks.guardrail") });
-  if (v.hypothesis.trim() === "") advice.push({ id: "hypothesis", section: "hypothesis", message: i18n.t("experiments:draft.checks.hypothesis") });
-  if (!ctx.planned) advice.push({ id: "plan", section: "plan", message: i18n.t("experiments:draft.checks.plan") });
+    advice.push({ id: "flagOff", section: "targeting", message: i18n.t(($) => $.draft.checks.flagOff, { ns: "experiments", environments: ctx.flagOffIn.join(", ") }) });
+  if (v.guardrailMetricIds.length === 0) advice.push({ id: "guardrail", section: "metrics", message: i18n.t(($) => $.draft.checks.guardrail, { ns: "experiments" }) });
+  if (v.hypothesis.trim() === "") advice.push({ id: "hypothesis", section: "hypothesis", message: i18n.t(($) => $.draft.checks.hypothesis, { ns: "experiments" }) });
+  if (!ctx.planned) advice.push({ id: "plan", section: "plan", message: i18n.t(($) => $.draft.checks.plan, { ns: "experiments" }) });
   else if (ctx.planDays !== null && ctx.planDays > LONG_PLAN_DAYS)
-    advice.push({ id: "longPlan", section: "plan", message: i18n.t("experiments:draft.checks.longPlan", { count: ctx.planDays }) });
+    advice.push({ id: "longPlan", section: "plan", message: i18n.t(($) => $.draft.checks.longPlan, { ns: "experiments", count: ctx.planDays }) });
   return { blockers, advice };
 }

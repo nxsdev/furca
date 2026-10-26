@@ -9,7 +9,7 @@ import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/reviews")({
-  head: () => ({ meta: [{ title: i18n.t("reviews:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "reviews" }) }] }),
   component: Page,
 });
 
@@ -22,26 +22,26 @@ function Page() {
   const reviewed = environments.filter((e) => e.requireApproval).map((e) => e.name);
   return (
     <>
-      <PageHeader title={t("page.title")} description={t("page.description")} />
+      <PageHeader title={t(($) => $.page.title)} description={t(($) => $.page.description)} />
       {open.isPending ? (
         <Panel>
           <ListSkeleton rows={3} />
         </Panel>
       ) : open.isError ? (
-        <QueryError message={t("page.loadFailed", { message: errorMessage(open.error) })} onRetry={() => open.refetch()} />
+        <QueryError message={t(($) => $.page.loadFailed, { message: errorMessage(open.error) })} onRetry={() => open.refetch()} />
       ) : open.data.length === 0 ? (
         <EmptyState
           icon={<ShieldCheck />}
-          title={t("page.emptyTitle")}
+          title={t(($) => $.page.emptyTitle)}
           description={
             reviewed.length === 0
-              ? t("page.emptyDescription")
-              : t("page.emptyDescriptionOn", { environments: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(reviewed) })
+              ? t(($) => $.page.emptyDescription)
+              : t(($) => $.page.emptyDescriptionOn, { environments: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(reviewed) })
           }
           action={
             reviewed.length === 0 && (
               <Link to="/environments" className="button button--sm button--outline">
-                {t("page.emptyAction")}
+                {t(($) => $.page.emptyAction)}
               </Link>
             )
           }

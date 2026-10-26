@@ -6,11 +6,11 @@ const BUILTIN_SEED_NAME = "Built-in event store";
 
 /** Shows the seeded built-in source name in the UI language; a name someone changed is shown as is */
 export const dataSourceName = (s: Pick<DataSource, "type" | "name">): string =>
-  s.type === "builtin" && s.name === BUILTIN_SEED_NAME ? i18n.t("datasources:builtinName") : s.name;
+  s.type === "builtin" && s.name === BUILTIN_SEED_NAME ? i18n.t(($) => $.builtinName, { ns: "datasources" }) : s.name;
 
 /** "BigQuery", "Snowflake", ... or the built-in store's label */
 export const dataSourceTypeLabel = (s: Pick<DataSource, "type">): string =>
-  s.type === "builtin" ? i18n.t("datasources:list.builtinType") : WAREHOUSE_LABELS[s.type];
+  s.type === "builtin" ? i18n.t(($) => $.list.builtinType, { ns: "datasources" }) : WAREHOUSE_LABELS[s.type];
 
 /** Where a warehouse source points, in one line */
 export const configSummary = (c: WarehouseConfig): string => {

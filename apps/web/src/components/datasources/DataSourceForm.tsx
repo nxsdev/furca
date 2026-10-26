@@ -9,7 +9,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { SQL_TYPES } from "~/components/datasources/name";
 import { CodeBlock } from "~/components/environments/Quickstart";
 import { errorText, setServerError, submitHandler, useAppForm } from "~/components/form/form";
-import { i18n } from "~/i18n";
+import { i18n, type resources } from "~/i18n";
 import { client, orpc } from "~/lib/rpc";
 
 const LOCATIONS = [
@@ -86,26 +86,27 @@ const toConfig = (type: WarehouseType, v: Values) => {
 
 type TextKey = "account" | "user" | "warehouse" | "database" | "schema" | "role" | "url" | "host";
 
-type HelpKey = "form.help.snowflake.account" | "form.help.snowflake.role" | "form.help.clickhouse.url" | "form.help.postgres.host";
+/** Picks a field's help text out of `datasources:form.help` */
+type HelpKey = (help: (typeof resources)["en"]["datasources"]["form"]["help"]) => string;
 
 /** Connection fields of the non-BigQuery warehouses */
 const FIELDS: Record<Exclude<WarehouseType, "bigquery">, ReadonlyArray<{ name: TextKey; placeholder: string; optional?: true; help?: HelpKey; className?: string }>> = {
   snowflake: [
-    { name: "account", placeholder: "myorg-myaccount", help: "form.help.snowflake.account" },
+    { name: "account", placeholder: "myorg-myaccount", help: (h) => h.snowflake.account },
     { name: "user", placeholder: "FURCA_READER" },
     { name: "warehouse", placeholder: "ANALYTICS_WH" },
     { name: "database", placeholder: "ANALYTICS" },
     { name: "schema", placeholder: "PUBLIC" },
-    { name: "role", placeholder: "FURCA_READER", optional: true, help: "form.help.snowflake.role" },
+    { name: "role", placeholder: "FURCA_READER", optional: true, help: (h) => h.snowflake.role },
   ],
   clickhouse: [
-    { name: "url", placeholder: "https://abc123.eu-west-1.aws.clickhouse.cloud:8443", help: "form.help.clickhouse.url" },
+    { name: "url", placeholder: "https://abc123.eu-west-1.aws.clickhouse.cloud:8443", help: (h) => h.clickhouse.url },
     { name: "database", placeholder: "default" },
     { name: "user", placeholder: "furca_reader" },
   ],
   postgres: [
     // Port (order-2) and SSL (order-5) render after these, so order puts the port next to the host
-    { name: "host", placeholder: "db.example.com", help: "form.help.postgres.host", className: "order-1" },
+    { name: "host", placeholder: "db.example.com", help: (h) => h.postgres.host, className: "order-1" },
     { name: "database", placeholder: "analytics", className: "order-3" },
     { name: "user", placeholder: "furca_reader", className: "order-4" },
   ],
@@ -115,10 +116,10 @@ const FIELDS: Record<Exclude<WarehouseType, "bigquery">, ReadonlyArray<{ name: T
 const fieldError = (name: TextKey, value: string): string | undefined => {
   const v = value.trim();
   if (name === "account" && (!/^[A-Za-z0-9][A-Za-z0-9_-]*(\.[A-Za-z0-9_-]+)*$/.test(v) || /snowflakecomputing/i.test(v)))
-    return v === "" ? i18n.t("datasources:form.errors.required") : i18n.t("datasources:form.errors.account");
-  if (name === "url" && v !== "" && !/^https:\/\/[^/@\s]+/.test(v)) return i18n.t("datasources:form.errors.url");
-  if (name === "host" && /[\s/@]/.test(v)) return i18n.t("datasources:form.errors.host");
-  return v === "" ? i18n.t("datasources:form.errors.required") : undefined;
+    return v === "" ? i18n.t(($) => $.form.errors.required, { ns: "datasources" }) : i18n.t(($) => $.form.errors.account, { ns: "datasources" });
+  if (name === "url" && v !== "" && !/^https:\/\/[^/@\s]+/.test(v)) return i18n.t(($) => $.form.errors.url, { ns: "datasources" });
+  if (name === "host" && /[\s/@]/.test(v)) return i18n.t(($) => $.form.errors.host, { ns: "datasources" });
+  return v === "" ? i18n.t(($) => $.form.errors.required, { ns: "datasources" }) : undefined;
 };
 
 type Template = "ga4" | "segment" | "generic";
@@ -181,10 +182,10 @@ const parseServiceAccount = (text: string): Parsed => {
     const o = (j ?? {}) as Record<string, unknown>;
     // Same rule as the server (non-empty client_email and private_key), so the message stays localized
     if (o.type !== "service_account" || typeof o.client_email !== "string" || o.client_email === "" || typeof o.private_key !== "string" || o.private_key === "")
-      return { error: i18n.t("datasources:form.key.notServiceAccount") };
+      return { error: i18n.t(($) => $.form.key.notServiceAccount, { ns: "datasources" }) };
     return { email: o.client_email, projectId: typeof o.project_id === "string" ? o.project_id : null };
   } catch {
-    return { error: i18n.t("datasources:form.key.invalidJson") };
+    return { error: i18n.t(($) => $.form.key.invalidJson, { ns: "datasources" }) };
   }
 };
 
@@ -192,15 +193,15 @@ const parseServiceAccount = (text: string): Parsed => {
 const secretError = (type: WarehouseType, value: string): string | undefined => {
   if (type === "bigquery") {
     const p = parseServiceAccount(value);
-    return p === null ? i18n.t("datasources:form.errors.credentials") : "error" in p ? p.error : undefined;
+    return p === null ? i18n.t(($) => $.form.errors.credentials, { ns: "datasources" }) : "error" in p ? p.error : undefined;
   }
   if (type === "snowflake") {
-    if (value.trim() === "") return i18n.t("datasources:form.privateKey.required");
-    if (value.includes("ENCRYPTED PRIVATE KEY")) return i18n.t("datasources:form.privateKey.encrypted");
-    if (value.includes("BEGIN RSA PRIVATE KEY")) return i18n.t("datasources:form.privateKey.pkcs1");
-    return /-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(value) ? undefined : i18n.t("datasources:form.privateKey.invalid");
+    if (value.trim() === "") return i18n.t(($) => $.form.privateKey.required, { ns: "datasources" });
+    if (value.includes("ENCRYPTED PRIVATE KEY")) return i18n.t(($) => $.form.privateKey.encrypted, { ns: "datasources" });
+    if (value.includes("BEGIN RSA PRIVATE KEY")) return i18n.t(($) => $.form.privateKey.pkcs1, { ns: "datasources" });
+    return /-----BEGIN PRIVATE KEY-----[\s\S]+-----END PRIVATE KEY-----/.test(value) ? undefined : i18n.t(($) => $.form.privateKey.invalid, { ns: "datasources" });
   }
-  return value === "" ? i18n.t("datasources:form.password.required") : undefined;
+  return value === "" ? i18n.t(($) => $.form.password.required, { ns: "datasources" }) : undefined;
 };
 
 /** Base64 DER public key of a PKCS#8 RSA private key, computed in the browser; null if it is not one */
@@ -233,24 +234,24 @@ function GrantRoles({ email, projectId }: { email: string; projectId: string }) 
     <div className="flex flex-col gap-3 rounded-md border border-border bg-default/30 px-4 py-3">
       <p className="flex min-w-0 items-center gap-2 text-label">
         <CircleCheck className="size-4 shrink-0 text-muted" aria-hidden="true" />
-        <span className="shrink-0 text-muted">{t("form.roles.serviceAccount")}</span>
+        <span className="shrink-0 text-muted">{t(($) => $.form.roles.serviceAccount)}</span>
         <code className="truncate font-mono">{email}</code>
       </p>
       <div className="text-label">
         <p>
-          <Trans t={t} i18nKey="form.roles.grant" components={{ project: <code className="font-mono">{project}</code> }} />
+          <Trans t={t} i18nKey={($) => $.form.roles.grant} components={{ project: <code className="font-mono">{project}</code> }} />
         </p>
         <ul className="mt-1.5 flex flex-col gap-1">
           {ROLES.map((r) => (
             <li key={r.id} className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-medium">{t(`form.roles.${r.key}`)}</span>
+              <span className="font-medium">{t(($) => $.form.roles[r.key])}</span>
               <code className="font-mono text-meta text-muted">{r.id}</code>
-              <span className="text-meta text-muted">{t(`form.roles.${r.key}Why`)}</span>
+              <span className="text-meta text-muted">{t(($) => $.form.roles[`${r.key}Why` as const])}</span>
             </li>
           ))}
         </ul>
       </div>
-      <CodeBlock code={commands} label={t("form.roles.copyCommands")} />
+      <CodeBlock code={commands} label={t(($) => $.form.roles.copyCommands)} />
     </div>
   );
 }
@@ -271,14 +272,14 @@ function SnowflakeKeySetup({ pem, user }: { pem: string; user: string }) {
     <div className="flex flex-col gap-2 rounded-md border border-border bg-default/30 px-4 py-3 text-label">
       <p className="flex items-center gap-2">
         <CircleCheck className="size-4 shrink-0 text-muted" aria-hidden="true" />
-        {t("form.privateKey.register")}
+        {t(($) => $.form.privateKey.register)}
       </p>
-      <CodeBlock code={`ALTER USER ${name} SET RSA_PUBLIC_KEY='${publicKey}';`} label={t("form.privateKey.copySql")} />
+      <CodeBlock code={`ALTER USER ${name} SET RSA_PUBLIC_KEY='${publicKey}';`} label={t(($) => $.form.privateKey.copySql)} />
     </div>
   ) : (
     <div className="flex flex-col gap-2 text-label text-muted">
-      <p>{t("form.privateKey.howTo")}</p>
-      <CodeBlock code="openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt" label={t("form.privateKey.copyCommand")} />
+      <p>{t(($) => $.form.privateKey.howTo)}</p>
+      <CodeBlock code="openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -out rsa_key.p8 -nocrypt" label={t(($) => $.form.privateKey.copyCommand)} />
     </div>
   );
 }
@@ -365,18 +366,18 @@ export function DataSourceForm({
     const previous = form.getFieldValue("sql");
     form.setFieldValue("sql", exposureTemplate(type, template, values));
     if (previous.trim() !== "")
-      toast(t("form.sql.templateInserted"), {
-        description: t("form.sql.templateInsertedDescription"),
-        actionProps: { children: t("form.sql.undo"), onPress: () => form.setFieldValue("sql", previous), variant: "tertiary" },
+      toast(t(($) => $.form.sql.templateInserted), {
+        description: t(($) => $.form.sql.templateInsertedDescription),
+        actionProps: { children: t(($) => $.form.sql.undo), onPress: () => form.setFieldValue("sql", previous), variant: "tertiary" },
       });
   };
 
-  const secretTitle = type === "bigquery" ? t("form.key.title") : type === "snowflake" ? t("form.privateKey.title") : t("form.password.title");
+  const secretTitle = type === "bigquery" ? t(($) => $.form.key.title) : type === "snowflake" ? t(($) => $.form.privateKey.title) : t(($) => $.form.password.title);
 
   return (
     <form noValidate onSubmit={submitHandler(form)} className="min-w-0 rounded-[10px] border border-border bg-surface">
-      <Section title={t("form.warehouse.title")}>
-        <form.AppField name="name" validators={{ onChange: required(t("form.errors.name")) }}>
+      <Section title={t(($) => $.form.warehouse.title)}>
+        <form.AppField name="name" validators={{ onChange: required(t(($) => $.form.errors.name)) }}>
           {(field) => (
             <TextField
               value={field.state.value}
@@ -387,15 +388,15 @@ export function DataSourceForm({
               className="sm:max-w-sm"
               autoFocus={!isEdit}
             >
-              <Label>{t("form.warehouse.name")}</Label>
-              <Input placeholder={t("form.warehouse.namePlaceholder")} />
+              <Label>{t(($) => $.form.warehouse.name)}</Label>
+              <Input placeholder={t(($) => $.form.warehouse.namePlaceholder)} />
               <FieldError>{shown(field)}</FieldError>
             </TextField>
           )}
         </form.AppField>
         {type === "bigquery" ? (
           <div className="grid gap-4 sm:grid-cols-3">
-            <form.AppField name="projectId" validators={{ onChange: required(t("form.errors.projectId")) }}>
+            <form.AppField name="projectId" validators={{ onChange: required(t(($) => $.form.errors.projectId)) }}>
               {(field) => (
                 <TextField
                   value={field.state.value}
@@ -404,13 +405,13 @@ export function DataSourceForm({
                   isRequired
                   isInvalid={shown(field) !== undefined}
                 >
-                  <Label>{t("form.warehouse.projectId")}</Label>
+                  <Label>{t(($) => $.form.warehouse.projectId)}</Label>
                   <Input placeholder="my-company-prod" spellCheck={false} className="font-mono" />
                   <FieldError>{shown(field)}</FieldError>
                 </TextField>
               )}
             </form.AppField>
-            <form.AppField name="dataset" validators={{ onChange: required(t("form.errors.dataset")) }}>
+            <form.AppField name="dataset" validators={{ onChange: required(t(($) => $.form.errors.dataset)) }}>
               {(field) => (
                 <TextField
                   value={field.state.value}
@@ -419,14 +420,14 @@ export function DataSourceForm({
                   isRequired
                   isInvalid={shown(field) !== undefined}
                 >
-                  <Label>{t("form.warehouse.dataset")}</Label>
+                  <Label>{t(($) => $.form.warehouse.dataset)}</Label>
                   <Input placeholder="analytics_123456" spellCheck={false} className="font-mono" />
-                  <Description>{t("form.warehouse.datasetHelp")}</Description>
+                  <Description>{t(($) => $.form.warehouse.datasetHelp)}</Description>
                   <FieldError>{shown(field)}</FieldError>
                 </TextField>
               )}
             </form.AppField>
-            <form.AppField name="location" validators={{ onChange: required(t("form.errors.location")) }}>
+            <form.AppField name="location" validators={{ onChange: required(t(($) => $.form.errors.location)) }}>
               {(field) => (
                 <ComboBox
                   allowsCustomValue
@@ -437,7 +438,7 @@ export function DataSourceForm({
                   items={LOCATIONS}
                   menuTrigger="focus"
                 >
-                  <Label>{t("form.warehouse.location")}</Label>
+                  <Label>{t(($) => $.form.warehouse.location)}</Label>
                   <ComboBox.InputGroup>
                     <Input spellCheck={false} className="font-mono" />
                     <ComboBox.Trigger />
@@ -451,7 +452,7 @@ export function DataSourceForm({
                       )}
                     </ListBox>
                   </ComboBox.Popover>
-                  <Description>{t("form.warehouse.locationHelp")}</Description>
+                  <Description>{t(($) => $.form.warehouse.locationHelp)}</Description>
                   <FieldError>{shown(field)}</FieldError>
                 </ComboBox>
               )}
@@ -467,9 +468,9 @@ export function DataSourceForm({
               >
                 {(field) => (
                   <field.TextField
-                    label={t(`form.fields.${f.name}`)}
+                    label={t(($) => $.form.fields[f.name])}
                     placeholder={f.placeholder}
-                    description={f.help === undefined ? undefined : t(f.help)}
+                    description={f.help === undefined ? undefined : t(($) => f.help!($.form.help))}
                     autoComplete="off"
                     className={f.className}
                     mono
@@ -482,22 +483,22 @@ export function DataSourceForm({
                 <form.AppField
                   name="port"
                   validators={{
-                    onChange: ({ value }) => (Number.isInteger(value) && value >= 1 && value <= 65535 ? undefined : t("form.errors.port")),
+                    onChange: ({ value }) => (Number.isInteger(value) && value >= 1 && value <= 65535 ? undefined : t(($) => $.form.errors.port)),
                   }}
                 >
                   {(field) => (
-                    <field.NumberField label={t("form.fields.port")} minValue={1} maxValue={65535} formatOptions={{ useGrouping: false }} className="order-2" />
+                    <field.NumberField label={t(($) => $.form.fields.port)} minValue={1} maxValue={65535} formatOptions={{ useGrouping: false }} className="order-2" />
                   )}
                 </form.AppField>
                 <form.AppField name="ssl">
                   {(field) => (
                     <field.SelectField
                       className="order-5"
-                      label={t("form.fields.ssl")}
-                      description={t("form.help.postgres.ssl")}
+                      label={t(($) => $.form.fields.ssl)}
+                      description={t(($) => $.form.help.postgres.ssl)}
                       options={[
-                        { id: "require", label: t("form.ssl.require"), textValue: t("form.ssl.require") },
-                        { id: "disable", label: t("form.ssl.disable"), textValue: t("form.ssl.disable") },
+                        { id: "require", label: t(($) => $.form.ssl.require), textValue: t(($) => $.form.ssl.require) },
+                        { id: "disable", label: t(($) => $.form.ssl.disable), textValue: t(($) => $.form.ssl.disable) },
                       ]}
                     />
                   )}
@@ -510,16 +511,16 @@ export function DataSourceForm({
 
       <Section
         title={secretTitle}
-        description={<Trans t={t} i18nKey="form.secretDescription" components={{ c: code }} />}
+        description={<Trans t={t} i18nKey={($) => $.form.secretDescription} components={{ c: code }} />}
       >
         {!replaceSecret ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-4 py-3">
             <span className="flex items-center gap-2 text-label">
               <KeyRound className="size-4 text-muted" aria-hidden="true" />
-              {t("form.secretStored", { secret: secretTitle })}
+              {t(($) => $.form.secretStored, { secret: secretTitle })}
             </span>
             <Button size="sm" variant="tertiary" onPress={() => setReplaceSecret(true)}>
-              {t("form.replace")}
+              {t(($) => $.form.replace)}
             </Button>
           </div>
         ) : (
@@ -528,7 +529,7 @@ export function DataSourceForm({
             {(field) => (
               <>
                 {type === "clickhouse" || type === "postgres" ? (
-                  <field.TextField label={t("form.password.label")} type="password" autoComplete="new-password" className="sm:max-w-sm" />
+                  <field.TextField label={t(($) => $.form.password.label)} type="password" autoComplete="new-password" className="sm:max-w-sm" />
                 ) : (
                   <DropZone
                     getDropOperation={() => "copy"}
@@ -546,14 +547,14 @@ export function DataSourceForm({
                         }
                     }}
                     className={`rounded-md outline-none transition-shadow data-focus-visible:ring-2 data-focus-visible:ring-focus ${dragging ? "ring-2 ring-focus" : ""}`}
-                    aria-label={type === "bigquery" ? t("form.key.dropLabel") : t("form.privateKey.dropLabel")}
+                    aria-label={type === "bigquery" ? t(($) => $.form.key.dropLabel) : t(($) => $.form.privateKey.dropLabel)}
                   >
                     <TextField
                       value={field.state.value}
                       onChange={field.handleChange}
                       onBlur={field.handleBlur}
                       isInvalid={field.state.value !== "" && shown(field) !== undefined}
-                      aria-label={type === "bigquery" ? t("form.key.fieldLabel") : t("form.privateKey.title")}
+                      aria-label={type === "bigquery" ? t(($) => $.form.key.fieldLabel) : t(($) => $.form.privateKey.title)}
                     >
                       <TextArea
                         rows={5}
@@ -561,8 +562,8 @@ export function DataSourceForm({
                         autoCorrect="off"
                         placeholder={
                           type === "bigquery"
-                            ? `${t("form.key.placeholder")}\n{ "type": "service_account", "project_id": "…", "client_email": "…", … }`
-                            : `${t("form.privateKey.placeholder")}\n-----BEGIN PRIVATE KEY-----\n…`
+                            ? `${t(($) => $.form.key.placeholder)}\n{ "type": "service_account", "project_id": "…", "client_email": "…", … }`
+                            : `${t(($) => $.form.privateKey.placeholder)}\n-----BEGIN PRIVATE KEY-----\n…`
                         }
                         className="w-full resize-y font-mono text-[12px] leading-5"
                       />
@@ -581,7 +582,7 @@ export function DataSourceForm({
                     >
                       <Button size="sm" variant="tertiary">
                         <FileUp className="size-4" />
-                        {type === "bigquery" ? t("form.key.chooseFile") : t("form.privateKey.chooseFile")}
+                        {type === "bigquery" ? t(($) => $.form.key.chooseFile) : t(($) => $.form.privateKey.chooseFile)}
                       </Button>
                     </FileTrigger>
                   )}
@@ -594,7 +595,7 @@ export function DataSourceForm({
                         form.resetField("credentials");
                       }}
                     >
-                      {t("form.keep")}
+                      {t(($) => $.form.keep)}
                     </Button>
                   )}
                   {type !== "clickhouse" &&
@@ -612,7 +613,7 @@ export function DataSourceForm({
                 )}
                 {type === "bigquery" && parsed === null && (
                   <p className="text-label text-muted">
-                    <Trans t={t} i18nKey="form.key.needsRoles" components={{ b: <span className="text-foreground" /> }} />
+                    <Trans t={t} i18nKey={($) => $.form.key.needsRoles} components={{ b: <span className="text-foreground" /> }} />
                   </p>
                 )}
                 {type === "snowflake" && <SnowflakeKeySetup pem={field.state.value} user={values.user} />}
@@ -620,11 +621,11 @@ export function DataSourceForm({
             )}
           </form.AppField>
         )}
-        {type !== "bigquery" && <p className="text-label text-muted">{t(`form.access.${type}`)}</p>}
+        {type !== "bigquery" && <p className="text-label text-muted">{t(($) => $.form.access[type])}</p>}
       </Section>
 
-      <Section title={t("form.sql.title")} description={t("form.sql.description")}>
-        <form.AppField name="sql" validators={{ onChange: required(t("form.errors.sql")) }}>
+      <Section title={t(($) => $.form.sql.title)} description={t(($) => $.form.sql.description)}>
+        <form.AppField name="sql" validators={{ onChange: required(t(($) => $.form.errors.sql)) }}>
           {(field) => (
             <TextField
               value={field.state.value}
@@ -634,12 +635,12 @@ export function DataSourceForm({
               className="w-full"
             >
               <div className="flex flex-wrap items-end justify-between gap-2">
-                <Label>{t("form.sql.label", { warehouse: label })}</Label>
+                <Label>{t(($) => $.form.sql.label, { warehouse: label })}</Label>
                 <span className="flex items-center gap-1 text-label text-muted">
-                  {t("form.sql.startFrom")}
+                  {t(($) => $.form.sql.startFrom)}
                   {TEMPLATES[type].map((template) => (
                     <Button key={template} size="sm" variant="ghost" className="h-7 px-2 text-label" onPress={() => insertTemplate(template)}>
-                      {template === "segment" ? "Segment" : t(`form.sql.${template}`)}
+                      {template === "segment" ? "Segment" : t(($) => $.form.sql[template])}
                     </Button>
                   ))}
                 </span>
@@ -653,7 +654,7 @@ export function DataSourceForm({
                 className="w-full resize-y font-mono text-[0.8125rem] leading-5"
               />
               <Description>
-                <Trans t={t} i18nKey="form.sql.help" values={SQL_TYPES[type]} components={{ c: code }} />
+                <Trans t={t} i18nKey={($) => $.form.sql.help} values={SQL_TYPES[type]} components={{ c: code }} />
               </Description>
               <FieldError>{shown(field)}</FieldError>
             </TextField>
@@ -671,15 +672,15 @@ export function DataSourceForm({
                 </p>
               )}
               {isEdit && pristine && serverError === "" && (
-                <p className="basis-full text-label text-muted sm:mr-auto sm:basis-auto">{t("form.noChanges")}</p>
+                <p className="basis-full text-label text-muted sm:mr-auto sm:basis-auto">{t(($) => $.form.noChanges)}</p>
               )}
               {onCancel !== undefined && (
                 <Button size="sm" variant="tertiary" onPress={onCancel} isDisabled={isSubmitting}>
-                  {t("common:actions.cancel")}
+                  {t(($) => $.actions.cancel, { ns: "common" })}
                 </Button>
               )}
               <Button type="submit" size="sm" isPending={isSubmitting} isDisabled={isEdit && pristine}>
-                {isEdit ? t("form.saveChanges") : t("form.create")}
+                {isEdit ? t(($) => $.form.saveChanges) : t(($) => $.form.create)}
               </Button>
             </>
           )}

@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_app/flags/")({
   // ?new=1 (also from the ⌘K palette) opens the inline create form
   validateSearch: (search: Record<string, unknown>): { new?: 1 | "1" } =>
     search.new === "1" || search.new === 1 || search.new === true ? { new: 1 } : {},
-  head: () => ({ meta: [{ title: i18n.t("flags:page.listTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.page.listTitle, { ns: "flags" }) }] }),
   component: FlagsPage,
 });
 
@@ -73,12 +73,12 @@ function FlagsPage() {
         <PageHeader
           breadcrumb={
             <Breadcrumbs className="mb-1 text-label">
-              <Breadcrumbs.Item href="/flags">{t("shared.flags")}</Breadcrumbs.Item>
-              <Breadcrumbs.Item>{t("create.breadcrumb")}</Breadcrumbs.Item>
+              <Breadcrumbs.Item href="/flags">{t(($) => $.shared.flags)}</Breadcrumbs.Item>
+              <Breadcrumbs.Item>{t(($) => $.create.breadcrumb)}</Breadcrumbs.Item>
             </Breadcrumbs>
           }
-          title={t("shared.createFlag")}
-          description={t("create.description")}
+          title={t(($) => $.shared.createFlag)}
+          description={t(($) => $.create.description)}
         />
         <div className="max-w-3xl">
           <CreateFlagForm onCancel={() => setCreating(false)} />
@@ -89,26 +89,26 @@ function FlagsPage() {
   return (
     <>
       <PageHeader
-        title={t("shared.flags")}
-        description={t("list.description")}
+        title={t(($) => $.shared.flags)}
+        description={t(($) => $.list.description)}
         actions={
           canEdit &&
           !isEmpty && (
             <Button size="sm" onPress={() => setCreating(true)}>
               <Plus className="size-4" />
-              {t("shared.createFlag")}
+              {t(($) => $.shared.createFlag)}
             </Button>
           )
         }
       />
 
       {features.error !== null ? (
-        <QueryError message={t("list.loadError", { error: errorMessage(features.error) })} onRetry={() => features.refetch()} />
+        <QueryError message={t(($) => $.list.loadError, { error: errorMessage(features.error) })} onRetry={() => features.refetch()} />
       ) : isEmpty ? (
         <EmptyState
           icon={<Flag />}
-          title={t("list.emptyTitle")}
-          description={t("list.emptyDescription")}
+          title={t(($) => $.list.emptyTitle)}
+          description={t(($) => $.list.emptyDescription)}
           action={
             <div className="flex w-full max-w-[560px] flex-col items-center gap-4">
               <div className="w-full">
@@ -117,7 +117,7 @@ function FlagsPage() {
               {canEdit && (
                 <Button size="sm" onPress={() => setCreating(true)}>
                   <Plus className="size-4" />
-                  {t("shared.createFlag")}
+                  {t(($) => $.shared.createFlag)}
                 </Button>
               )}
             </div>
@@ -126,21 +126,21 @@ function FlagsPage() {
       ) : (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <SearchField aria-label={t("list.search")} value={query} onChange={setQuery} className="w-full sm:w-72">
+            <SearchField aria-label={t(($) => $.list.search)} value={query} onChange={setQuery} className="w-full sm:w-72">
               <SearchField.Group className="h-8">
                 <SearchField.SearchIcon />
-                <SearchField.Input placeholder={t("list.searchPlaceholder")} className="text-base sm:text-label" />
+                <SearchField.Input placeholder={t(($) => $.list.searchPlaceholder)} className="text-base sm:text-label" />
                 <SearchField.ClearButton />
               </SearchField.Group>
             </SearchField>
-            <Select aria-label={t("shared.type")} value={type} onChange={(k) => typeof k === "string" && setType(k as FeatureValueType | "all")} className="w-36">
+            <Select aria-label={t(($) => $.shared.type)} value={type} onChange={(k) => typeof k === "string" && setType(k as FeatureValueType | "all")} className="w-36">
               <Select.Trigger className="h-8 min-h-8 py-1 text-label">
                 <Select.Value className="text-label" />
                 <Select.Indicator />
               </Select.Trigger>
               <Select.Popover>
                 <ListBox>
-                  {[{ id: "all", label: t("list.allTypes") }, ...valueTypes.map((id) => ({ id, label: t(`valueTypes.${id}`) }))].map((o) => (
+                  {[{ id: "all", label: t(($) => $.list.allTypes) }, ...valueTypes.map((id) => ({ id, label: t(($) => $.valueTypes[id]) }))].map((o) => (
                     <ListBox.Item key={o.id} id={o.id} textValue={o.label} className="text-label">
                       {o.label}
                       <ListBox.ItemIndicator />
@@ -154,7 +154,7 @@ function FlagsPage() {
                 <Checkbox.Control>
                   <Checkbox.Indicator />
                 </Checkbox.Control>
-                {t("list.showArchived")}
+                {t(($) => $.list.showArchived)}
               </Checkbox.Content>
             </Checkbox>
           </div>
@@ -171,7 +171,7 @@ function FlagsPage() {
                   filtering ? (
                     <Trans
                       t={t}
-                      i18nKey="list.noMatches"
+                      i18nKey={($) => $.list.noMatches}
                       components={{
                         clear: (
                           <button
@@ -186,7 +186,7 @@ function FlagsPage() {
                       }}
                     />
                   ) : (
-                    t("list.noFlags")
+                    t(($) => $.list.noFlags)
                   )
                 }
               />
@@ -231,31 +231,31 @@ function FlagsTable({
       <table className="w-full border-collapse text-label">
         <thead className="border-b border-border bg-surface-secondary/60">
           <tr>
-            <th className={th}>{t("list.columns.flag")}</th>
-            <th className={`${th} hidden md:table-cell`}>{t("list.columns.type")}</th>
+            <th className={th}>{t(($) => $.list.columns.flag)}</th>
+            <th className={`${th} hidden md:table-cell`}>{t(($) => $.list.columns.type)}</th>
             {environments.map((env) => (
               <th key={env.id} className={`${th} w-px ${env.id === currentEnvironmentId ? "text-foreground" : "hidden sm:table-cell"}`}>
-                <span className="inline-flex items-center gap-1.5" title={env.requireApproval ? t("reviews:request.tableHint", { environment: env.name }) : undefined}>
+                <span className="inline-flex items-center gap-1.5" title={env.requireApproval ? t(($) => $.request.tableHint, { ns: "reviews", environment: env.name }) : undefined}>
                   <span className={`size-1.5 rounded-full ${environmentHue(env.key)}`} aria-hidden="true" />
                   {env.name}
                   {env.requireApproval && (
                     <>
                       <ShieldCheck className="size-3.5 text-muted" aria-hidden="true" />
-                      <span className="sr-only">{t("reviews:request.tableHint", { environment: env.name })}</span>
+                      <span className="sr-only">{t(($) => $.request.tableHint, { ns: "reviews", environment: env.name })}</span>
                     </>
                   )}
                 </span>
               </th>
             ))}
-            <th className={`${th} hidden text-right sm:table-cell`} title={current ? t("shared.rulesIn", { environment: current.name }) : undefined}>
+            <th className={`${th} hidden text-right sm:table-cell`} title={current ? t(($) => $.shared.rulesIn, { environment: current.name }) : undefined}>
               <span className="inline-flex items-center gap-1.5">
                 {current && <span className={`size-1.5 rounded-full ${environmentHue(current.key)}`} aria-hidden="true" />}
-                {t("list.columns.rules")}
-                {current && <span className="sr-only">{t("list.columns.rulesInSr", { environment: current.name })}</span>}
+                {t(($) => $.list.columns.rules)}
+                {current && <span className="sr-only">{t(($) => $.list.columns.rulesInSr, { environment: current.name })}</span>}
               </span>
             </th>
-            <th className={`${th} hidden lg:table-cell`}>{t("list.columns.experiment")}</th>
-            <th className={`${th} hidden text-right md:table-cell`}>{t("list.columns.updated")}</th>
+            <th className={`${th} hidden lg:table-cell`}>{t(($) => $.list.columns.experiment)}</th>
+            <th className={`${th} hidden text-right md:table-cell`}>{t(($) => $.list.columns.updated)}</th>
           </tr>
         </thead>
         <tbody>
@@ -287,10 +287,10 @@ function FlagsTable({
                       {f.key}
                     </Link>
                     <span className="shrink-0 transition-opacity duration-150 group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0">
-                      <CopyButton value={f.key} label={t("shared.copyKey")} />
+                      <CopyButton value={f.key} label={t(($) => $.shared.copyKey)} />
                     </span>
                     {f.archived && (
-                      <span className="shrink-0 rounded-[4px] border border-border px-1.5 text-meta text-muted">{t("shared.archived")}</span>
+                      <span className="shrink-0 rounded-[4px] border border-border px-1.5 text-meta text-muted">{t(($) => $.shared.archived)}</span>
                     )}
                   </div>
                   {(f.description !== "" || f.tags.length > 0) && (
@@ -310,7 +310,7 @@ function FlagsTable({
                   return (
                     <td key={env.id} className={`${td} ${env.id === currentEnvironmentId ? "" : "hidden sm:table-cell"}`}>
                       <FlagSwitch
-                        aria-label={t("shared.switchLabel", { key: f.key, environment: env.name })}
+                        aria-label={t(($) => $.shared.switchLabel, { key: f.key, environment: env.name })}
                         description={stateAndServing(f, env.id, experimentsById)}
                         isSelected={enabled}
                         isDisabled={f.archived || !canEdit || env.requireApproval}

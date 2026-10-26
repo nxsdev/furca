@@ -121,7 +121,7 @@ export function CodeBlock({ code, label, className = "max-h-[440px]" }: { code: 
         <code>{code}</code>
       </pre>
       <div className="absolute top-1.5 right-1.5 rounded-md bg-background">
-        <CopyButton value={code} label={label ?? t("codeBlock.copy")} />
+        <CopyButton value={code} label={label ?? t(($) => $.codeBlock.copy)} />
       </div>
     </div>
   );
@@ -147,7 +147,7 @@ export function SdkTabs({ sdkKey, flagKey, targets }: { sdkKey: string; flagKey?
   return (
     <Tabs variant="secondary" defaultSelectedKey={targets[0]} className="min-w-0 gap-0">
       <Tabs.ListContainer>
-        <Tabs.List aria-label={t("quickstart.runtime")} className="w-max min-w-0">
+        <Tabs.List aria-label={t(($) => $.quickstart.runtime)} className="w-max min-w-0">
           {targets.map((id) => (
             <Tabs.Tab key={id} id={id} className="w-auto px-3 text-label">
               {TARGET_LABELS[id]}
@@ -158,7 +158,7 @@ export function SdkTabs({ sdkKey, flagKey, targets }: { sdkKey: string; flagKey?
       </Tabs.ListContainer>
       {targets.map((id) => (
         <Tabs.Panel key={id} id={id} className="mt-3 flex min-w-0 flex-col gap-2 p-0">
-          <CodeBlock code={installFor(id)} label={t("quickstart.copyInstall")} />
+          <CodeBlock code={installFor(id)} label={t(($) => $.quickstart.copyInstall)} />
           <CodeBlock code={sdkSnippet(id, conn, flagKey)} />
         </Tabs.Panel>
       ))}
@@ -174,16 +174,16 @@ export function Quickstart() {
   return (
     <Panel>
       <PanelHeader
-        title={t("quickstart.title")}
-        description={t("quickstart.description")}
+        title={t(($) => $.quickstart.title)}
+        description={t(($) => $.quickstart.description)}
         actions={
           <Select
-            aria-label={t("quickstart.environmentLabel")}
+            aria-label={t(($) => $.quickstart.environmentLabel)}
             value={current.id}
             onChange={(id) => typeof id === "string" && select(id)}
             className="w-44 shrink-0"
           >
-            <Label className="sr-only">{t("quickstart.environment")}</Label>
+            <Label className="sr-only">{t(($) => $.quickstart.environment)}</Label>
             <Select.Trigger className="h-8">
               <Select.Value className="text-label" />
               <Select.Indicator />
@@ -203,28 +203,28 @@ export function Quickstart() {
       />
       <div className="flex flex-col gap-4 px-5 py-4">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h3 className="text-label font-medium">{t("quickstart.connect", { name: current.name })}</h3>
+          <h3 className="text-label font-medium">{t(($) => $.quickstart.connect, { name: current.name })}</h3>
           <SdkTabs sdkKey={current.sdkKey} targets={["browser", "react", "workers", "node"]} />
         </div>
         <Disclosure className="rounded-md border border-border">
           <Disclosure.Heading>
             <Disclosure.Trigger className="flex w-full items-center justify-between gap-4 px-3 py-2.5 text-left">
               <span className="min-w-0">
-                <span className="block text-label font-medium">{t("quickstart.analytics.title")}</span>
-                <span className="block text-meta font-normal text-muted">{t("quickstart.analytics.summary")}</span>
+                <span className="block text-label font-medium">{t(($) => $.quickstart.analytics.title)}</span>
+                <span className="block text-meta font-normal text-muted">{t(($) => $.quickstart.analytics.summary)}</span>
               </span>
               <Disclosure.Indicator />
             </Disclosure.Trigger>
           </Disclosure.Heading>
           <Disclosure.Content>
             <Disclosure.Body className="flex flex-col gap-2 border-t border-border px-3 py-3">
-              <p className="text-label text-muted">{t("quickstart.analytics.help")}</p>
+              <p className="text-label text-muted">{t(($) => $.quickstart.analytics.help)}</p>
               <CodeBlock code={ANALYTICS_SNIPPET} />
             </Disclosure.Body>
           </Disclosure.Content>
         </Disclosure>
         <p className="text-label text-muted">
-          <Trans t={t} i18nKey="quickstart.footer" components={{ code: <code className="font-mono text-foreground" /> }} />
+          <Trans t={t} i18nKey={($) => $.quickstart.footer} components={{ code: <code className="font-mono text-foreground" /> }} />
         </p>
       </div>
     </Panel>

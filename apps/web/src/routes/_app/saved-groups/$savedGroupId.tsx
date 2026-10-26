@@ -16,13 +16,13 @@ import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/saved-groups/$savedGroupId")({
-  head: () => ({ meta: [{ title: i18n.t("savedGroups:detailPageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.detailPageTitle, { ns: "savedGroups" }) }] }),
   component: Page,
 });
 
 const crumbs = (name: ReactNode) => (
   <Breadcrumbs className="mb-1 text-label">
-    <Breadcrumbs.Item href="/saved-groups">{i18n.t("savedGroups:list.title")}</Breadcrumbs.Item>
+    <Breadcrumbs.Item href="/saved-groups">{i18n.t(($) => $.list.title, { ns: "savedGroups" })}</Breadcrumbs.Item>
     <Breadcrumbs.Item>{name}</Breadcrumbs.Item>
   </Breadcrumbs>
 );
@@ -46,8 +46,8 @@ function Page() {
   if (group.isError)
     return (
       <>
-        <PageHeader breadcrumb={crumbs(t("detail.fallbackTitle"))} title={t("detail.fallbackTitle")} />
-        <QueryError message={t("detail.loadFailed", { message: errorMessage(group.error) })} onRetry={() => group.refetch()} />
+        <PageHeader breadcrumb={crumbs(t(($) => $.detail.fallbackTitle))} title={t(($) => $.detail.fallbackTitle)} />
+        <QueryError message={t(($) => $.detail.loadFailed, { message: errorMessage(group.error) })} onRetry={() => group.refetch()} />
       </>
     );
   return <Detail group={group.data} />;
@@ -69,7 +69,7 @@ function Detail({ group }: { group: SavedGroup }) {
         void queryClient.invalidateQueries({ queryKey: orpc.savedGroups.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         setDeleteOpen(false);
-        toast.success(t("delete.done", { name: group.name }));
+        toast.success(t(($) => $.delete.done, { name: group.name }));
         void navigate({ to: "/saved-groups" });
       },
     }),
@@ -94,7 +94,7 @@ function Detail({ group }: { group: SavedGroup }) {
             className="text-muted"
           >
             <Trash2 className="size-4" />
-            {t("common:actions.delete")}
+            {t(($) => $.actions.delete, { ns: "common" })}
           </Button>
         }
       />
@@ -105,21 +105,21 @@ function Detail({ group }: { group: SavedGroup }) {
             group={group}
             onSaved={() => {
               void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
-              toast.success(t("detail.saved"), { description: t("detail.savedDescription") });
+              toast.success(t(($) => $.detail.saved), { description: t(($) => $.detail.savedDescription) });
             }}
           />
         </fieldset>
         <aside className="flex flex-col gap-3 rounded-[10px] border border-border bg-surface p-5">
-          <h2 className="text-meta font-medium text-muted">{t("detail.usedBy")}</h2>
+          <h2 className="text-meta font-medium text-muted">{t(($) => $.detail.usedBy)}</h2>
           {features.isPending || experiments.isPending ? (
             <Skeleton className="h-5 w-40 rounded-md" />
           ) : used.flags.length === 0 && used.experiments.length === 0 ? (
-            <p className="text-label text-muted">{t("detail.unused")}</p>
+            <p className="text-label text-muted">{t(($) => $.detail.unused)}</p>
           ) : (
             <ul className="flex flex-col gap-1.5 text-label">
               {used.flags.map((f) => (
                 <li key={f.id} className="flex min-w-0 items-center gap-2">
-                  <span className="text-meta text-muted">{t("detail.flag")}</span>
+                  <span className="text-meta text-muted">{t(($) => $.detail.flag)}</span>
                   <Link to="/flags/$featureId" params={{ featureId: f.id }} className={`${linkCls} font-mono`}>
                     {f.key}
                   </Link>
@@ -138,19 +138,19 @@ function Detail({ group }: { group: SavedGroup }) {
         </aside>
       </div>
       <Panel className="mt-6">
-        <PanelHeader title={t("detail.history")} />
+        <PanelHeader title={t(($) => $.detail.history)} />
         <AuditList entityType="savedGroup" entityId={group.id} limit={20} showEntity={false} />
       </Panel>
       <ConfirmDialog
         isOpen={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={t("delete.title", { name: group.name })}
-        confirmLabel={t("delete.confirm")}
+        title={t(($) => $.delete.title, { name: group.name })}
+        confirmLabel={t(($) => $.delete.confirm)}
         isPending={remove.isPending}
         error={remove.error === null ? null : errorMessage(remove.error)}
         onConfirm={() => remove.mutate({ id: group.id })}
       >
-        <p>{t("delete.body")}</p>
+        <p>{t(($) => $.delete.body)}</p>
       </ConfirmDialog>
     </>
   );

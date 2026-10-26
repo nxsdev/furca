@@ -28,13 +28,13 @@ export const ruleIssue = (rule: Rule, valueType: FeatureValueType): string | nul
   if (rule._tag === "experiment") return null;
   for (const c of rule.conditions) {
     const issue = conditionIssue(c);
-    if (issue !== null) return i18n.t("flags:rules.issues.condition", { issue: lowerFirst(issue) });
+    if (issue !== null) return i18n.t(($) => $.rules.issues.condition, { ns: "flags", issue: lowerFirst(issue) });
   }
   const valueError = valueIssue(valueType, rule.value);
-  if (valueError !== null) return i18n.t("flags:rules.issues.value", { issue: lowerFirst(valueError) });
+  if (valueError !== null) return i18n.t(($) => $.rules.issues.value, { ns: "flags", issue: lowerFirst(valueError) });
   if (rule._tag === "rollout") {
-    if (!(rule.coverage >= 0 && rule.coverage <= 1)) return i18n.t("flags:rules.issues.coverage");
-    if (rule.hashAttribute.trim() === "") return i18n.t("flags:rules.issues.hashAttribute");
+    if (!(rule.coverage >= 0 && rule.coverage <= 1)) return i18n.t(($) => $.rules.issues.coverage, { ns: "flags" });
+    if (rule.hashAttribute.trim() === "") return i18n.t(($) => $.rules.issues.hashAttribute, { ns: "flags" });
   }
   return null;
 };
@@ -98,15 +98,15 @@ export const RulesList = withForm({
           const blockers = shadowedRules(rules, experimentsById);
           const ruleLabel = (rule: Rule) =>
             rule._tag === "experiment"
-              ? t("rules.experimentLabel", { name: experimentsById.get(rule.experimentId)?.name ?? "…" })
+              ? t(($) => $.rules.experimentLabel, { name: experimentsById.get(rule.experimentId)?.name ?? "…" })
               : rule.description.trim() !== ""
                 ? rule.description.trim()
-                : t("rules.everyoneGets", { value: short(rule.value) });
+                : t(($) => $.rules.everyoneGets, { value: short(rule.value) });
           return (
-            <ol aria-label={t("shared.rulesIn", { environment: environment.name })}>
+            <ol aria-label={t(($) => $.shared.rulesIn, { environment: environment.name })}>
               {rules.length === 0 && (
                 <li className="border-b border-border px-4 py-6 text-center text-label text-muted sm:px-5">
-                  {t("rules.empty", { environment: environment.name })}
+                  {t(($) => $.rules.empty, { environment: environment.name })}
                 </li>
               )}
               {rules.map((rule, i) => {
@@ -129,13 +129,13 @@ export const RulesList = withForm({
                         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="inline-flex shrink-0 items-center gap-1 rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">
                             {rule._tag === "experiment" && <FlaskConical className="size-3 text-muted" aria-hidden="true" />}
-                            {t(`rules.types.${rule._tag}`)}
+                            {t(($) => $.rules.types[rule._tag])}
                           </span>
                           {rule._tag === "experiment" ? (
                             <span className="min-w-0 truncate text-label">
                               <Trans
                                 t={t}
-                                i18nKey="rules.managedBy"
+                                i18nKey={($) => $.rules.managedBy}
                                 values={{ name: experiment?.name ?? "…" }}
                                 components={{
                                   link: (
@@ -151,8 +151,8 @@ export const RulesList = withForm({
                           ) : (
                             <span className="min-w-0 break-words text-label">{conditionsSummary(rule.conditions)}</span>
                           )}
-                          {!rule.enabled && <span className="text-meta text-muted">{t("shared.off")}</span>}
-                          {matched && <span className="text-meta font-medium text-focus">{t("shared.matchesTestUser")}</span>}
+                          {!rule.enabled && <span className="text-meta text-muted">{t(($) => $.shared.off)}</span>}
+                          {matched && <span className="text-meta font-medium text-focus">{t(($) => $.shared.matchesTestUser)}</span>}
                         </div>
                         {rule._tag !== "experiment" && rule.description !== "" && (
                           <p className="mt-0.5 truncate text-meta text-muted">{ruleNote(rule.description)}</p>
@@ -164,7 +164,7 @@ export const RulesList = withForm({
                               <span>
                                 <Trans
                                   t={t}
-                                  i18nKey="rules.rolloutOf"
+                                  i18nKey={($) => $.rules.rolloutOf}
                                   values={{ percent: pct(rule.coverage), attribute: rule.hashAttribute }}
                                   components={{ pct: <span className="font-mono tabular text-foreground" /> }}
                                 />
@@ -173,7 +173,7 @@ export const RulesList = withForm({
                             {rule._tag === "rollout" && <span aria-hidden="true">·</span>}
                             <Trans
                               t={t}
-                              i18nKey="shared.serve"
+                              i18nKey={($) => $.shared.serve}
                               components={{ value: <ValuePreview valueType={valueType} value={rule.value} className="min-w-0" /> }}
                             />
                           </div>
@@ -182,13 +182,13 @@ export const RulesList = withForm({
                         {blocker !== null && (
                           <p className="mt-1 flex items-start gap-1.5 text-meta">
                             <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-health" aria-hidden="true" />
-                            {t("rules.shadowed", { number: blocker + 1, label: ruleLabel(rules[blocker]!) })}
+                            {t(($) => $.rules.shadowed, { number: blocker + 1, label: ruleLabel(rules[blocker]!) })}
                           </p>
                         )}
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
                         <FlagSwitch
-                          aria-label={t("rules.ruleEnabled", { number: i + 1 })}
+                          aria-label={t(($) => $.rules.ruleEnabled, { number: i + 1 })}
                           isSelected={rule.enabled}
                           isDisabled={readOnly}
                           onChange={(enabled) => form.setFieldValue(`envs[${envIndex}].rules[${i}].enabled`, enabled)}
@@ -199,7 +199,7 @@ export const RulesList = withForm({
                             isIconOnly
                             size="sm"
                             variant={editing ? "tertiary" : "ghost"}
-                            aria-label={editing ? t("rules.closeRule", { number: i + 1 }) : t("rules.editRule", { number: i + 1 })}
+                            aria-label={editing ? t(($) => $.rules.closeRule, { number: i + 1 }) : t(($) => $.rules.editRule, { number: i + 1 })}
                             aria-expanded={editing}
                             className="size-8 min-w-8 text-muted hover:text-foreground"
                             onPress={() => onEditingChange(editing ? null : rule.id)}
@@ -208,12 +208,12 @@ export const RulesList = withForm({
                           </Button>
                         )}
                         {!readOnly && <Dropdown>
-                          <Button isIconOnly size="sm" variant="ghost" aria-label={t("rules.moreActions", { number: i + 1 })} className="size-8 min-w-8 text-muted hover:text-foreground">
+                          <Button isIconOnly size="sm" variant="ghost" aria-label={t(($) => $.rules.moreActions, { number: i + 1 })} className="size-8 min-w-8 text-muted hover:text-foreground">
                             <Ellipsis className="size-4" />
                           </Button>
                           <Dropdown.Popover placement="bottom end" className="min-w-44">
                             <Dropdown.Menu
-                              aria-label={t("rules.ruleActions", { number: i + 1 })}
+                              aria-label={t(($) => $.rules.ruleActions, { number: i + 1 })}
                               disabledKeys={[...(i === 0 ? ["up"] : []), ...(i === rules.length - 1 ? ["down"] : [])]}
                               onAction={(key) => {
                                 if (key === "up") field.moveValue(i, i - 1);
@@ -221,20 +221,20 @@ export const RulesList = withForm({
                                 else if (key === "delete") field.removeValue(i);
                               }}
                             >
-                              <Dropdown.Item id="up" textValue={t("rules.moveUp")}>
+                              <Dropdown.Item id="up" textValue={t(($) => $.rules.moveUp)}>
                                 <ArrowUp className="size-4" />
-                                <Label>{t("rules.moveUp")}</Label>
+                                <Label>{t(($) => $.rules.moveUp)}</Label>
                               </Dropdown.Item>
-                              <Dropdown.Item id="down" textValue={t("rules.moveDown")}>
+                              <Dropdown.Item id="down" textValue={t(($) => $.rules.moveDown)}>
                                 <ArrowDown className="size-4" />
-                                <Label>{t("rules.moveDown")}</Label>
+                                <Label>{t(($) => $.rules.moveDown)}</Label>
                               </Dropdown.Item>
                               {rule._tag !== "experiment" && (
                                 <>
                                   <Separator />
-                                  <Dropdown.Item id="delete" textValue={t("rules.deleteRule")} variant="danger">
+                                  <Dropdown.Item id="delete" textValue={t(($) => $.rules.deleteRule)} variant="danger">
                                     <Trash2 className="size-4" />
-                                    <Label>{t("rules.deleteRule")}</Label>
+                                    <Label>{t(($) => $.rules.deleteRule)}</Label>
                                   </Dropdown.Item>
                                 </>
                               )}
@@ -270,16 +270,16 @@ function ExperimentFacts({ experiment }: { experiment: Experiment }) {
   const { t } = useTranslation("flags");
   const phase = experiment.phases.at(-1);
   const coverage = phase?.coverage ?? experiment.coverage;
-  const status = t(`rules.experimentStatus.${experiment.status}`);
+  const status = t(($) => $.rules.experimentStatus[experiment.status]);
   return (
     <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-meta text-muted">
       <span className={experiment.status === "running" ? "text-foreground" : ""}>{status}</span>
       <span aria-hidden="true">·</span>
       <span>
-        <Trans t={t} i18nKey="rules.ofMatchingUsers" values={{ percent: pct(coverage) }} components={{ pct: <span className="font-mono tabular" /> }} />
+        <Trans t={t} i18nKey={($) => $.rules.ofMatchingUsers} values={{ percent: pct(coverage) }} components={{ pct: <span className="font-mono tabular" /> }} />
       </span>
       <span aria-hidden="true">·</span>
-      <span>{t("rules.variations", { count: experiment.variations.length })}</span>
+      <span>{t(($) => $.rules.variations, { count: experiment.variations.length })}</span>
     </p>
   );
 }
@@ -300,7 +300,7 @@ const RuleEditor = withForm({
     return (
       <div className="flex flex-col gap-5 border-t border-border bg-surface-secondary/60 px-4 py-4 sm:px-5 sm:pl-13">
         <section className="flex flex-col gap-2">
-          <h3 className="text-label font-medium">{t("ruleEditor.who")}</h3>
+          <h3 className="text-label font-medium">{t(($) => $.ruleEditor.who)}</h3>
           <form.AppField name={`${name}.conditions`}>
             {(field) => (
               <ConditionBuilder value={field.state.value} onChange={field.handleChange} attributeSuggestions={attributeSuggestions} />
@@ -309,7 +309,7 @@ const RuleEditor = withForm({
         </section>
         {rule._tag === "rollout" && (
           <section className="flex flex-col gap-2">
-            <h3 className="text-label font-medium">{t("ruleEditor.howMany")}</h3>
+            <h3 className="text-label font-medium">{t(($) => $.ruleEditor.howMany)}</h3>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <form.AppField name={`${name}.coverage`}>
                 {(field) => {
@@ -318,7 +318,7 @@ const RuleEditor = withForm({
                   return (
                     <>
                       <Slider
-                        aria-label={t("ruleEditor.coverage")}
+                        aria-label={t(($) => $.ruleEditor.coverage)}
                         value={percent}
                         onChange={(v) => setPercent(Array.isArray(v) ? (v[0] ?? 0) : v)}
                         minValue={0}
@@ -332,7 +332,7 @@ const RuleEditor = withForm({
                         </Slider.Track>
                       </Slider>
                       <NumberField
-                        aria-label={t("ruleEditor.coveragePercent")}
+                        aria-label={t(($) => $.ruleEditor.coveragePercent)}
                         value={percent}
                         onChange={setPercent}
                         onBlur={field.handleBlur}
@@ -350,11 +350,11 @@ const RuleEditor = withForm({
                   );
                 }}
               </form.AppField>
-              <span className="text-label text-muted">{t("ruleEditor.bucketedBy")}</span>
+              <span className="text-label text-muted">{t(($) => $.ruleEditor.bucketedBy)}</span>
               <form.AppField name={`${name}.hashAttribute`}>
                 {(field) => (
                   <TextField
-                    aria-label={t("ruleEditor.bucketBy")}
+                    aria-label={t(($) => $.ruleEditor.bucketBy)}
                     value={field.state.value}
                     onChange={(v) => field.handleChange(v.trim())}
                     onBlur={field.handleBlur}
@@ -365,12 +365,12 @@ const RuleEditor = withForm({
               </form.AppField>
             </div>
             <p className="text-meta text-muted">
-              {t("ruleEditor.stickyHelp", { attribute: rule.hashAttribute || "id" })}
+              {t(($) => $.ruleEditor.stickyHelp, { attribute: rule.hashAttribute || "id" })}
             </p>
           </section>
         )}
         <section className="flex flex-col gap-2">
-          <h3 className="text-label font-medium">{t("ruleEditor.serve")}</h3>
+          <h3 className="text-label font-medium">{t(($) => $.ruleEditor.serve)}</h3>
           <form.AppField name={`${name}.value`}>
             {(field) => <ValueInput valueType={valueType} value={field.state.value} onChange={field.handleChange} />}
           </form.AppField>
@@ -379,16 +379,16 @@ const RuleEditor = withForm({
           {(field) => (
             <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} className="max-w-md">
               <Label className="text-label font-medium">
-                {t("ruleEditor.note")} <span className="font-normal text-muted">{t("shared.optional")}</span>
+                {t(($) => $.ruleEditor.note)} <span className="font-normal text-muted">{t(($) => $.shared.optional)}</span>
               </Label>
-              <Input className="h-8 py-1 text-base sm:text-label" placeholder={t("ruleEditor.notePlaceholder")} />
+              <Input className="h-8 py-1 text-base sm:text-label" placeholder={t(($) => $.ruleEditor.notePlaceholder)} />
             </TextField>
           )}
         </form.AppField>
         <div className="flex items-center justify-between gap-3">
-          <p className={`text-meta ${issue === null ? "text-muted" : "text-danger"}`}>{issue ?? t("ruleEditor.keptUntilSave")}</p>
+          <p className={`text-meta ${issue === null ? "text-muted" : "text-danger"}`}>{issue ?? t(($) => $.ruleEditor.keptUntilSave)}</p>
           <Button size="sm" variant="tertiary" onPress={onDone}>
-            {t("ruleEditor.done")}
+            {t(($) => $.ruleEditor.done)}
           </Button>
         </div>
       </div>
@@ -403,20 +403,20 @@ export function AddRuleButton({ onAdd }: { onAdd: (kind: "force" | "rollout") =>
     <Dropdown>
       <Button size="sm" variant="outline">
         <Plus className="size-4" />
-        {t("addRule.button")}
+        {t(($) => $.addRule.button)}
       </Button>
       <Dropdown.Popover placement="bottom start" className="min-w-64">
-        <Dropdown.Menu aria-label={t("addRule.menu")} onAction={(key) => (key === "force" || key === "rollout") && onAdd(key)}>
-          <Dropdown.Item id="force" textValue={t("addRule.force")}>
+        <Dropdown.Menu aria-label={t(($) => $.addRule.menu)} onAction={(key) => (key === "force" || key === "rollout") && onAdd(key)}>
+          <Dropdown.Item id="force" textValue={t(($) => $.addRule.force)}>
             <div className="flex flex-col">
-              <Label>{t("addRule.force")}</Label>
-              <span className="text-meta text-muted">{t("addRule.forceHelp")}</span>
+              <Label>{t(($) => $.addRule.force)}</Label>
+              <span className="text-meta text-muted">{t(($) => $.addRule.forceHelp)}</span>
             </div>
           </Dropdown.Item>
-          <Dropdown.Item id="rollout" textValue={t("addRule.rollout")}>
+          <Dropdown.Item id="rollout" textValue={t(($) => $.addRule.rollout)}>
             <div className="flex flex-col">
-              <Label>{t("addRule.rollout")}</Label>
-              <span className="text-meta text-muted">{t("addRule.rolloutHelp")}</span>
+              <Label>{t(($) => $.addRule.rollout)}</Label>
+              <span className="text-meta text-muted">{t(($) => $.addRule.rolloutHelp)}</span>
             </div>
           </Dropdown.Item>
         </Dropdown.Menu>

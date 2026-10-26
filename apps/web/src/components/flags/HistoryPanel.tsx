@@ -13,19 +13,19 @@ const PAGE = 50;
 
 /** Audit action → full-sentence key ("<actor>…</actor> created the flag"), so the actor sits where each language wants it */
 const sentences = {
-  created: "history.verbs.created",
-  updated: "history.verbs.updated",
-  "rules.updated": "history.verbs.rulesUpdated",
-  enabled: "history.verbs.enabled",
-  disabled: "history.verbs.disabled",
-  archived: "history.verbs.archived",
-  unarchived: "history.verbs.unarchived",
-  deleted: "history.verbs.deleted",
-  "review.requested": "history.verbs.reviewRequested",
-  "review.approved": "history.verbs.reviewApproved",
-  "review.selfApproved": "history.verbs.reviewSelfApproved",
-  "review.rejected": "history.verbs.reviewRejected",
-  "review.cancelled": "history.verbs.reviewCancelled",
+  created: "created",
+  updated: "updated",
+  "rules.updated": "rulesUpdated",
+  enabled: "enabled",
+  disabled: "disabled",
+  archived: "archived",
+  unarchived: "unarchived",
+  deleted: "deleted",
+  "review.requested": "reviewRequested",
+  "review.approved": "reviewApproved",
+  "review.selfApproved": "reviewSelfApproved",
+  "review.rejected": "reviewRejected",
+  "review.cancelled": "reviewCancelled",
 } as const;
 
 /** The author's note or the reviewer's comment, kept in the change request snapshot of review rows */
@@ -104,7 +104,7 @@ export function HistoryPanel({ featureId }: { featureId: string }) {
   const entries = query.data?.pages.flat() ?? [];
 
   if (query.error !== null) {
-    return <QueryError message={t("history.loadError", { error: errorMessage(query.error) })} onRetry={() => query.refetch()} />;
+    return <QueryError message={t(($) => $.history.loadError, { error: errorMessage(query.error) })} onRetry={() => query.refetch()} />;
   }
   if (query.isPending) {
     return (
@@ -114,7 +114,7 @@ export function HistoryPanel({ featureId }: { featureId: string }) {
     );
   }
   if (entries.length === 0) {
-    return <EmptyState icon={<History />} title={t("history.emptyTitle")} description={t("history.emptyDescription")} />;
+    return <EmptyState icon={<History />} title={t(($) => $.history.emptyTitle)} description={t(($) => $.history.emptyDescription)} />;
   }
   return (
     <Panel>
@@ -126,7 +126,7 @@ export function HistoryPanel({ featureId }: { featureId: string }) {
       {query.hasNextPage && (
         <div className="border-t border-border px-4 py-3 sm:px-5">
           <Button size="sm" variant="ghost" isPending={query.isFetchingNextPage} onPress={() => query.fetchNextPage()}>
-            {t("history.loadOlder")}
+            {t(($) => $.history.loadOlder)}
           </Button>
         </div>
       )}
@@ -154,7 +154,7 @@ function HistoryItem({ entry, names, isLast }: { entry: AuditLog; names: Readonl
           ) : (
             <Trans
               t={t}
-              i18nKey={sentence}
+              i18nKey={($) => $.history.verbs[sentence]}
               values={{ actor: "" }}
               components={{ actor: <MemberName email={entry.actorEmail} className="font-medium text-foreground" /> }}
             />
@@ -173,19 +173,19 @@ function HistoryItem({ entry, names, isLast }: { entry: AuditLog; names: Readonl
           className="mt-1 -ml-1 inline-flex items-center gap-1 rounded-sm px-1 text-meta text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
         >
           <ChevronRight className={`size-3 transition-transform duration-150 ${open ? "rotate-90" : ""}`} aria-hidden="true" />
-          {open ? t("history.hideChanges") : t("history.showChanges")}
+          {open ? t(($) => $.history.hideChanges) : t(($) => $.history.showChanges)}
         </button>
       )}
       {open && (
         <div className="mt-2 overflow-x-auto rounded-md border border-border bg-surface-secondary">
           {diff.length === 0 ? (
-            <p className="px-3 py-2 text-meta text-muted">{t("history.noDiff")}</p>
+            <p className="px-3 py-2 text-meta text-muted">{t(($) => $.history.noDiff)}</p>
           ) : (
             <table className="w-full font-mono text-meta">
               <tbody>
                 {diff.map((d) => (
                   <tr key={d.path} className="border-b border-border last:border-0">
-                    <td className="px-3 py-1.5 align-top whitespace-nowrap text-muted">{d.path === "" ? t("history.wholeValue") : d.path}</td>
+                    <td className="px-3 py-1.5 align-top whitespace-nowrap text-muted">{d.path === "" ? t(($) => $.history.wholeValue) : d.path}</td>
                     <td className="px-3 py-1.5 align-top break-all">
                       {d.before !== undefined && <span className="text-muted line-through decoration-muted/60">{d.before}</span>}
                       {d.before !== undefined && d.after !== undefined && <span className="px-1.5 text-muted">→</span>}

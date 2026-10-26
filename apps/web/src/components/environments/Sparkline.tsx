@@ -62,7 +62,7 @@ export function TrafficSparkline({ environmentId }: { environmentId: string }) {
   if (volume.isPending) return <Skeleton className="h-5 w-32 rounded-md" />;
   if (volume.isError) return <span className="text-muted">—</span>;
   const total = series.reduce((a, s) => a + s.events + s.exposures, 0);
-  const label = t("sparkline.label", {
+  const label = t(($) => $.sparkline.label, {
     events: formatCount(series.reduce((a, s) => a + s.events, 0)),
     exposures: formatCount(series.reduce((a, s) => a + s.exposures, 0)),
   });

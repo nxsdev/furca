@@ -29,12 +29,12 @@ export const filterValues = ({ operator, values }: FilterValues): string[] =>
 
 /** Why a filter can't be saved yet (mirrors the API's checks), or null */
 export const filterIssue = (f: FilterValues): string | null => {
-  if (f.property.trim() === "") return i18n.t("metrics:form.filters.errors.property");
-  if (/["\\]/.test(f.property)) return i18n.t("metrics:form.filters.errors.unsupported");
+  if (f.property.trim() === "") return i18n.t(($) => $.form.filters.errors.property, { ns: "metrics" });
+  if (/["\\]/.test(f.property)) return i18n.t(($) => $.form.filters.errors.unsupported, { ns: "metrics" });
   if (isPresence(f.operator)) return null;
   const [first = ""] = filterValues(f);
-  if (first === "") return i18n.t("metrics:form.filters.errors.value");
-  if (isNumeric(f.operator) && !Number.isFinite(Number(first))) return i18n.t("metrics:form.filters.errors.number");
+  if (first === "") return i18n.t(($) => $.form.filters.errors.value, { ns: "metrics" });
+  if (isNumeric(f.operator) && !Number.isFinite(Number(first))) return i18n.t(($) => $.form.filters.errors.number, { ns: "metrics" });
   return null;
 };
 
@@ -77,10 +77,10 @@ export function PropertyFilters({
         return (
           // biome-ignore lint/suspicious/noArrayIndexKey: rows have no identity besides their position
           <div key={i} className="grid grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-start gap-x-2 gap-y-1.5 @lg:grid-cols-[3rem_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_2rem]">
-            <span className="flex h-8 items-center font-mono text-meta text-muted">{i === 0 ? t("form.filters.where") : t("form.filters.and")}</span>
+            <span className="flex h-8 items-center font-mono text-meta text-muted">{i === 0 ? t(($) => $.form.filters.where) : t(($) => $.form.filters.and)}</span>
             <PropertyInput value={row.property} properties={properties} onChange={(property) => update(i, { property })} />
             <Select
-              aria-label={t("form.filters.operator")}
+              aria-label={t(($) => $.form.filters.operator)}
               value={row.operator}
               onChange={(k) => typeof k === "string" && setOperator(i, k as PropertyFilterOperator)}
             >
@@ -91,8 +91,8 @@ export function PropertyFilters({
               <Select.Popover className="min-w-40">
                 <ListBox>
                   {OPERATORS.map((op) => (
-                    <ListBox.Item key={op} id={op} textValue={tt(`operators.${op}`)} className="text-label">
-                      {tt(`operators.${op}`)}
+                    <ListBox.Item key={op} id={op} textValue={tt(($) => $.operators[op])} className="text-label">
+                      {tt(($) => $.operators[op])}
                       <ListBox.ItemIndicator />
                     </ListBox.Item>
                   ))}
@@ -101,18 +101,18 @@ export function PropertyFilters({
             </Select>
             <div className="order-last col-span-3 col-start-2 min-w-0 @lg:order-none @lg:col-span-1 @lg:col-start-auto">
               {isPresence(row.operator) ? (
-                <span className="hidden h-8 items-center text-label text-muted @lg:flex">{t("form.filters.noValue")}</span>
+                <span className="hidden h-8 items-center text-label text-muted @lg:flex">{t(($) => $.form.filters.noValue)}</span>
               ) : isList(row.operator) ? (
                 <TagInput
-                  aria-label={t("form.filters.values")}
+                  aria-label={t(($) => $.form.filters.values)}
                   values={row.values}
                   onChange={(values) => update(i, { values })}
-                  placeholder={t("form.filters.valuesPlaceholder")}
+                  placeholder={t(($) => $.form.filters.valuesPlaceholder)}
                   className="font-mono"
                 />
               ) : (
                 <ComboBox
-                  aria-label={t("form.filters.value")}
+                  aria-label={t(($) => $.form.filters.value)}
                   allowsCustomValue
                   menuTrigger="focus"
                   inputValue={row.values[0] ?? ""}
@@ -142,7 +142,7 @@ export function PropertyFilters({
               isIconOnly
               size="sm"
               variant="ghost"
-              aria-label={t("form.filters.remove", { number: i + 1 })}
+              aria-label={t(($) => $.form.filters.remove, { number: i + 1 })}
               className="size-8 min-w-8 text-muted hover:text-foreground"
               onPress={() => onChange(rows.filter((_, j) => j !== i))}
             >
@@ -161,7 +161,7 @@ export function PropertyFilters({
           className="-ml-2 h-7 px-2 text-label text-muted hover:text-foreground"
         >
           <Plus className="size-3.5" />
-          {t("form.filters.add")}
+          {t(($) => $.form.filters.add)}
         </Button>
       </div>
     </div>
@@ -179,7 +179,7 @@ function PropertyInput({
 }) {
   const { t } = useTranslation("metrics");
   return (
-    <ComboBox aria-label={t("form.filters.property")} allowsCustomValue menuTrigger="focus" inputValue={value} onInputChange={(v) => onChange(v.trim())}>
+    <ComboBox aria-label={t(($) => $.form.filters.property)} allowsCustomValue menuTrigger="focus" inputValue={value} onInputChange={(v) => onChange(v.trim())}>
       <ComboBox.InputGroup>
         <Input className="h-8 w-full py-1 font-mono text-base sm:text-label" placeholder="plan" spellCheck={false} />
         {properties.length > 0 && <ComboBox.Trigger />}
@@ -189,7 +189,7 @@ function PropertyInput({
           {properties.map((p) => (
             <ListBox.Item key={p.property} id={p.property} textValue={p.property} className="gap-3">
               <span className="min-w-0 flex-1 truncate font-mono text-label">{p.property}</span>
-              <span className="shrink-0 text-meta text-muted tabular">{t("form.filters.seen", { count: p.count, events: formatCount(p.count) })}</span>
+              <span className="shrink-0 text-meta text-muted tabular">{t(($) => $.form.filters.seen, { count: p.count, events: formatCount(p.count) })}</span>
             </ListBox.Item>
           ))}
         </ListBox>

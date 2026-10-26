@@ -15,7 +15,7 @@ export const verdictStyle: Record<Verdict, { text: string; fill: string; band: s
 };
 
 /** "Winning" / "No difference" … in the current language */
-export const verdictLabel = (verdict: Verdict): string => i18n.t(`results:verdict.${verdict}`);
+export const verdictLabel = (verdict: Verdict): string => i18n.t(($) => $.verdict[verdict], { ns: "results" });
 
 /** Icon + label, never color alone */
 export function VerdictLabel({ verdict }: { verdict: Verdict }) {
@@ -25,7 +25,7 @@ export function VerdictLabel({ verdict }: { verdict: Verdict }) {
   return (
     <span className={`inline-flex items-center gap-1 whitespace-nowrap text-label font-medium ${s.text}`}>
       <Icon className="size-3.5 shrink-0" aria-hidden="true" />
-      {t(`verdict.${verdict}`)}
+      {t(($) => $.verdict[verdict])}
     </span>
   );
 }
@@ -50,7 +50,7 @@ export const effectText = (c: VariationComparison): string =>
     ? "–"
     : c.ci === null
       ? formatLift(c.lift)
-      : i18n.t("results:banner.effect", { lift: formatLift(c.lift), lo: formatLift(c.ci[0]), hi: formatLift(c.ci[1]) });
+      : i18n.t(($) => $.banner.effect, { ns: "results", lift: formatLift(c.lift), lo: formatLift(c.ci[0]), hi: formatLift(c.ci[1]) });
 
 /**
  * The verdict in plain language, shared by the results header, the stop panel and the decision memo.
@@ -62,39 +62,39 @@ export function verdictText(
   metrics: ReadonlyMap<string, Metric>,
   finished: boolean,
 ): { headline: string; guardrails: string | null } {
-  const name = experiment.variations.find((v) => v.key === a.comparison?.variationKey)?.name ?? i18n.t("results:banner.treatmentFallback");
+  const name = experiment.variations.find((v) => v.key === a.comparison?.variationKey)?.name ?? i18n.t(($) => $.banner.treatmentFallback, { ns: "results" });
   const effect = a.comparison === null ? "" : effectText(a.comparison);
   const headline = {
-    noData: () => i18n.t("results:banner.noData"),
-    unhealthy: () => i18n.t("results:banner.untrustworthy"),
-    noPrimary: () => i18n.t("results:banner.noPrimary"),
+    noData: () => i18n.t(($) => $.banner.noData, { ns: "results" }),
+    unhealthy: () => i18n.t(($) => $.banner.untrustworthy, { ns: "results" }),
+    noPrimary: () => i18n.t(($) => $.banner.noPrimary, { ns: "results" }),
     error: () =>
-      i18n.t("results:banner.notAnalyzed", { metric: metrics.get(a.primary?.metricId ?? "")?.name ?? i18n.t("results:banner.primaryFallback") }),
+      i18n.t(($) => $.banner.notAnalyzed, { ns: "results", metric: metrics.get(a.primary?.metricId ?? "")?.name ?? i18n.t(($) => $.banner.primaryFallback, { ns: "results" }) }),
     winning: () =>
-      i18n.t(a.regressions.length > 0 ? "results:banner.winningRegressed" : "results:banner.winning", { name, effect }),
-    losing: () => i18n.t("results:banner.losing", { name, effect }),
-    neutral: () => (finished ? i18n.t("results:banner.noDifference") : i18n.t("results:banner.noDifferenceYet")),
-    inconclusive: () => i18n.t("results:banner.notEnoughData"),
+      i18n.t(($) => (a.regressions.length > 0 ? $.banner.winningRegressed : $.banner.winning), { ns: "results", name, effect }),
+    losing: () => i18n.t(($) => $.banner.losing, { ns: "results", name, effect }),
+    neutral: () => (finished ? i18n.t(($) => $.banner.noDifference, { ns: "results" }) : i18n.t(($) => $.banner.noDifferenceYet, { ns: "results" })),
+    inconclusive: () => i18n.t(($) => $.banner.notEnoughData, { ns: "results" }),
   }[a.kind]();
   const guardrails =
     a.kind === "noData" || a.kind === "unhealthy"
       ? null
       : a.regressions.length > 0
-        ? i18n.t("results:banner.guardrailsRegressed", {
-            metrics: formatList(a.regressions.map((m) => metrics.get(m.metricId)?.name ?? i18n.t("results:banner.guardrailFallback"))),
+        ? i18n.t(($) => $.banner.guardrailsRegressed, { ns: "results",
+            metrics: formatList(a.regressions.map((m) => metrics.get(m.metricId)?.name ?? i18n.t(($) => $.banner.guardrailFallback, { ns: "results" }))),
           })
         : experiment.guardrailMetricIds.length === 0
-          ? i18n.t("results:banner.guardrailsNone")
-          : i18n.t("results:banner.guardrailsOk");
+          ? i18n.t(($) => $.banner.guardrailsNone, { ns: "results" })
+          : i18n.t(($) => $.banner.guardrailsOk, { ns: "results" });
   return { headline, guardrails };
 }
 
 /** "Day 2 · 38% of target sample · about 9 days left" (no estimate once stopped) */
 export const progressText = (p: Progress, running: boolean): string =>
   [
-    i18n.t("results:banner.day", { day: p.day }),
-    p.fraction === null ? null : p.fraction >= 1 ? i18n.t("results:banner.reached") : i18n.t("results:banner.progress", { percent: formatPercent(p.fraction, 0) }),
-    p.daysLeft === null || !running ? null : i18n.t("results:banner.eta", { count: p.daysLeft }),
+    i18n.t(($) => $.banner.day, { ns: "results", day: p.day }),
+    p.fraction === null ? null : p.fraction >= 1 ? i18n.t(($) => $.banner.reached, { ns: "results" }) : i18n.t(($) => $.banner.progress, { ns: "results", percent: formatPercent(p.fraction, 0) }),
+    p.daysLeft === null || !running ? null : i18n.t(($) => $.banner.eta, { ns: "results", count: p.daysLeft }),
   ]
     .filter((x) => x !== null)
     .join(" · ");

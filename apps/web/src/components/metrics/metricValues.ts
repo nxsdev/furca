@@ -97,7 +97,7 @@ const mirrorsNumerator = (d: Values) => d.template === "lowerIsBetter";
 
 /** The name a template suggests for an event: "purchase conversion rate" */
 export const suggestedName = (template: MetricTemplate, event: string): string =>
-  event.trim() === "" ? "" : i18n.t(`metrics:form.templates.${template}.name`, { event: event.trim() });
+  event.trim() === "" ? "" : i18n.t(($) => $.form.templates[template].name, { ns: "metrics", event: event.trim() });
 
 export const windowHoursOf = (d: Values): number | null =>
   d.window === "none" ? null : d.window === "custom" ? d.customWindow : Number(d.window);
@@ -149,29 +149,29 @@ export const ADVANCED_FIELDS: ReadonlyArray<DeepKeys<Values>> = [
 /** Whole-form rules (they cross fields: type, source, window and delay), run as a form-level validator */
 export const validate = (d: Values, isSql: boolean, isEdit: boolean): FieldErrors => {
   const e: FieldErrors = {};
-  if (d.name.trim() === "") e.name = i18n.t("metrics:form.errors.name");
+  if (d.name.trim() === "") e.name = i18n.t(($) => $.form.errors.name, { ns: "metrics" });
   // An empty name already has its error; the key follows the name
-  if (!isEdit && d.name.trim() !== "" && !Schema.is(Key)(d.key)) e.key = i18n.t("metrics:form.errors.key");
+  if (!isEdit && d.name.trim() !== "" && !Schema.is(Key)(d.key)) e.key = i18n.t(($) => $.form.errors.key, { ns: "metrics" });
   const needsDen = d.type === "ratio" && !mirrorsNumerator(d);
   if (isSql) {
-    if (d.numSql.trim() === "") e.numSql = i18n.t("metrics:form.errors.numSql");
-    if (d.type === "ratio" && d.denSql.trim() === "") e.denSql = i18n.t("metrics:form.errors.denSql");
+    if (d.numSql.trim() === "") e.numSql = i18n.t(($) => $.form.errors.numSql, { ns: "metrics" });
+    if (d.type === "ratio" && d.denSql.trim() === "") e.denSql = i18n.t(($) => $.form.errors.denSql, { ns: "metrics" });
   } else {
-    if (d.num.event.trim() === "") e["num.event"] = i18n.t("metrics:form.errors.numEvent");
-    if (needsDen && d.den.event.trim() === "") e["den.event"] = i18n.t("metrics:form.errors.denEvent");
+    if (d.num.event.trim() === "") e["num.event"] = i18n.t(($) => $.form.errors.numEvent, { ns: "metrics" });
+    if (needsDen && d.den.event.trim() === "") e["den.event"] = i18n.t(($) => $.form.errors.denEvent, { ns: "metrics" });
     const numFilters = d.num.filters.map(filterIssue).find((issue) => issue !== null);
     if (numFilters) e["num.filters"] = numFilters;
     const denFilters = needsDen ? d.den.filters.map(filterIssue).find((issue) => issue !== null) : null;
     if (denFilters) e["den.filters"] = denFilters;
   }
   const w = windowHoursOf(d);
-  if (w !== null && !(w > 0)) e.customWindow = i18n.t("metrics:form.errors.window");
-  if (!(d.delayHours >= 0)) e.delayHours = i18n.t("metrics:form.errors.delayNegative");
-  else if (w !== null && d.delayHours >= w) e.delayHours = i18n.t("metrics:form.errors.delayTooLong");
+  if (w !== null && !(w > 0)) e.customWindow = i18n.t(($) => $.form.errors.window, { ns: "metrics" });
+  if (!(d.delayHours >= 0)) e.delayHours = i18n.t(($) => $.form.errors.delayNegative, { ns: "metrics" });
+  else if (w !== null && d.delayHours >= w) e.delayHours = i18n.t(($) => $.form.errors.delayTooLong, { ns: "metrics" });
   if (d.type !== "proportion") {
-    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.capAbsolute = i18n.t("metrics:form.errors.capAbsolute");
+    if (d.capType === "absolute" && !(d.capAbsolute > 0)) e.capAbsolute = i18n.t(($) => $.form.errors.capAbsolute, { ns: "metrics" });
     if (d.capType === "percentile" && !(d.capPercentile >= 50 && d.capPercentile < 100))
-      e.capPercentile = i18n.t("metrics:form.errors.capPercentile");
+      e.capPercentile = i18n.t(($) => $.form.errors.capPercentile, { ns: "metrics" });
   }
   return e;
 };
@@ -187,11 +187,11 @@ export const advancedSummary = (d: Values, sourceName: string, isSql: boolean): 
   const capping = toInput(d, isSql).capping;
   return [
     sourceName,
-    (w === null ? i18n.t("metrics:form.advanced.windowNone") : i18n.t("metrics:form.advanced.window", { window: formatHours(w) })) +
-      (d.delayHours > 0 ? i18n.t("metrics:form.advanced.delay", { delay: formatHours(d.delayHours) }) : ""),
-    d.type === "proportion" ? null : capping.type === "none" ? i18n.t("metrics:form.advanced.capNone") : cappingLabel(capping),
-    isSql ? null : filters === 0 ? i18n.t("metrics:form.advanced.filtersNone") : i18n.t("metrics:form.advanced.filters", { count: filters }),
-    d.inverse ? i18n.t("metrics:direction.lowerIsBetter") : null,
+    (w === null ? i18n.t(($) => $.form.advanced.windowNone, { ns: "metrics" }) : i18n.t(($) => $.form.advanced.window, { ns: "metrics", window: formatHours(w) })) +
+      (d.delayHours > 0 ? i18n.t(($) => $.form.advanced.delay, { ns: "metrics", delay: formatHours(d.delayHours) }) : ""),
+    d.type === "proportion" ? null : capping.type === "none" ? i18n.t(($) => $.form.advanced.capNone, { ns: "metrics" }) : cappingLabel(capping),
+    isSql ? null : filters === 0 ? i18n.t(($) => $.form.advanced.filtersNone, { ns: "metrics" }) : i18n.t(($) => $.form.advanced.filters, { ns: "metrics", count: filters }),
+    d.inverse ? i18n.t(($) => $.direction.lowerIsBetter, { ns: "metrics" }) : null,
   ]
     .filter((part) => part !== null)
     .join(" · ");

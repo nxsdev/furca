@@ -51,9 +51,9 @@ function NotFound() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-2 px-4 text-center">
       <p className="font-mono text-label text-muted">404</p>
-      <h1 className="text-title font-semibold tracking-tight">{t("notFound.title")}</h1>
+      <h1 className="text-title font-semibold tracking-tight">{t(($) => $.notFound.title)}</h1>
       <a href="/overview" className="text-body text-link underline-offset-4 hover:underline">
-        {t("notFound.back")}
+        {t(($) => $.notFound.back)}
       </a>
     </div>
   );

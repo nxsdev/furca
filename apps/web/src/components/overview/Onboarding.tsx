@@ -23,12 +23,12 @@ export function Onboarding({ steps }: { steps: ReadonlyArray<OnboardingStep> }) 
     <Panel>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 px-5 py-4">
         <div>
-          <h2 className="text-section font-medium">{t("onboarding.title")}</h2>
-          <p className="mt-0.5 text-label text-muted">{t("onboarding.description")}</p>
+          <h2 className="text-section font-medium">{t(($) => $.onboarding.title)}</h2>
+          <p className="mt-0.5 text-label text-muted">{t(($) => $.onboarding.description)}</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-label text-muted tabular">
-            {t("onboarding.progress", { done, total: steps.length })}
+            {t(($) => $.onboarding.progress, { done, total: steps.length })}
           </span>
           <span className="flex gap-1" aria-hidden="true">
             {steps.map((s) => (
@@ -51,7 +51,7 @@ export function Onboarding({ steps }: { steps: ReadonlyArray<OnboardingStep> }) 
                       : "border border-border text-muted"
                 }`}
               >
-                {s.done ? <Check className="size-3.5" strokeWidth={2.5} aria-label={t("onboarding.done")} /> : i + 1}
+                {s.done ? <Check className="size-3.5" strokeWidth={2.5} aria-label={t(($) => $.onboarding.done)} /> : i + 1}
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

@@ -48,46 +48,18 @@ const entityName = (entry: AuditLog): string => {
   return (entry.entityType === "feature" ? (pick("key") ?? pick("featureKey")) : null) ?? pick("name") ?? pick("key") ?? pick("email") ?? entry.entityId;
 };
 
-/** Every action the server writes; each has a label under `audit:actions` */
-const KNOWN_ACTIONS = [
-  "created",
-  "updated",
-  "enabled",
-  "disabled",
-  "archived",
-  "unarchived",
-  "deleted",
-  "started",
-  "stopped",
-  "invited",
-  "removed",
-  "rules.updated",
-  "phase.started",
-  "traffic.updated",
-  "sdkKey.rotated",
-  "credentials.updated",
-  "invitation.revoked",
-  "role.updated",
-  "review.requested",
-  "review.approved",
-  "review.selfApproved",
-  "review.rejected",
-  "review.cancelled",
-  "review.required",
-  "review.notRequired",
-] as const;
-const isKnownAction = (a: string): a is (typeof KNOWN_ACTIONS)[number] => (KNOWN_ACTIONS as ReadonlyArray<string>).includes(a);
-
 /** Known verbs are translated; unknown ones are derived in English: "rules.updated" -> "updated rules" */
-const actionLabel = (action: string): string =>
-  isKnownAction(action)
-    ? i18n.t(`audit:actions.${action}`)
+const actionLabel = (action: string): string => {
+  const key = `audit:actions.${action}`;
+  return i18n.exists(key)
+    ? i18n.t(key)
     : action
         .split(".")
         .reverse()
         .join(" ")
         .replace(/([a-z])([A-Z])/g, "$1 $2")
         .toLowerCase();
+};
 
 function EntityLink({ entry }: { entry: AuditLog }) {
   const meta = entityTypes.find((t) => t.type === entry.entityType);
@@ -170,11 +142,11 @@ export function JsonDiff({ before, after, caption }: { before: string | null; af
       <p className="text-meta text-muted">
         {onlyOne
           ? a.length === 0
-            ? t("diff.createdWith")
-            : t("diff.stateBefore")
+            ? t(($) => $.diff.createdWith)
+            : t(($) => $.diff.stateBefore)
           : changes === 0
-            ? t("diff.noFieldChanged")
-            : t("diff.changedLines", { count: changes })}
+            ? t(($) => $.diff.noFieldChanged)
+            : t(($) => $.diff.changedLines, { count: changes })}
         {caption !== undefined && ` · ${caption}`}
       </p>
       <div className="max-h-[420px] overflow-auto rounded-md border border-border bg-background">
@@ -182,7 +154,7 @@ export function JsonDiff({ before, after, caption }: { before: string | null; af
           {rows.map((r, i) =>
             r.kind === "skip" ? (
               <div key={i} className="px-3 py-0.5 text-muted select-none">
-                ⋯ {t("diff.unchangedLines", { count: r.count })}
+                ⋯ {t(($) => $.diff.unchangedLines, { count: r.count })}
               </div>
             ) : (
               <div
@@ -195,7 +167,7 @@ export function JsonDiff({ before, after, caption }: { before: string | null; af
                 >
                   {r.kind === "add" ? "+" : r.kind === "del" ? "−" : ""}
                 </span>
-                <span className="sr-only">{r.kind === "add" ? t("diff.added") : r.kind === "del" ? t("diff.removed") : ""}</span>
+                <span className="sr-only">{r.kind === "add" ? t(($) => $.diff.added) : r.kind === "del" ? t(($) => $.diff.removed) : ""}</span>
                 <span className="whitespace-pre pr-4">{r.text}</span>
               </div>
             ),
@@ -240,7 +212,7 @@ export function AuditList({
   if (query.data === undefined)
     return (
       <div className="p-4">
-        <QueryError message={t("list.loadFailed", { message: errorMessage(query.error) })} onRetry={() => query.refetch()} />
+        <QueryError message={t(($) => $.list.loadFailed, { message: errorMessage(query.error) })} onRetry={() => query.refetch()} />
       </div>
     );
 
@@ -249,8 +221,8 @@ export function AuditList({
     return (
       <div className="flex flex-col items-center gap-1 px-6 py-12 text-center">
         <History className="mb-2 size-5 text-muted" aria-hidden="true" />
-        <p className="text-body font-medium">{t("list.emptyTitle")}</p>
-        <p className="max-w-[52ch] text-label text-muted">{emptyDescription ?? t("list.emptyDescription")}</p>
+        <p className="text-body font-medium">{t(($) => $.list.emptyTitle)}</p>
+        <p className="max-w-[52ch] text-label text-muted">{emptyDescription ?? t(($) => $.list.emptyDescription)}</p>
       </div>
     );
 
@@ -269,12 +241,12 @@ export function AuditList({
           <thead>
             <tr>
               <th className={`${tbl.th} w-8 pr-0`}>
-                <span className="sr-only">{t("list.expand")}</span>
+                <span className="sr-only">{t(($) => $.list.expand)}</span>
               </th>
-              {showEntity && <th className={tbl.th}>{t("list.entity")}</th>}
-              <th className={tbl.th}>{t("list.change")}</th>
-              <th className={`${tbl.th} hidden md:table-cell`}>{t("list.by")}</th>
-              <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t("list.when")}</th>
+              {showEntity && <th className={tbl.th}>{t(($) => $.list.entity)}</th>}
+              <th className={tbl.th}>{t(($) => $.list.change)}</th>
+              <th className={`${tbl.th} hidden md:table-cell`}>{t(($) => $.list.by)}</th>
+              <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t(($) => $.list.when)}</th>
             </tr>
           </thead>
           <tbody>
@@ -290,7 +262,7 @@ export function AuditList({
                           type="button"
                           onClick={() => toggle(entry.id)}
                           aria-expanded={isOpen}
-                          aria-label={isOpen ? t("list.hideDetails") : t("list.showDetails")}
+                          aria-label={isOpen ? t(($) => $.list.hideDetails) : t(($) => $.list.showDetails)}
                           className="flex size-6 items-center justify-center rounded-md text-muted outline-none transition-colors after:absolute after:inset-0 after:content-[''] hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
                         >
                           <ChevronRight
@@ -323,7 +295,7 @@ export function AuditList({
                         <JsonDiff
                           before={entry.before}
                           after={entry.after}
-                          caption={t("list.caption", {
+                          caption={t(($) => $.list.caption, {
                             email: nameOf(entry.actorEmail),
                             date: formatDateTime(new Date(entry.createdAt)),
                           })}
@@ -340,7 +312,7 @@ export function AuditList({
       {paginate && query.hasNextPage && (
         <div className="flex justify-center border-t border-border p-3">
           <Button size="sm" variant="ghost" onPress={() => query.fetchNextPage()} isPending={query.isFetchingNextPage}>
-            {t("common:actions.loadOlder")}
+            {t(($) => $.actions.loadOlder, { ns: "common" })}
           </Button>
         </div>
       )}

@@ -26,21 +26,21 @@ function RuleSummary({ rule, valueType, className = "" }: { rule: Rule; valueTyp
   const conditionsSummary = useConditionsSummary();
   return (
     <span className={`flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 ${rule.enabled ? "" : "opacity-60"} ${className}`}>
-      <span className="rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">{t(`rules.types.${rule._tag}`)}</span>
+      <span className="rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">{t(($) => $.rules.types[rule._tag])}</span>
       {rule._tag !== "experiment" && (
         <>
           <span className="min-w-0 break-words">{conditionsSummary(rule.conditions)}</span>
           {rule._tag === "rollout" && (
             <span className="text-muted">
-              · <Trans t={t} i18nKey="rules.rolloutOf" values={{ percent: pct(rule.coverage), attribute: rule.hashAttribute }} components={{ pct: <span className="font-mono tabular text-foreground" /> }} />
+              · <Trans t={t} i18nKey={($) => $.rules.rolloutOf} values={{ percent: pct(rule.coverage), attribute: rule.hashAttribute }} components={{ pct: <span className="font-mono tabular text-foreground" /> }} />
             </span>
           )}
           <span className="inline-flex min-w-0 items-center gap-1 text-muted">
-            · <Trans t={t} i18nKey="shared.serve" components={{ value: <ValuePreview valueType={valueType} value={rule.value} className="min-w-0" /> }} />
+            · <Trans t={t} i18nKey={($) => $.shared.serve} components={{ value: <ValuePreview valueType={valueType} value={rule.value} className="min-w-0" /> }} />
           </span>
         </>
       )}
-      {!rule.enabled && <span className="text-meta text-muted">{t("shared.off")}</span>}
+      {!rule.enabled && <span className="text-meta text-muted">{t(($) => $.shared.off)}</span>}
     </span>
   );
 }
@@ -69,9 +69,9 @@ export function ChangeDiff({
   if (change.type === "toggle") {
     return (
       <p className="flex items-center gap-2 text-label">
-        <span className="text-muted">{base.enabled ? t("change.on") : t("change.off")}</span>
-        <ArrowRight className="size-3.5 text-muted" aria-label={t("change.becomes")} />
-        <span className="font-medium">{change.enabled ? t("change.on") : t("change.off")}</span>
+        <span className="text-muted">{base.enabled ? t(($) => $.change.on) : t(($) => $.change.off)}</span>
+        <ArrowRight className="size-3.5 text-muted" aria-label={t(($) => $.change.becomes)} />
+        <span className="font-medium">{change.enabled ? t(($) => $.change.on) : t(($) => $.change.off)}</span>
       </p>
     );
   }
@@ -80,26 +80,26 @@ export function ChangeDiff({
   const changed = lines.filter((l) => l.kind !== "same");
   return (
     <div className="flex flex-col gap-1 text-label">
-      {change.rules.length === 0 && <p className="text-muted">{t("change.allRulesRemoved")}</p>}
+      {change.rules.length === 0 && <p className="text-muted">{t(($) => $.change.allRulesRemoved)}</p>}
       <ol className="flex flex-col gap-1">
         {changed.map(({ rule, previous, kind }) => (
           <li key={`${kind}:${rule.id}`} className={`flex flex-col gap-0.5 border-l-2 py-0.5 pl-2.5 ${kindStyle[kind]}`}>
             <span className="flex min-w-0 items-start gap-2">
               <span className={`w-16 shrink-0 text-meta font-medium ${kind === "removed" ? "text-muted no-underline" : "text-foreground"}`}>
-                {t(`change.kinds.${kind as Exclude<DiffKind, "same">}`)}
+                {t(($) => $.change.kinds[kind as Exclude<DiffKind, "same">])}
               </span>
               <RuleSummary rule={rule} valueType={valueType} className={kind === "removed" ? "text-muted line-through" : ""} />
             </span>
             {kind === "changed" && previous !== null && (
               <span className="flex min-w-0 items-start gap-2">
-                <span className="w-16 shrink-0 text-meta text-muted">{t("change.was")}</span>
+                <span className="w-16 shrink-0 text-meta text-muted">{t(($) => $.change.was)}</span>
                 <RuleSummary rule={previous} valueType={valueType} className="text-muted line-through" />
               </span>
             )}
           </li>
         ))}
       </ol>
-      {unchanged > 0 && <p className="pl-3 text-meta text-muted">{t("change.unchanged", { count: unchanged })}</p>}
+      {unchanged > 0 && <p className="pl-3 text-meta text-muted">{t(($) => $.change.unchanged, { count: unchanged })}</p>}
     </div>
   );
 }
@@ -113,13 +113,13 @@ const useExperimentWhat = () => {
     const name = experiment?.name ?? "…";
     switch (change.type) {
       case "experiment.start":
-        return t("experiment.start", { name });
+        return t(($) => $.experiment.start, { name });
       case "experiment.traffic":
-        return t("experiment.traffic", { name });
+        return t(($) => $.experiment.traffic, { name });
       case "experiment.stop":
         return change.outcome === "ship"
-          ? t("experiment.ship", { name, variation: experiment?.variations.find((v) => v.key === change.variationKey)?.name ?? change.variationKey ?? "" })
-          : t(`experiment.${change.outcome}`, { name });
+          ? t(($) => $.experiment.ship, { name, variation: experiment?.variations.find((v) => v.key === change.variationKey)?.name ?? change.variationKey ?? "" })
+          : t(($) => $.experiment[change.outcome], { name });
     }
   };
 };
@@ -142,7 +142,7 @@ function ExperimentChangeDiff({
   const arrow = (from: string, to: string) => (
     <span className="inline-flex items-center gap-1.5">
       <span className="font-mono tabular text-muted">{from}</span>
-      <ArrowRight className="size-3.5 text-muted" aria-label={t("change.becomes")} />
+      <ArrowRight className="size-3.5 text-muted" aria-label={t(($) => $.change.becomes)} />
       <span className="font-mono tabular font-medium">{to}</span>
     </span>
   );
@@ -150,7 +150,7 @@ function ExperimentChangeDiff({
   switch (change.type) {
     case "experiment.start":
       lines.push(
-        t("experiment.startDetail", {
+        t(($) => $.experiment.startDetail, {
           coverage: pct(experiment.coverage),
           variations: experiment.variations.map((v) => v.name).join(" / "),
           weights: weightsText(experiment.weights),
@@ -158,22 +158,22 @@ function ExperimentChangeDiff({
       );
       break;
     case "experiment.traffic":
-      if (change.coverage !== experiment.coverage) lines.push(<>{t("experiment.coverage")} {arrow(pct(experiment.coverage), pct(change.coverage))}</>);
+      if (change.coverage !== experiment.coverage) lines.push(<>{t(($) => $.experiment.coverage)} {arrow(pct(experiment.coverage), pct(change.coverage))}</>);
       if (weightsText(change.weights) !== weightsText(experiment.weights)) {
-        lines.push(<>{t("experiment.weights")} {arrow(weightsText(experiment.weights), weightsText(change.weights))}</>);
+        lines.push(<>{t(($) => $.experiment.weights)} {arrow(weightsText(experiment.weights), weightsText(change.weights))}</>);
       }
-      if (JSON.stringify(change.conditions) !== JSON.stringify(experiment.conditions)) lines.push(t("experiment.conditionsChanged"));
-      if (trafficChangeNeedsNewPhase(experiment, change)) lines.push(t("experiment.newPhase"));
+      if (JSON.stringify(change.conditions) !== JSON.stringify(experiment.conditions)) lines.push(t(($) => $.experiment.conditionsChanged));
+      if (trafficChangeNeedsNewPhase(experiment, change)) lines.push(t(($) => $.experiment.newPhase));
       break;
     case "experiment.stop": {
       const variation = experiment.variations.find((v) => v.key === change.variationKey);
       lines.push(
         change.outcome === "ship" && variation !== undefined ? (
           <span className="inline-flex flex-wrap items-center gap-1.5">
-            <Trans t={t} i18nKey="experiment.shipDetail" components={{ value: <ValuePreview valueType={valueType} value={variation.value} /> }} />
+            <Trans t={t} i18nKey={($) => $.experiment.shipDetail} components={{ value: <ValuePreview valueType={valueType} value={variation.value} /> }} />
           </span>
         ) : (
-          t("experiment.removeDetail")
+          t(($) => $.experiment.removeDetail)
         ),
       );
       break;
@@ -186,16 +186,16 @@ function ExperimentChangeDiff({
           {line}
         </p>
       ))}
-      {reason !== "" && <p className="max-w-[72ch] text-muted">{t("experiment.reason", { reason })}</p>}
+      {reason !== "" && <p className="max-w-[72ch] text-muted">{t(($) => $.experiment.reason, { reason })}</p>}
       {experiment.updatedAt.getTime() > request.createdAt.getTime() && request.status === "open" && (
-        <p className="text-meta text-danger">{t("experiment.stale")}</p>
+        <p className="text-meta text-danger">{t(($) => $.experiment.stale)}</p>
       )}
       <Link
         to="/experiments/$experimentId"
         params={{ experimentId: experiment.id }}
         className="w-fit rounded-sm text-meta text-muted underline decoration-border underline-offset-2 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
       >
-        {t("experiment.open")}
+        {t(($) => $.experiment.open)}
       </Link>
     </div>
   );
@@ -225,10 +225,10 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
         const input = { id: request.id, comment: value.comment.trim() };
         if (mode === "approve") {
           await client.changeRequests.approve(input);
-          toast.success(t("actions.approved", { key: request.featureKey }), { description: t("actions.approvedDescription") });
+          toast.success(t(($) => $.actions.approved, { key: request.featureKey }), { description: t(($) => $.actions.approvedDescription) });
         } else {
           await client.changeRequests.reject(input);
-          toast(t("actions.rejected", { key: request.featureKey }));
+          toast(t(($) => $.actions.rejected, { key: request.featureKey }));
         }
         setMode(null);
         refresh();
@@ -240,10 +240,10 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
   const cancel = useMutation({
     mutationFn: () => client.changeRequests.cancel({ id: request.id }),
     onSuccess: () => {
-      toast(t("actions.cancelled"));
+      toast(t(($) => $.actions.cancelled));
       refresh();
     },
-    onError: (error) => toast.danger(t("actions.failed"), { description: errorMessage(error) }),
+    onError: (error) => toast.danger(t(($) => $.actions.failed), { description: errorMessage(error) }),
   });
 
   if (mode !== null) {
@@ -251,13 +251,13 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
       <form noValidate onSubmit={submitHandler(form)} className="flex flex-col gap-2 pt-1">
         <form.AppField
           name="comment"
-          validators={{ onSubmit: ({ value }) => (selfApproval && mode === "approve" && value.trim() === "" ? t("actions.reasonRequired") : undefined) }}
+          validators={{ onSubmit: ({ value }) => (selfApproval && mode === "approve" && value.trim() === "" ? t(($) => $.actions.reasonRequired) : undefined) }}
         >
           {(field) =>
             selfApproval && mode === "approve" ? (
-              <field.TextAreaField label={t("actions.reasonLabel")} placeholder={t("actions.reasonPlaceholder")} rows={2} className="max-w-lg" />
+              <field.TextAreaField label={t(($) => $.actions.reasonLabel)} placeholder={t(($) => $.actions.reasonPlaceholder)} rows={2} className="max-w-lg" />
             ) : (
-              <field.TextAreaField label={t("actions.commentLabel")} placeholder={t("actions.commentPlaceholder")} rows={2} className="max-w-lg" />
+              <field.TextAreaField label={t(($) => $.actions.commentLabel)} placeholder={t(($) => $.actions.commentPlaceholder)} rows={2} className="max-w-lg" />
             )
           }
         </form.AppField>
@@ -268,11 +268,11 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
           <form.AppForm>
             <form.SubmitButton
               size="sm"
-              label={mode === "approve" ? (selfApproval ? t("actions.confirmSelfApprove") : t("actions.confirmApprove")) : t("actions.confirmReject")}
+              label={mode === "approve" ? (selfApproval ? t(($) => $.actions.confirmSelfApprove) : t(($) => $.actions.confirmApprove)) : t(($) => $.actions.confirmReject)}
             />
           </form.AppForm>
           <Button size="sm" variant="tertiary" onPress={() => setMode(null)}>
-            {t("common:actions.back")}
+            {t(($) => $.actions.back, { ns: "common" })}
           </Button>
         </div>
       </form>
@@ -283,18 +283,18 @@ function ReviewActions({ request }: { request: ChangeRequest }) {
     <div className="flex flex-wrap items-center gap-2 pt-1">
       {isAdmin && (!isAuthor || selfApproval) && (
         <Button size="sm" variant={selfApproval ? "outline" : "primary"} onPress={() => { form.reset(); setMode("approve"); }}>
-          {selfApproval ? t("actions.selfApprove") : t("actions.approve")}
+          {selfApproval ? t(($) => $.actions.selfApprove) : t(($) => $.actions.approve)}
         </Button>
       )}
       {isAdmin && !isAuthor && (
         <Button size="sm" variant="outline" onPress={() => { form.reset(); setMode("reject"); }}>
-          {t("actions.reject")}
+          {t(($) => $.actions.reject)}
         </Button>
       )}
       <Button size="sm" variant="ghost" className="text-muted" isPending={cancel.isPending} onPress={() => cancel.mutate()}>
-        {t("actions.cancel")}
+        {t(($) => $.actions.cancel)}
       </Button>
-      {isAuthor && <span className="text-meta text-muted">{selfApproval ? t("actions.onlyAdmin") : t("actions.waitingForAdmin")}</span>}
+      {isAuthor && <span className="text-meta text-muted">{selfApproval ? t(($) => $.actions.onlyAdmin) : t(($) => $.actions.waitingForAdmin)}</span>}
     </div>
   );
 }
@@ -322,9 +322,9 @@ export function ChangeRequestItem({
     ? experimentWhat(change, experiment)
     : change.type === "toggle"
       ? change.enabled
-        ? t("change.turnOn")
-        : t("change.turnOff")
-      : t("change.rules");
+        ? t(($) => $.change.turnOn)
+        : t(($) => $.change.turnOff)
+      : t(($) => $.change.rules);
   return (
     <article className="flex flex-col gap-2 px-4 py-4 sm:px-5">
       <header className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-label">
@@ -347,7 +347,7 @@ export function ChangeRequestItem({
       <p className="text-meta text-muted">
         <Trans
           t={t}
-          i18nKey="item.requestedBy"
+          i18nKey={($) => $.item.requestedBy}
           components={{ author: <MemberName email={request.authorEmail} className="text-foreground" />, relative: <RelativeTime date={request.createdAt} /> }}
         />
       </p>

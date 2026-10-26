@@ -26,7 +26,7 @@ export function StatusBadge({ status }: { status: ExperimentStatus }) {
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-label">
       <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${statusDot[status]}`} />
-      {t(`status.${status}`)}
+      {t(($) => $.status[status])}
     </span>
   );
 }
@@ -39,10 +39,10 @@ export function DecisionBadge({ experiment }: { experiment: Experiment }) {
   const variation = experiment.variations.find((v) => v.key === d.variationKey);
   const [Icon, label] =
     d.outcome === "ship"
-      ? [Rocket, t("decision.shipped", { name: variation?.name ?? d.variationKey ?? "" }).trim()]
+      ? [Rocket, t(($) => $.decision.shipped, { name: variation?.name ?? d.variationKey ?? "" }).trim()]
       : d.outcome === "rollback"
-        ? [Undo2, t("decision.rolledBack")]
-        : [CircleSlash, t("decision.inconclusive")];
+        ? [Undo2, t(($) => $.decision.rolledBack)]
+        : [CircleSlash, t(($) => $.decision.inconclusive)];
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-border px-2 py-0.5 text-label font-medium">
       <Icon className="size-3.5 text-muted" aria-hidden="true" />
@@ -56,7 +56,7 @@ const SHIPPED_NOTE = "Shipped from experiment ";
 
 /** A rule's note in the UI language: the server's English "Shipped from experiment X" is localized */
 export const ruleNote = (description: string): string =>
-  description.startsWith(SHIPPED_NOTE) ? i18n.t("results:decision.shippedRuleNote", { name: description.slice(SHIPPED_NOTE.length) }) : description;
+  description.startsWith(SHIPPED_NOTE) ? i18n.t(($) => $.decision.shippedRuleNote, { ns: "results", name: description.slice(SHIPPED_NOTE.length) }) : description;
 
 export const currentPhase = (experiment: Experiment) => experiment.phases.at(-1) ?? null;
 
@@ -82,15 +82,15 @@ export function CoverageField({ value, onChange, description }: { value: number;
   const set = (p: number) => Number.isFinite(p) && onChange(Math.min(100, Math.max(1, p)) / 100);
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-label font-medium">{t("coverage.label")}</p>
+      <p className="text-label font-medium">{t(($) => $.coverage.label)}</p>
       <div className="flex items-center gap-3">
-        <Slider aria-label={t("coverage.label")} value={percent} onChange={(v) => set(Array.isArray(v) ? (v[0] ?? 100) : v)} minValue={1} maxValue={100} className="w-full max-w-72">
+        <Slider aria-label={t(($) => $.coverage.label)} value={percent} onChange={(v) => set(Array.isArray(v) ? (v[0] ?? 100) : v)} minValue={1} maxValue={100} className="w-full max-w-72">
           <Slider.Track>
             <Slider.Fill />
             <Slider.Thumb />
           </Slider.Track>
         </Slider>
-        <NumberField aria-label={t("coverage.percent")} value={percent} onChange={set} minValue={1} maxValue={100} className="w-24 shrink-0">
+        <NumberField aria-label={t(($) => $.coverage.percent)} value={percent} onChange={set} minValue={1} maxValue={100} className="w-24 shrink-0">
           <NumberField.Group className="grid-cols-[1fr_auto]">
             <NumberField.Input className="text-right tabular" />
             <span className="pr-3 text-label text-muted">%</span>

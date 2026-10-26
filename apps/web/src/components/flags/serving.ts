@@ -13,7 +13,7 @@ export const short = (value: string) => (value.length > 32 ? `${value.slice(0, 3
  */
 export function servingText(feature: Feature, environmentId: string, experiments?: ReadonlyMap<string, Experiment>): string {
   const config = feature.environments.find((e) => e.environmentId === environmentId);
-  if (config?.enabled !== true) return i18n.t("flags:serving.off");
+  if (config?.enabled !== true) return i18n.t(($) => $.serving.off, { ns: "flags" });
   const live = config.rules.filter(
     (r) => r.enabled && (r._tag !== "experiment" || (experiments?.get(r.experimentId)?.status ?? "running") === "running"),
   );
@@ -22,18 +22,18 @@ export function servingText(feature: Feature, environmentId: string, experiments
   const blocker = catchAll === null ? undefined : live[catchAll];
   const [rules, fallback] = blocker !== undefined && blocker._tag !== "experiment" ? [live.slice(0, catchAll!), blocker.value] : [live, feature.defaultValue];
   const value = short(fallback);
-  if (rules.length === 0) return i18n.t("flags:serving.everyone", { value });
+  if (rules.length === 0) return i18n.t(($) => $.serving.everyone, { ns: "flags", value });
   const ruleValues = new Set(rules.map((r) => (r._tag === "experiment" ? null : r.value)));
   const [only] = ruleValues;
   return ruleValues.size === 1 && only != null && only !== fallback
-    ? i18n.t("flags:serving.rules", { ruleValue: short(only), value })
-    : i18n.t("flags:serving.mixed", { value });
+    ? i18n.t(($) => $.serving.rules, { ns: "flags", ruleValue: short(only), value })
+    : i18n.t(($) => $.serving.mixed, { ns: "flags", value });
 }
 
 /** "On · everyone gets false" / "Off · SDKs return the fallback in your code" */
 export const stateAndServing = (feature: Feature, environmentId: string, experiments?: ReadonlyMap<string, Experiment>) =>
-  i18n.t("flags:serving.withState", {
-    state: feature.environments.find((e) => e.environmentId === environmentId)?.enabled === true ? i18n.t("flags:shared.on") : i18n.t("flags:shared.off"),
+  i18n.t(($) => $.serving.withState, { ns: "flags",
+    state: feature.environments.find((e) => e.environmentId === environmentId)?.enabled === true ? i18n.t(($) => $.shared.on, { ns: "flags" }) : i18n.t(($) => $.shared.off, { ns: "flags" }),
     serving: servingText(feature, environmentId, experiments),
   });
 

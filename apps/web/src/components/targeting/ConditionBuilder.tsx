@@ -23,20 +23,20 @@ const formatIssue = ({ operator, values }: ConditionValue): string | null => {
     try {
       new RegExp(v);
     } catch {
-      return i18n.t("targeting:issues.invalidRegex");
+      return i18n.t(($) => $.issues.invalidRegex, { ns: "targeting" });
     }
   }
   if ((operator === "gt" || operator === "gte" || operator === "lt" || operator === "lte") && !Number.isFinite(Number(v)))
-    return i18n.t("targeting:issues.enterNumber");
-  if (operator.startsWith("semver_") && !SEMVER.test(v.trim())) return i18n.t("targeting:issues.invalidVersion");
+    return i18n.t(($) => $.issues.enterNumber, { ns: "targeting" });
+  if (operator.startsWith("semver_") && !SEMVER.test(v.trim())) return i18n.t(($) => $.issues.invalidVersion, { ns: "targeting" });
   return null;
 };
 
 /** Why a condition can't be saved yet, or null when it's complete */
 export const conditionIssue = (c: ConditionValue): string | null => {
-  if (isGroupOperator(c.operator)) return (c.values[0] ?? "") === "" ? i18n.t("targeting:issues.chooseGroup") : null;
-  if (c.attribute.trim() === "") return i18n.t("targeting:issues.chooseAttribute");
-  if (!isPresenceOperator(c.operator) && (c.values[0] ?? "").trim() === "") return i18n.t("targeting:issues.enterValue");
+  if (isGroupOperator(c.operator)) return (c.values[0] ?? "") === "" ? i18n.t(($) => $.issues.chooseGroup, { ns: "targeting" }) : null;
+  if (c.attribute.trim() === "") return i18n.t(($) => $.issues.chooseAttribute, { ns: "targeting" });
+  if (!isPresenceOperator(c.operator) && (c.values[0] ?? "").trim() === "") return i18n.t(($) => $.issues.enterValue, { ns: "targeting" });
   return formatIssue(c);
 };
 
@@ -82,13 +82,13 @@ export function ConditionBuilder({
   return (
     <div className="@container flex flex-col gap-2">
       {rows.length === 0 && (
-        <p className="text-label text-muted">{t("conditionBuilder.empty")}</p>
+        <p className="text-label text-muted">{t(($) => $.conditionBuilder.empty)}</p>
       )}
       {rows.map((row, i) => {
         const issue = formatIssue(row);
         const operatorSelect = (
           <Select
-            aria-label={t("conditionBuilder.operator")}
+            aria-label={t(($) => $.conditionBuilder.operator)}
             value={row.operator}
             onChange={(k) => typeof k === "string" && setOperator(i, k as ConditionOperator)}
             isDisabled={isDisabled}
@@ -101,10 +101,10 @@ export function ConditionBuilder({
               <ListBox>
                 {groups.map((group) => (
                   <ListBox.Section key={group.id}>
-                    <Header>{t(`operatorGroups.${group.id}`)}</Header>
+                    <Header>{t(($) => $.operatorGroups[group.id])}</Header>
                     {group.operators.map((op) => (
-                      <ListBox.Item key={op} id={op} textValue={t(`operators.${op}`)} className="text-label">
-                        {t(`operators.${op}`)}
+                      <ListBox.Item key={op} id={op} textValue={t(($) => $.operators[op])} className="text-label">
+                        {t(($) => $.operators[op])}
                         <ListBox.ItemIndicator />
                       </ListBox.Item>
                     ))}
@@ -119,7 +119,7 @@ export function ConditionBuilder({
             isIconOnly
             size="sm"
             variant="ghost"
-            aria-label={t("conditionBuilder.removeCondition", { number: i + 1 })}
+            aria-label={t(($) => $.conditionBuilder.removeCondition, { number: i + 1 })}
             className="size-8 min-w-8 text-muted hover:text-foreground"
             onPress={() => onChange(rows.filter((_, j) => j !== i))}
             isDisabled={isDisabled}
@@ -128,7 +128,7 @@ export function ConditionBuilder({
           </Button>
         );
         const label = (
-          <span className="flex h-8 items-center font-mono text-meta text-muted">{i === 0 ? t("conditionBuilder.if") : t("conditionBuilder.and")}</span>
+          <span className="flex h-8 items-center font-mono text-meta text-muted">{i === 0 ? t(($) => $.conditionBuilder.if) : t(($) => $.conditionBuilder.and)}</span>
         );
         if (isGroupOperator(row.operator))
           return (
@@ -156,19 +156,19 @@ export function ConditionBuilder({
             {operatorSelect}
             <div className="order-last col-span-3 col-start-2 min-w-0 sm:order-none sm:col-span-1 sm:col-start-auto">
               {isPresenceOperator(row.operator) ? (
-                <span className="hidden h-8 items-center text-label text-muted sm:flex">{t("conditionBuilder.noValueNeeded")}</span>
+                <span className="hidden h-8 items-center text-label text-muted sm:flex">{t(($) => $.conditionBuilder.noValueNeeded)}</span>
               ) : isListOperator(row.operator) ? (
                 <TagInput
-                  aria-label={t("conditionBuilder.values")}
+                  aria-label={t(($) => $.conditionBuilder.values)}
                   values={row.values}
                   onChange={(values) => update(i, { values })}
-                  placeholder={t("conditionBuilder.valuesPlaceholder")}
+                  placeholder={t(($) => $.conditionBuilder.valuesPlaceholder)}
                   isDisabled={isDisabled}
                   className="font-mono"
                 />
               ) : (
                 <TextField
-                  aria-label={t("conditionBuilder.value")}
+                  aria-label={t(($) => $.conditionBuilder.value)}
                   value={row.values[0] ?? ""}
                   onChange={(v) => update(i, { values: [v] })}
                   isInvalid={issue !== null}
@@ -176,7 +176,7 @@ export function ConditionBuilder({
                 >
                   <Input
                     className="h-8 w-full py-1 font-mono text-base sm:text-label"
-                    placeholder={row.operator === "regex" ? "^.+@acme\\.com$" : row.operator.startsWith("semver") ? "2.4.0" : t("conditionBuilder.valuePlaceholder")}
+                    placeholder={row.operator === "regex" ? "^.+@acme\\.com$" : row.operator.startsWith("semver") ? "2.4.0" : t(($) => $.conditionBuilder.valuePlaceholder)}
                   />
                 </TextField>
               )}
@@ -189,7 +189,7 @@ export function ConditionBuilder({
       <div>
         <Button size="sm" variant="ghost" onPress={add} isDisabled={isDisabled} className="-ml-2 h-7 px-2 text-label text-muted hover:text-foreground">
           <Plus className="size-3.5" />
-          {t("conditionBuilder.addCondition")}
+          {t(($) => $.conditionBuilder.addCondition)}
         </Button>
       </div>
     </div>
@@ -204,7 +204,7 @@ function GroupPicker({ value, onChange, isDisabled }: { value: string; onChange:
     return (
       <p className="flex min-h-8 items-center text-label text-muted">
         <Link to="/saved-groups" search={{ new: true }} className="text-link hover:underline">
-          {t("conditionBuilder.createGroup")}
+          {t(($) => $.conditionBuilder.createGroup)}
         </Link>
       </p>
     );
@@ -212,10 +212,10 @@ function GroupPicker({ value, onChange, isDisabled }: { value: string; onChange:
   return (
     <div className="min-w-0">
       <Select
-        aria-label={t("conditionBuilder.group")}
+        aria-label={t(($) => $.conditionBuilder.group)}
         value={value === "" || missing ? null : value}
         onChange={(k) => typeof k === "string" && onChange(k)}
-        placeholder={groups.isPending ? t("conditionBuilder.loadingGroups") : t("conditionBuilder.groupPlaceholder")}
+        placeholder={groups.isPending ? t(($) => $.conditionBuilder.loadingGroups) : t(($) => $.conditionBuilder.groupPlaceholder)}
         isDisabled={isDisabled || groups.isPending}
         isInvalid={missing}
       >
@@ -229,7 +229,7 @@ function GroupPicker({ value, onChange, isDisabled }: { value: string; onChange:
               <ListBox.Item key={g.id} id={g.id} textValue={g.name} className="text-label">
                 <span className="flex-1 truncate">{g.name}</span>
                 <span className="text-meta text-muted tabular">
-                  {g.type === "list" ? t("conditionBuilder.listSize", { count: g.values.length }) : t("conditionBuilder.conditionGroup")}
+                  {g.type === "list" ? t(($) => $.conditionBuilder.listSize, { count: g.values.length }) : t(($) => $.conditionBuilder.conditionGroup)}
                 </span>
                 <ListBox.ItemIndicator />
               </ListBox.Item>
@@ -237,8 +237,8 @@ function GroupPicker({ value, onChange, isDisabled }: { value: string; onChange:
           </ListBox>
         </Select.Popover>
       </Select>
-      {missing && <p className="mt-1 text-meta text-danger">{t("issues.groupMissing")}</p>}
-      {groups.isError && <p className="mt-1 text-meta text-danger">{t("issues.groupsFailed")}</p>}
+      {missing && <p className="mt-1 text-meta text-danger">{t(($) => $.issues.groupMissing)}</p>}
+      {groups.isError && <p className="mt-1 text-meta text-danger">{t(($) => $.issues.groupsFailed)}</p>}
     </div>
   );
 }
@@ -257,7 +257,7 @@ function AttributeInput({
   const { t } = useTranslation("targeting");
   return (
     <ComboBox
-      aria-label={t("conditionBuilder.attribute")}
+      aria-label={t(($) => $.conditionBuilder.attribute)}
       allowsCustomValue
       menuTrigger="focus"
       inputValue={value}
@@ -265,7 +265,7 @@ function AttributeInput({
       isDisabled={isDisabled}
     >
       <ComboBox.InputGroup>
-        <Input className="h-8 w-full py-1 font-mono text-base sm:text-label" placeholder={t("conditionBuilder.attributePlaceholder")} />
+        <Input className="h-8 w-full py-1 font-mono text-base sm:text-label" placeholder={t(($) => $.conditionBuilder.attributePlaceholder)} />
         <ComboBox.Trigger />
       </ComboBox.InputGroup>
       <ComboBox.Popover>
@@ -326,7 +326,7 @@ export function TagInput({
           <span className="truncate">{v}</span>
           <button
             type="button"
-            aria-label={t("tagInput.remove", { value: v })}
+            aria-label={t(($) => $.tagInput.remove, { value: v })}
             disabled={isDisabled}
             onClick={() => onChange(values.filter((x) => x !== v))}
             className="flex size-6 shrink-0 items-center justify-center rounded-[4px] text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"

@@ -6,7 +6,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { conditionsSummary } from "~/components/targeting/summary";
 import { i18n, intlLocale } from "~/i18n";
 
-export const metricTypeLabel = (type: MetricType): string => i18n.t(`metrics:types.${type}`);
+export const metricTypeLabel = (type: MetricType): string => i18n.t(($) => $.types[type], { ns: "metrics" });
 
 /** 24h, 72h, 7d, 14d (24時間, 7日 in Japanese) */
 export const formatHours = (hours: number): string => {
@@ -20,18 +20,18 @@ export const formatHours = (hours: number): string => {
 };
 
 export const windowLabel = (m: Pick<Metric, "windowHours" | "delayHours">): string => {
-  const window = m.windowHours === null ? i18n.t("metrics:window.none") : formatHours(m.windowHours);
-  return m.delayHours > 0 ? i18n.t("metrics:window.withDelay", { window, delay: formatHours(m.delayHours) }) : window;
+  const window = m.windowHours === null ? i18n.t(($) => $.window.none, { ns: "metrics" }) : formatHours(m.windowHours);
+  return m.delayHours > 0 ? i18n.t(($) => $.window.withDelay, { ns: "metrics", window, delay: formatHours(m.delayHours) }) : window;
 };
 
 const percentileOf = (value: number) => Number((value * 100).toFixed(2));
 
 export const cappingLabel = (capping: Metric["capping"]): string =>
   capping.type === "none"
-    ? i18n.t("common:states.none")
+    ? i18n.t(($) => $.states.none, { ns: "common" })
     : capping.type === "absolute"
-      ? i18n.t("metrics:capping.absolute", { value: capping.value })
-      : i18n.t("metrics:capping.percentile", { percentile: percentileOf(capping.value) });
+      ? i18n.t(($) => $.capping.absolute, { ns: "metrics", value: capping.value })
+      : i18n.t(($) => $.capping.percentile, { ns: "metrics", percentile: percentileOf(capping.value) });
 
 const tok = <code className="rounded-[4px] bg-default px-1 py-px font-mono text-[0.92em]" />;
 
@@ -44,16 +44,16 @@ type Describable = Pick<Metric, "type" | "definition" | "windowHours" | "delayHo
 export function MetricSentence({ metric }: { metric: Describable }) {
   const { t } = useTranslation("metrics");
   const d = metric.definition;
-  const ev = (name: string) => (name.trim() === "" ? t("sentence.eventPlaceholder") : name.trim());
+  const ev = (name: string) => (name.trim() === "" ? t(($) => $.sentence.eventPlaceholder) : name.trim());
   let what: ReactNode;
   if (d._tag === "event") {
     if (metric.type === "proportion")
-      what = <Trans t={t} i18nKey="sentence.proportion" values={{ event: ev(d.numerator.event) }} components={{ c: tok }} />;
+      what = <Trans t={t} i18nKey={($) => $.sentence.proportion} values={{ event: ev(d.numerator.event) }} components={{ c: tok }} />;
     else if (metric.type === "mean")
       what = (
         <Trans
           t={t}
-          i18nKey={d.numerator.aggregation === "count" ? "sentence.meanCount" : "sentence.meanSum"}
+          i18nKey={($) => (d.numerator.aggregation === "count" ? $.sentence.meanCount : $.sentence.meanSum)}
           values={{ event: ev(d.numerator.event) }}
           components={{ c: tok }}
         />
@@ -64,7 +64,7 @@ export function MetricSentence({ metric }: { metric: Describable }) {
       what = (
         <Trans
           t={t}
-          i18nKey={`sentence.ratio.${combo}`}
+          i18nKey={($) => $.sentence.ratio[combo]}
           values={{ numerator: ev(d.numerator.event), denominator: ev(den.event) }}
           components={{ c: tok }}
         />
@@ -74,7 +74,7 @@ export function MetricSentence({ metric }: { metric: Describable }) {
     what = (
       <Trans
         t={t}
-        i18nKey={metric.type === "proportion" ? "sentence.sqlProportion" : metric.type === "mean" ? "sentence.sqlMean" : "sentence.sqlRatio"}
+        i18nKey={($) => (metric.type === "proportion" ? $.sentence.sqlProportion : metric.type === "mean" ? $.sentence.sqlMean : $.sentence.sqlRatio)}
         components={{ c: tok }}
       />
     );
@@ -85,18 +85,18 @@ export function MetricSentence({ metric }: { metric: Describable }) {
   const when =
     window === null
       ? delay === null
-        ? t("sentence.when.anyTime")
-        : t("sentence.when.fromDelay", { delay })
+        ? t(($) => $.sentence.when.anyTime)
+        : t(($) => $.sentence.when.fromDelay, { delay })
       : delay === null
-        ? t("sentence.when.within", { window })
-        : t("sentence.when.between", { delay, window });
+        ? t(($) => $.sentence.when.within, { window })
+        : t(($) => $.sentence.when.between, { delay, window });
 
   const cap =
     metric.type === "proportion" || metric.capping.type === "none"
       ? ""
       : metric.capping.type === "absolute"
-        ? t("sentence.cap.absolute", { value: metric.capping.value })
-        : t("sentence.cap.percentile", { percentile: percentileOf(metric.capping.value) });
+        ? t(($) => $.sentence.cap.absolute, { value: metric.capping.value })
+        : t(($) => $.sentence.cap.percentile, { percentile: percentileOf(metric.capping.value) });
 
   // "Only purchase events where plan is pro count." per filtered source
   const filtered =
@@ -107,13 +107,13 @@ export function MetricSentence({ metric }: { metric: Describable }) {
   return (
     <>
       {what}
-      {t("sentence.tail", { when, cap })}
+      {t(($) => $.sentence.tail, { when, cap })}
       {filtered.map((s, i) => (
         <span key={i}>
           {" "}
           <Trans
             t={t}
-            i18nKey="sentence.filters"
+            i18nKey={($) => $.sentence.filters}
             values={{
               event: ev(s.event),
               filters: conditionsSummary(s.filters.map((f) => ({ attribute: f.property, operator: f.operator, values: f.values }))),
@@ -132,7 +132,7 @@ export function Direction({ inverse }: { inverse: boolean }) {
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap">
       <Icon className="size-3.5 text-muted" aria-hidden="true" />
-      {inverse ? t("direction.lowerIsBetter") : t("direction.higherIsBetter")}
+      {inverse ? t(($) => $.direction.lowerIsBetter) : t(($) => $.direction.higherIsBetter)}
     </span>
   );
 }

@@ -10,7 +10,7 @@ const isEntityType = (v: unknown): v is AuditEntityType => entityTypes.some((t) 
 
 export const Route = createFileRoute("/_app/audit")({
   validateSearch: (s: Record<string, unknown>): { type?: AuditEntityType } => (isEntityType(s.type) ? { type: s.type } : {}),
-  head: () => ({ meta: [{ title: i18n.t("audit:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "audit" }) }] }),
   component: Page,
 });
 
@@ -21,39 +21,39 @@ function Page() {
   return (
     <>
       <PageHeader
-        title={t("page.title")}
-        description={t("page.description")}
+        title={t(($) => $.page.title)}
+        description={t(($) => $.page.description)}
       />
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <Select
-            aria-label={t("page.filterLabel")}
+            aria-label={t(($) => $.page.filterLabel)}
             value={type ?? "all"}
             onChange={(k) => void navigate({ search: k === "all" || !isEntityType(k) ? {} : { type: k }, replace: true })}
             className="w-48"
           >
-            <Label className="sr-only">{t("page.type")}</Label>
+            <Label className="sr-only">{t(($) => $.page.type)}</Label>
             <Select.Trigger className="h-8">
               <Select.Value className="text-label" />
               <Select.Indicator />
             </Select.Trigger>
             <Select.Popover>
               <ListBox>
-                <ListBox.Item id="all" textValue={t("page.allChanges")}>
-                  {t("page.allChanges")}
+                <ListBox.Item id="all" textValue={t(($) => $.page.allChanges)}>
+                  {t(($) => $.page.allChanges)}
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
                 {entityTypes.map((et) => (
-                  <ListBox.Item key={et.type} id={et.type} textValue={t(`entityTypes.${et.type}`)}>
+                  <ListBox.Item key={et.type} id={et.type} textValue={t(($) => $.entityTypes[et.type])}>
                     <et.icon className="size-4 text-muted" />
-                    {t(`entityTypes.${et.type}`)}
+                    {t(($) => $.entityTypes[et.type])}
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
                 ))}
               </ListBox>
             </Select.Popover>
           </Select>
-          <p className="text-meta text-muted">{t("page.hint")}</p>
+          <p className="text-meta text-muted">{t(($) => $.page.hint)}</p>
         </div>
         <AuditList key={type ?? "all"} entityType={type ?? null} />
       </Panel>

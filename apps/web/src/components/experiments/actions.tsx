@@ -47,7 +47,7 @@ export function useReviewRequest(experiment: Experiment, onDone: () => void) {
     await client.changeRequests.create({ featureId: experiment.featureId, environmentId: environment.id, change, comment });
     void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
     void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-    toast.success(i18n.t("results:decision.requested"), { description: i18n.t("results:decision.requestedDescription") });
+    toast.success(i18n.t(($) => $.decision.requested, { ns: "results" }), { description: i18n.t(($) => $.decision.requestedDescription, { ns: "results" }) });
     onDone();
   };
   return { environment, request };
@@ -60,7 +60,7 @@ function ReviewNote({ environment }: { environment: { name: string } | null }) {
   return (
     <p className="flex items-start gap-2 text-label text-muted">
       <ShieldCheck className="mt-0.5 size-4 shrink-0 text-focus" aria-hidden="true" />
-      {t("decision.reviewNote", { environment: environment.name })}
+      {t(($) => $.decision.reviewNote, { environment: environment.name })}
     </p>
   );
 }
@@ -116,12 +116,12 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
         const fields = {
           percents:
             Math.abs(total - 1) > 1e-4
-              ? t("traffic.weightsTotal", { percent: Number((total * 100).toFixed(2)) })
+              ? t(($) => $.traffic.weightsTotal, { percent: Number((total * 100).toFixed(2)) })
               : weights.some((w) => w <= 0)
-                ? t("traffic.weightZero")
+                ? t(($) => $.traffic.weightZero)
                 : undefined,
           conditions: value.conditions.map((c) => conditionIssue(c)).find((m) => m !== null) ?? undefined,
-          reason: needsNewPhase(value) && value.reason.trim() === "" ? t("common:form.required") : undefined,
+          reason: needsNewPhase(value) && value.reason.trim() === "" ? t(($) => $.form.required, { ns: "common" }) : undefined,
         };
         return Object.values(fields).some((m) => m !== undefined) ? { fields } : undefined;
       },
@@ -151,9 +151,9 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
 
   const weights = weightsOf(v);
   const changes = [
-    v.coverage < phase.coverage - 1e-9 && t("traffic.changes.coverageDown"),
-    !sameWeights(weights, phase.weights) && t("traffic.changes.split"),
-    JSON.stringify(v.conditions) !== JSON.stringify(phase.conditions) && t("traffic.changes.targeting"),
+    v.coverage < phase.coverage - 1e-9 && t(($) => $.traffic.changes.coverageDown),
+    !sameWeights(weights, phase.weights) && t(($) => $.traffic.changes.split),
+    JSON.stringify(v.conditions) !== JSON.stringify(phase.conditions) && t(($) => $.traffic.changes.targeting),
   ].filter((c): c is string => c !== false);
   const changed = changes.length > 0 || Math.abs(v.coverage - phase.coverage) > 1e-9;
   const newPhase = needsNewPhase(v);
@@ -161,19 +161,19 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
 
   return (
     <ActionPanel
-      title={t("traffic.title")}
-      description={t("traffic.description", { phase: phaseNo })}
+      title={t(($) => $.traffic.title)}
+      description={t(($) => $.traffic.description, { phase: phaseNo })}
       footer={
         <>
           <form.AppForm>
             <form.FormError className="sm:mr-auto" />
           </form.AppForm>
           <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={isSubmitting}>
-            {t("common:actions.cancel")}
+            {t(($) => $.actions.cancel, { ns: "common" })}
           </Button>
           {/* No <form>: Enter in a number field must not apply a change that can re-randomize users */}
           <Button size="sm" onPress={() => void form.handleSubmit()} isPending={isSubmitting} isDisabled={!changed || (submissionAttempts > 0 && !isFieldsValid)}>
-            {review.environment !== null ? t("results:decision.requestReview") : newPhase ? t("traffic.startPhase", { phase: phaseNo + 1 }) : t("traffic.apply")}
+            {review.environment !== null ? t(($) => $.decision.requestReview, { ns: "results" }) : newPhase ? t(($) => $.traffic.startPhase, { phase: phaseNo + 1 }) : t(($) => $.traffic.apply)}
           </Button>
         </>
       }
@@ -183,13 +183,13 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
           <CoverageField
             value={field.state.value}
             onChange={field.handleChange}
-            description={t("traffic.coverageHelp", { percent: Math.round(phase.coverage * 100) })}
+            description={t(($) => $.traffic.coverageHelp, { percent: Math.round(phase.coverage * 100) })}
           />
         )}
       </form.AppField>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-label font-medium">{t("traffic.split")}</p>
+          <p className="text-label font-medium">{t(($) => $.traffic.split)}</p>
           <form.AppField name="even" listeners={{ onChange: () => form.setFieldValue("percents", evenPercents(n)) }}>
             {(field) => (
               <Switch size="sm" isSelected={field.state.value} onChange={field.handleChange}>
@@ -197,7 +197,7 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
                   <Switch.Control>
                     <Switch.Thumb />
                   </Switch.Control>
-                  <span className="text-label">{t("traffic.evenSplit")}</span>
+                  <span className="text-label">{t(($) => $.traffic.evenSplit)}</span>
                 </Switch.Content>
               </Switch>
             )}
@@ -218,7 +218,7 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
                       minValue={0}
                       maxValue={100}
                       step={0.1}
-                      aria-label={t("traffic.weight", { name: variation.name })}
+                      aria-label={t(($) => $.traffic.weight, { name: variation.name })}
                     >
                       <NumberField.Group className="grid-cols-[auto_1fr_auto]">
                         <span className="flex items-center gap-2 pl-3 text-label whitespace-nowrap">
@@ -240,7 +240,7 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
       <form.AppField name="conditions">
         {(field) => (
           <div className="flex flex-col gap-2">
-            <p className="text-label font-medium">{t("traffic.whoCanEnter")}</p>
+            <p className="text-label font-medium">{t(($) => $.traffic.whoCanEnter)}</p>
             <ConditionBuilder value={field.state.value} onChange={field.handleChange} />
             {/* Format problems show inline in the builder; missing parts are reported once a save was tried */}
             {submissionAttempts > 0 && field.state.meta.errors.length > 0 && <p className="text-meta text-danger">{errorText(field.state.meta.errors)}</p>}
@@ -256,9 +256,9 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
           {newPhase ? <RotateCcw className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : <Info className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />}
           {newPhase ? (
             <p>
-              <span className="font-medium">{t("traffic.newPhase", { phase: phaseNo + 1 })}</span>{" "}
+              <span className="font-medium">{t(($) => $.traffic.newPhase, { phase: phaseNo + 1 })}</span>{" "}
               <span className="text-muted">
-                {t("traffic.newPhaseWhy", {
+                {t(($) => $.traffic.newPhaseWhy, {
                   changes: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(changes),
                   current: phaseNo,
                 })}
@@ -266,8 +266,8 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
             </p>
           ) : (
             <p>
-              <span className="font-medium">{t("traffic.keepsPhase")}</span>{" "}
-              <span className="text-muted">{t("traffic.keepsPhaseWhy")}</span>
+              <span className="font-medium">{t(($) => $.traffic.keepsPhase)}</span>{" "}
+              <span className="text-muted">{t(($) => $.traffic.keepsPhaseWhy)}</span>
             </p>
           )}
         </div>
@@ -283,9 +283,9 @@ export function TrafficEditor({ experiment, onDone }: { experiment: Experiment; 
               isRequired={newPhase}
               isInvalid={error !== null}
             >
-              <Label>{newPhase ? t("traffic.reason") : t("traffic.reasonOptional")}</Label>
-              <TextArea rows={2} placeholder={t("traffic.reasonPlaceholder")} className="resize-y" />
-              <Description>{t("traffic.reasonHelp")}</Description>
+              <Label>{newPhase ? t(($) => $.traffic.reason) : t(($) => $.traffic.reasonOptional)}</Label>
+              <TextArea rows={2} placeholder={t(($) => $.traffic.reasonPlaceholder)} className="resize-y" />
+              <Description>{t(($) => $.traffic.reasonHelp)}</Description>
               <FieldError>{error}</FieldError>
             </TextField>
           );
@@ -327,11 +327,11 @@ export function StopPanel({
   const memo = [
     headline,
     // Winning / losing headlines carry the lift and interval; a non-significant estimate is recorded as such
-    a.kind === "neutral" && a.comparison !== null ? t("results:banner.estimate", { effect: effectText(a.comparison) }) : null,
+    a.kind === "neutral" && a.comparison !== null ? t(($) => $.banner.estimate, { ns: "results", effect: effectText(a.comparison) }) : null,
     guardrails,
     problem,
-    early ? t("results:banner.early") : null,
-    a.kind === "noData" ? null : `${t("results:users", { count: users, users: formatCount(users) })} · ${progressText(progress, false)}`,
+    early ? t(($) => $.banner.early, { ns: "results" }) : null,
+    a.kind === "noData" ? null : `${t(($) => $.users, { ns: "results", count: users, users: formatCount(users) })} · ${progressText(progress, false)}`,
   ]
     .filter((line) => line !== null)
     .join("\n");
@@ -344,12 +344,12 @@ export function StopPanel({
         const against = value.choice !== recommended;
         const reason = value.reason.trim();
         const fields = {
-          acknowledged: against && !value.acknowledged ? t("results:decision.acknowledgeRequired") : undefined,
+          acknowledged: against && !value.acknowledged ? t(($) => $.decision.acknowledgeRequired, { ns: "results" }) : undefined,
           reason:
             reason === ""
-              ? t("common:form.required")
+              ? t(($) => $.form.required, { ns: "common" })
               : against && reason === memo.trim()
-                ? t("results:decision.explainRequired")
+                ? t(($) => $.decision.explainRequired, { ns: "results" })
                 : undefined,
         };
         return Object.values(fields).some((m) => m !== undefined) ? { fields } : undefined;
@@ -381,13 +381,13 @@ export function StopPanel({
   const shipped = experiment.variations.find((v) => v.key === shipKeyOf(choice));
   const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? id;
   const envNames = formatList(experiment.environmentIds.map(envName));
-  const suggested = <span className="ml-1.5 shrink-0 whitespace-nowrap rounded-sm bg-default px-1 py-px text-[11px] font-medium text-muted">{t("stop.suggested")}</span>;
+  const suggested = <span className="ml-1.5 shrink-0 whitespace-nowrap rounded-sm bg-default px-1 py-px text-[11px] font-medium text-muted">{t(($) => $.stop.suggested)}</span>;
   const preview = (value: string) =>
     feature === undefined ? <code className="font-mono">{value}</code> : <ValuePreview valueType={feature.valueType} value={value} />;
 
   const choiceLabel = (value: string) => {
     const v = experiment.variations.find((x) => x.key === shipKeyOf(value));
-    return v !== undefined ? t("stop.ship", { name: v.name }) : value === "rollback" ? t("stop.rollback") : t("stop.inconclusive");
+    return v !== undefined ? t(($) => $.stop.ship, { name: v.name }) : value === "rollback" ? t(($) => $.stop.rollback) : t(($) => $.stop.inconclusive);
   };
   const options = [
     ...experiment.variations.slice(1).map((v, i) => ({
@@ -395,31 +395,31 @@ export function StopPanel({
       label: (
         <span className="inline-flex items-center gap-1.5">
           <VariationSwatch index={i + 1} />
-          {t("stop.ship", { name: v.name })}
+          {t(($) => $.stop.ship, { name: v.name })}
           {recommended === `ship:${v.key}` && suggested}
         </span>
       ),
-      description: t("stop.shipHelp"),
+      description: t(($) => $.stop.shipHelp),
     })),
     {
       value: "rollback",
       label: (
         <span>
-          {t("stop.rollback")}
+          {t(($) => $.stop.rollback)}
           {recommended === "rollback" && suggested}
         </span>
       ),
-      description: t("stop.rollbackHelp"),
+      description: t(($) => $.stop.rollbackHelp),
     },
     {
       value: "inconclusive",
       label: (
         <span>
-          {t("stop.inconclusive")}
+          {t(($) => $.stop.inconclusive)}
           {recommended === "inconclusive" && suggested}
         </span>
       ),
-      description: t("stop.inconclusiveHelp"),
+      description: t(($) => $.stop.inconclusiveHelp),
     },
   ];
 
@@ -428,17 +428,17 @@ export function StopPanel({
     !against
       ? []
       : [
-          a.kind === "unhealthy" ? t("results:decision.againstUnhealthy") : null,
+          a.kind === "unhealthy" ? t(($) => $.decision.againstUnhealthy, { ns: "results" }) : null,
           shipped !== undefined && a.regressions.length > 0
-            ? t("results:decision.againstShipRegressed", {
-                metrics: formatList(a.regressions.map((m) => metrics.get(m.metricId)?.name ?? t("results:banner.guardrailFallback"))),
+            ? t(($) => $.decision.againstShipRegressed, { ns: "results",
+                metrics: formatList(a.regressions.map((m) => metrics.get(m.metricId)?.name ?? t(($) => $.banner.guardrailFallback, { ns: "results" }))),
               })
             : null,
           shipped !== undefined && !(a.kind === "winning" && a.comparison?.variationKey === shipped.key)
-            ? t("results:decision.againstShipNotWinning", { name: shipped.name })
+            ? t(($) => $.decision.againstShipNotWinning, { ns: "results", name: shipped.name })
             : null,
-          shipped !== undefined && early ? t("results:decision.againstShipEarly") : null,
-          t("results:decision.againstRecommended", { choice: choiceLabel(recommended) }),
+          shipped !== undefined && early ? t(($) => $.decision.againstShipEarly, { ns: "results" }) : null,
+          t(($) => $.decision.againstRecommended, { ns: "results", choice: choiceLabel(recommended) }),
         ].filter((o) => o !== null);
 
   const byId = new Map(experimentsList.map((x) => [x.id, x]));
@@ -452,29 +452,29 @@ export function StopPanel({
 
   return (
     <ActionPanel
-      title={t("stop.title")}
-      description={t("stop.description")}
+      title={t(($) => $.stop.title)}
+      description={t(($) => $.stop.description)}
       footer={
         <>
           <form.AppForm>
             <form.FormError className="sm:mr-auto" />
           </form.AppForm>
           <Button size="sm" variant="tertiary" onPress={onDone} isDisabled={isSubmitting}>
-            {t("common:actions.cancel")}
+            {t(($) => $.actions.cancel, { ns: "common" })}
           </Button>
           {/* No <form>: stopping can't be undone, so only this button submits */}
           <Button size="sm" onPress={() => void form.handleSubmit()} isPending={isSubmitting} isDisabled={submissionAttempts > 0 && !isFieldsValid}>
             {review.environment !== null
-              ? t("results:decision.requestReview")
+              ? t(($) => $.decision.requestReview, { ns: "results" })
               : shipped !== undefined
-                ? t("stop.stopAndShip", { name: shipped.name })
-                : t("stop.stopExperiment")}
+                ? t(($) => $.stop.stopAndShip, { name: shipped.name })
+                : t(($) => $.stop.stopExperiment)}
           </Button>
         </>
       }
     >
       <div className="rounded-lg border border-border px-4 py-3 text-label">
-        <p className="text-meta text-muted">{t("results:decision.evidence")}</p>
+        <p className="text-meta text-muted">{t(($) => $.decision.evidence, { ns: "results" })}</p>
         <p className="mt-0.5 font-medium">{headline}</p>
         {guardrails !== null && (
           <p className={`mt-1 flex items-center gap-1.5 ${a.regressions.length > 0 ? "font-medium text-lose" : "text-muted"}`}>
@@ -490,13 +490,13 @@ export function StopPanel({
         {early && (
           <p className="mt-1 flex items-center gap-1.5 text-muted">
             <Hourglass className="size-3.5 shrink-0" aria-hidden="true" />
-            {t("results:banner.early")}
+            {t(($) => $.banner.early, { ns: "results" })}
           </p>
         )}
       </div>
 
       <form.AppField name="choice">
-        {(field) => <Segmented label={t("stop.decision")} value={field.state.value} onChange={field.handleChange} options={options} />}
+        {(field) => <Segmented label={t(($) => $.stop.decision)} value={field.state.value} onChange={field.handleChange} options={options} />}
       </form.AppField>
 
       {/* Always mounted, so the form-level validator can flag it the moment the choice goes against the results */}
@@ -509,7 +509,7 @@ export function StopPanel({
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                 <div>
-                  <p className="font-medium">{t("results:decision.notRecommended")}</p>
+                  <p className="font-medium">{t(($) => $.decision.notRecommended, { ns: "results" })}</p>
                   <ul className="mt-1 flex flex-col gap-0.5 text-muted">
                     {objections.map((o) => (
                       <li key={o}>{o}</li>
@@ -523,7 +523,7 @@ export function StopPanel({
                     <Checkbox.Control>
                       <Checkbox.Indicator />
                     </Checkbox.Control>
-                    <span className="text-label">{t("results:decision.acknowledge")}</span>
+                    <span className="text-label">{t(($) => $.decision.acknowledge, { ns: "results" })}</span>
                   </Checkbox.Content>
                 </Checkbox>
                 {error !== null && <p className="mt-1 text-meta text-danger">{error}</p>}
@@ -537,7 +537,7 @@ export function StopPanel({
         {shipped !== undefined ? (
           <Trans
             t={t}
-            i18nKey="stop.shipSummary"
+            i18nKey={($) => $.stop.shipSummary}
             values={{ name: shipped.name, environments: envNames }}
             components={{ value: preview(shipped.value) }}
           />
@@ -545,11 +545,11 @@ export function StopPanel({
           <>
             <Trans
               t={t}
-              i18nKey={feature === undefined ? "stop.removeSummaryNoValue" : "stop.removeSummary"}
-              values={{ flag: feature?.key ?? t("theFlag"), environments: envNames }}
+              i18nKey={($) => (feature === undefined ? $.stop.removeSummaryNoValue : $.stop.removeSummary)}
+              values={{ flag: feature?.key ?? t(($) => $.theFlag), environments: envNames }}
               components={{ code: <span className="font-mono" />, value: feature === undefined ? <></> : preview(feature.defaultValue) }}
             />
-            {choice === "inconclusive" && t("stop.recordedInconclusive")}
+            {choice === "inconclusive" && t(($) => $.stop.recordedInconclusive)}
           </>
         )}
       </p>
@@ -558,20 +558,20 @@ export function StopPanel({
         <div className="flex items-start gap-3 rounded-lg border border-foreground/30 px-4 py-3 text-label" aria-live="polite">
           <EyeOff className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div>
-            <p className="font-medium">{t("results:decision.shadowTitle")}</p>
+            <p className="font-medium">{t(($) => $.decision.shadowTitle, { ns: "results" })}</p>
             <ul className="mt-1 flex flex-col gap-0.5">
               {hidden.map(({ environmentId, rule }) => (
                 <li key={`${environmentId}:${rule.id}`}>
                   {rule._tag === "experiment"
-                    ? t("results:decision.shadowExperiment", { name: byId.get(rule.experimentId)?.name ?? rule.experimentId, environment: envName(environmentId) })
-                    : t("results:decision.shadowRule", {
-                        rule: rule.description !== "" ? ruleNote(rule.description) : t(`flags:rules.types.${rule._tag}`),
+                    ? t(($) => $.decision.shadowExperiment, { ns: "results", name: byId.get(rule.experimentId)?.name ?? rule.experimentId, environment: envName(environmentId) })
+                    : t(($) => $.decision.shadowRule, { ns: "results",
+                        rule: rule.description !== "" ? ruleNote(rule.description) : t(($) => $.rules.types[rule._tag], { ns: "flags" }),
                         environment: envName(environmentId),
                       })}
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-meta text-muted">{t("results:decision.shadowHelp")}</p>
+            <p className="mt-1 text-meta text-muted">{t(($) => $.decision.shadowHelp, { ns: "results" })}</p>
           </div>
         </div>
       )}
@@ -581,9 +581,9 @@ export function StopPanel({
           const error = shownError(field.state.meta);
           return (
             <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} isRequired isInvalid={error !== null}>
-              <Label>{t("stop.why")}</Label>
-              <TextArea rows={4} placeholder={t("stop.whyPlaceholder")} className="resize-y" />
-              <Description>{t("stop.whyHelp")}</Description>
+              <Label>{t(($) => $.stop.why)}</Label>
+              <TextArea rows={4} placeholder={t(($) => $.stop.whyPlaceholder)} className="resize-y" />
+              <Description>{t(($) => $.stop.whyHelp)}</Description>
               <FieldError>{error}</FieldError>
             </TextField>
           );

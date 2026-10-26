@@ -30,36 +30,36 @@ function step(rule: PayloadRule, attributes: Attributes, savedGroups: SdkPayload
   if (failing !== undefined) {
     // Group conditions have no attribute of their own to show
     if (failing.operator === "in_group" || failing.operator === "not_in_group")
-      return { matched: false, reason: i18n.t("flags:simulate.needsGroup", { condition: conditionsSummary([failing]) }) };
+      return { matched: false, reason: i18n.t(($) => $.simulate.needsGroup, { ns: "flags", condition: conditionsSummary([failing]) }) };
     const has = Object.hasOwn(attributes, failing.attribute) ? attributes[failing.attribute] : undefined;
     return {
       matched: false,
-      reason: i18n.t("flags:simulate.needs", {
+      reason: i18n.t(($) => $.simulate.needs, { ns: "flags",
         condition: conditionsSummary([failing]),
-        actual: has === undefined || has === null ? i18n.t("flags:simulate.notSet") : i18n.t("flags:simulate.has", { value: show(has) }),
+        actual: has === undefined || has === null ? i18n.t(($) => $.simulate.notSet, { ns: "flags" }) : i18n.t(($) => $.simulate.has, { ns: "flags", value: show(has) }),
       }),
     };
   }
-  const who = rule.conditions.length === 0 ? i18n.t("targeting:summary.everyone") : i18n.t("flags:simulate.conditionsMatch");
+  const who = rule.conditions.length === 0 ? i18n.t(($) => $.summary.everyone, { ns: "targeting" }) : i18n.t(($) => $.simulate.conditionsMatch, { ns: "flags" });
   if (rule.type === "force") return { matched: true, reason: who };
-  if (rule.type !== "rollout" && rule.type !== "experiment") return { matched: false, reason: i18n.t("flags:simulate.unknownType") };
+  if (rule.type !== "rollout" && rule.type !== "experiment") return { matched: false, reason: i18n.t(($) => $.simulate.unknownType, { ns: "flags" }) };
   const raw = Object.hasOwn(attributes, rule.hashAttribute) ? attributes[rule.hashAttribute] : undefined;
   const id = raw === undefined || raw === null ? "" : String(raw);
-  if (id === "") return { matched: false, reason: i18n.t("flags:simulate.noHashAttribute", { attribute: rule.hashAttribute }) };
+  if (id === "") return { matched: false, reason: i18n.t(($) => $.simulate.noHashAttribute, { ns: "flags", attribute: rule.hashAttribute }) };
   if (rule.type === "experiment" && rule.namespace && !inNamespace(id, rule.namespace))
-    return { matched: false, reason: i18n.t("flags:simulate.outsideNamespace", { namespace: rule.namespace[0] }) };
+    return { matched: false, reason: i18n.t(($) => $.simulate.outsideNamespace, { ns: "flags", namespace: rule.namespace[0] }) };
   const n = hash(rule.seed, id);
   const bucket = n.toFixed(4);
   if (rule.type === "rollout") {
     const percent = pct(rule.coverage);
     return n < rule.coverage
-      ? { matched: true, reason: i18n.t("flags:simulate.inRollout", { percent, bucket }) }
-      : { matched: false, reason: i18n.t("flags:simulate.outsideRollout", { percent, bucket }) };
+      ? { matched: true, reason: i18n.t(($) => $.simulate.inRollout, { ns: "flags", percent, bucket }) }
+      : { matched: false, reason: i18n.t(($) => $.simulate.outsideRollout, { ns: "flags", percent, bucket }) };
   }
   const v = rule.variations[chooseVariation(n, getBucketRanges(rule.variations.length, rule.coverage, rule.weights))];
   return v === undefined
-    ? { matched: false, reason: i18n.t("flags:simulate.outsideExperiment", { bucket }) }
-    : { matched: true, reason: i18n.t("flags:simulate.assigned", { variation: v.key, bucket }) };
+    ? { matched: false, reason: i18n.t(($) => $.simulate.outsideExperiment, { ns: "flags", bucket }) }
+    : { matched: true, reason: i18n.t(($) => $.simulate.assigned, { ns: "flags", variation: v.key, bucket }) };
 }
 
 /** Evaluates exactly like the SDK and explains each rule it looked at, up to the one that matched */

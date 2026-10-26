@@ -76,7 +76,7 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
           const hour = points[0]?.datum.hour;
           return {
             title: hour === undefined ? "" : new Date(hour).toLocaleString(intlLocale(), { weekday: "short", hour: "numeric", minute: "2-digit" }),
-            rows: points.map((p) => ({ label: t(`traffic.series.${p.datum.key}`), value: formatCount(p.datum.value), color: p.color })),
+            rows: points.map((p) => ({ label: t(($) => $.traffic.series[p.datum.key]), value: formatCount(p.datum.value), color: p.color })),
           };
         },
       },
@@ -84,7 +84,7 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
   }, [series, t]);
   if (volume.isPending)
     return (
-      <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t("traffic.loading")}>
+      <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t(($) => $.traffic.loading)}>
         <Skeleton className="h-4 w-48 rounded-md" />
         <Skeleton className="h-[160px] rounded-md" />
       </div>
@@ -92,7 +92,7 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
   if (volume.isError)
     return (
       <div className="p-4">
-        <QueryError message={t("traffic.loadFailed", { message: errorMessage(volume.error) })} onRetry={() => volume.refetch()} />
+        <QueryError message={t(($) => $.traffic.loadFailed, { message: errorMessage(volume.error) })} onRetry={() => volume.refetch()} />
       </div>
     );
 
@@ -103,20 +103,20 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
   if (totals.exposures + totals.events === 0)
     return (
       <div className="flex flex-col gap-1 px-5 py-8">
-        <p className="text-body font-medium">{t("traffic.emptyTitle", { name: environmentName })}</p>
+        <p className="text-body font-medium">{t(($) => $.traffic.emptyTitle, { name: environmentName })}</p>
         <p className="text-label text-muted">
-          <Trans t={t} i18nKey="traffic.emptyDescription" components={{ code: <code className="font-mono text-foreground" /> }} />
+          <Trans t={t} i18nKey={($) => $.traffic.emptyDescription} components={{ code: <code className="font-mono text-foreground" /> }} />
         </p>
       </div>
     );
 
   return (
     <div className="flex flex-col gap-3 px-5 pt-4 pb-3">
-      <ul className="flex flex-wrap gap-x-6 gap-y-1" aria-label={t("traffic.totals")}>
+      <ul className="flex flex-wrap gap-x-6 gap-y-1" aria-label={t(($) => $.traffic.totals)}>
         {SERIES.map((s) => (
           <li key={s.key} className="flex items-center gap-2 text-label">
             <span aria-hidden="true" className="h-0.5 w-3 rounded-full" style={{ background: s.color }} />
-            <span className="text-muted">{t(`traffic.series.${s.key}`)}</span>
+            <span className="text-muted">{t(($) => $.traffic.series[s.key])}</span>
             <span className="font-mono font-medium tabular">{formatCount(totals[s.key])}</span>
           </li>
         ))}
@@ -125,19 +125,19 @@ export function TrafficChart({ environmentId, environmentName }: { environmentId
         definition={definition}
         height={160}
         initialWidth={640}
-        ariaLabel={tc("traffic.label", { name: environmentName })}
-        ariaDescription={`${tc("traffic.description")} ${tc("keyboardHint")}`}
+        ariaLabel={tc(($) => $.traffic.label, { name: environmentName })}
+        ariaDescription={`${tc(($) => $.traffic.description)} ${tc(($) => $.keyboardHint)}`}
         className={chartHostClass}
       />
       {/* sr-only on the table itself doesn't shrink it (tables size to content) and widens the page on phones */}
       <div className="sr-only">
         <table>
-          <caption>{t("traffic.tableCaption", { name: environmentName })}</caption>
+          <caption>{t(($) => $.traffic.tableCaption, { name: environmentName })}</caption>
           <thead>
             <tr>
-              <th>{t("traffic.hour")}</th>
-              <th>{t("traffic.series.exposures")}</th>
-              <th>{t("traffic.series.events")}</th>
+              <th>{t(($) => $.traffic.hour)}</th>
+              <th>{t(($) => $.traffic.series.exposures)}</th>
+              <th>{t(($) => $.traffic.series.events)}</th>
             </tr>
           </thead>
           <tbody>

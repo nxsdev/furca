@@ -8,7 +8,7 @@ export function CodeBlock({ code, title }: { code: string; title?: string }) {
     <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface-secondary text-left">
       <div className="flex h-9 items-center justify-between gap-2 border-b border-border pr-1 pl-3.5">
         <span className="truncate text-meta font-medium text-muted">{title ?? ""}</span>
-        <CopyButton value={code} label={t("codeBlock.copy")} />
+        <CopyButton value={code} label={t(($) => $.codeBlock.copy)} />
       </div>
       <pre className="overflow-x-auto px-3.5 py-3 font-mono text-[0.8125rem] leading-[1.6]">
         <code>

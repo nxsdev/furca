@@ -45,14 +45,14 @@ export function NamespaceSlice({
   return (
     <div className="flex flex-col gap-3 border-t border-border pt-4">
       <div>
-        <p className="text-label font-medium">{t("experimentForm.title")}</p>
-        <p className="mt-0.5 text-meta text-muted">{t("experimentForm.description")}</p>
+        <p className="text-label font-medium">{t(($) => $.experimentForm.title)}</p>
+        <p className="mt-0.5 text-meta text-muted">{t(($) => $.experimentForm.description)}</p>
       </div>
       {list.isError ? (
-        <p className="text-meta text-danger">{t("experimentForm.loadFailed", { message: errorMessage(list.error) })}</p>
+        <p className="text-meta text-danger">{t(($) => $.experimentForm.loadFailed, { message: errorMessage(list.error) })}</p>
       ) : list.isSuccess && namespaces.length === 0 && value === null ? (
         <p className="text-label text-muted">
-          <Trans t={t} i18nKey="experimentForm.noNamespaces" components={{ link: <Link to="/namespaces" className="text-link hover:underline" /> }} />
+          <Trans t={t} i18nKey={($) => $.experimentForm.noNamespaces} components={{ link: <Link to="/namespaces" className="text-link hover:underline" /> }} />
         </p>
       ) : (
         <>
@@ -62,15 +62,15 @@ export function NamespaceSlice({
             isDisabled={list.isPending}
             className="sm:max-w-xs"
           >
-            <Label>{t("experimentForm.namespace")}</Label>
+            <Label>{t(($) => $.experimentForm.namespace)}</Label>
             <Select.Trigger>
               <Select.Value />
               <Select.Indicator />
             </Select.Trigger>
             <Select.Popover>
               <ListBox>
-                <ListBox.Item id={NONE} textValue={t("experimentForm.none")}>
-                  {t("experimentForm.none")}
+                <ListBox.Item id={NONE} textValue={t(($) => $.experimentForm.none)}>
+                  {t(($) => $.experimentForm.none)}
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
                 {namespaces.map(({ namespace: n }) => (
@@ -96,7 +96,7 @@ export function NamespaceSlice({
                     isInvalid={!rangeOk}
                     className="w-28"
                   >
-                    <Label>{t(`experimentForm.${key}`)}</Label>
+                    <Label>{t(($) => $.experimentForm[key])}</Label>
                     <NumberField.Group className="grid-cols-[1fr_auto]">
                       <NumberField.Input className="text-right tabular" />
                       <span className="pr-3 text-label text-muted">%</span>
@@ -104,20 +104,20 @@ export function NamespaceSlice({
                   </NumberField>
                 ))}
                 <Button size="sm" variant="outline" className="mb-0.5" isDisabled={free === null} onPress={() => free !== null && onChange({ ...value, ...free })}>
-                  {free === null ? t("experimentForm.full") : t("experimentForm.useFree")}
+                  {free === null ? t(($) => $.experimentForm.full) : t(($) => $.experimentForm.useFree)}
                 </Button>
               </div>
               <AllocationBar allocations={taken} selection={rangeOk ? value : null} conflict={running.length > 0} />
               {!rangeOk ? (
-                <p role="alert" className="text-meta text-danger">{t("experimentForm.rangeInvalid")}</p>
+                <p role="alert" className="text-meta text-danger">{t(($) => $.experimentForm.rangeInvalid)}</p>
               ) : running.length > 0 ? (
-                <p role="alert" className="text-meta text-danger">{t("experimentForm.overlapRunning", { names: formatList(running) })}</p>
+                <p role="alert" className="text-meta text-danger">{t(($) => $.experimentForm.overlapRunning, { names: formatList(running) })}</p>
               ) : drafts.length > 0 ? (
-                <p className="text-meta text-muted">{t("experimentForm.overlapDraft", { names: formatList(drafts) })}</p>
+                <p className="text-meta text-muted">{t(($) => $.experimentForm.overlapDraft, { names: formatList(drafts) })}</p>
               ) : (
-                <p className="text-meta text-muted">{t("experimentForm.help")}</p>
+                <p className="text-meta text-muted">{t(($) => $.experimentForm.help)}</p>
               )}
-              {current === undefined && list.isSuccess && <p className="text-meta text-danger">{t("experimentForm.missing")}</p>}
+              {current === undefined && list.isSuccess && <p className="text-meta text-danger">{t(($) => $.experimentForm.missing)}</p>}
             </div>
           )}
         </>

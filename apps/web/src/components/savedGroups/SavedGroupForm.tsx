@@ -50,16 +50,16 @@ const isKey = Schema.is(Key);
 /** Field -> message for everything that blocks saving */
 const validate = (v: Values, isEdit: boolean): Record<string, string> => {
   const out: Record<string, string> = {};
-  if (v.name.trim() === "") out.name = i18n.t("common:form.required");
+  if (v.name.trim() === "") out.name = i18n.t(($) => $.form.required, { ns: "common" });
   // An empty name already has its error; the key follows the name
-  if (!isEdit && v.name.trim() !== "" && !isKey(v.key)) out.key = v.key === "" ? i18n.t("common:form.required") : i18n.t("savedGroups:form.keyInvalid");
+  if (!isEdit && v.name.trim() !== "" && !isKey(v.key)) out.key = v.key === "" ? i18n.t(($) => $.form.required, { ns: "common" }) : i18n.t(($) => $.form.keyInvalid, { ns: "savedGroups" });
   if (v.type === "list") {
-    if (v.attribute.trim() === "") out.attribute = i18n.t("common:form.required");
+    if (v.attribute.trim() === "") out.attribute = i18n.t(($) => $.form.required, { ns: "common" });
     const { values } = parseIds(v.ids);
-    if (values.length === 0) out.ids = i18n.t("savedGroups:form.idsRequired");
-    else if (values.length > MAX_LIST_VALUES) out.ids = i18n.t("savedGroups:form.idsTooMany", { max: formatCount(MAX_LIST_VALUES) });
+    if (values.length === 0) out.ids = i18n.t(($) => $.form.idsRequired, { ns: "savedGroups" });
+    else if (values.length > MAX_LIST_VALUES) out.ids = i18n.t(($) => $.form.idsTooMany, { ns: "savedGroups", max: formatCount(MAX_LIST_VALUES) });
   } else {
-    const issue = v.conditions.length === 0 ? i18n.t("savedGroups:form.conditionsRequired") : v.conditions.map(conditionIssue).find((m) => m !== null);
+    const issue = v.conditions.length === 0 ? i18n.t(($) => $.form.conditionsRequired, { ns: "savedGroups" }) : v.conditions.map(conditionIssue).find((m) => m !== null);
     if (issue != null) out.conditions = issue;
   }
   return out;
@@ -123,7 +123,7 @@ export function SavedGroupForm({
 
   return (
     <form noValidate onSubmit={submitHandler(form)} className="min-w-0 rounded-[10px] border border-border bg-surface">
-      <Section title={t("form.basics")}>
+      <Section title={t(($) => $.form.basics)}>
         <div className="flex flex-col gap-3">
           <form.AppField
             name="name"
@@ -134,13 +134,13 @@ export function SavedGroupForm({
               },
             }}
           >
-            {(field) => <field.TextField label={t("form.name")} description={t("form.nameHelp")} className="sm:max-w-md" />}
+            {(field) => <field.TextField label={t(($) => $.form.name)} description={t(($) => $.form.nameHelp)} className="sm:max-w-md" />}
           </form.AppField>
           <form.AppField name="key">
             {(field) => (
               <field.KeyField
-                label={t("form.key")}
-                description={isEdit ? t("form.keyLocked") : t("form.keyHelp")}
+                label={t(($) => $.form.key)}
+                description={isEdit ? t(($) => $.form.keyLocked) : t(($) => $.form.keyHelp)}
                 isReadOnly={isEdit}
                 className="sm:max-w-md"
               />
@@ -152,26 +152,26 @@ export function SavedGroupForm({
             <field.TextAreaField
               label={
                 <>
-                  {t("form.description")} <span className="font-normal text-muted">{t("form.optional")}</span>
+                  {t(($) => $.form.description)} <span className="font-normal text-muted">{t(($) => $.form.optional)}</span>
                 </>
               }
-              description={t("form.descriptionHelp")}
+              description={t(($) => $.form.descriptionHelp)}
               rows={2}
             />
           )}
         </form.AppField>
       </Section>
 
-      <Section title={t("form.members")}>
+      <Section title={t(($) => $.form.members)}>
         <form.AppField name="type">
           {(field) => (
             <Segmented
-              label={t("form.type")}
+              label={t(($) => $.form.type)}
               value={field.state.value}
               onChange={field.handleChange}
               options={[
-                { value: "list", label: t("type.list"), description: t("form.typeList") },
-                { value: "condition", label: t("type.condition"), description: t("form.typeCondition") },
+                { value: "list", label: t(($) => $.type.list), description: t(($) => $.form.typeList) },
+                { value: "condition", label: t(($) => $.type.condition), description: t(($) => $.form.typeCondition) },
               ]}
             />
           )}
@@ -179,14 +179,14 @@ export function SavedGroupForm({
         {d.type === "list" ? (
           <>
             <form.AppField name="attribute">
-              {(field) => <field.TextField label={t("form.attribute")} description={t("form.attributeHelp")} mono className="sm:max-w-xs" />}
+              {(field) => <field.TextField label={t(($) => $.form.attribute)} description={t(($) => $.form.attributeHelp)} mono className="sm:max-w-xs" />}
             </form.AppField>
             <form.AppField name="ids">
               {(field) => {
                 const error = field.state.meta.isBlurred || attempted ? errorText(field.state.meta.errors) : "";
                 return (
                   <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} isInvalid={error !== ""}>
-                    <Label>{t("form.ids")}</Label>
+                    <Label>{t(($) => $.form.ids)}</Label>
                     <TextArea
                       rows={8}
                       spellCheck={false}
@@ -196,10 +196,10 @@ export function SavedGroupForm({
                     />
                     <Description>
                       <span className="block text-foreground tabular" aria-live="polite">
-                        {t("form.idsCount", { count: parsed.values.length, formatted: formatCount(parsed.values.length) })}
-                        {parsed.duplicates > 0 && ` · ${t("form.duplicates", { count: parsed.duplicates, formatted: formatCount(parsed.duplicates) })}`}
+                        {t(($) => $.form.idsCount, { count: parsed.values.length, formatted: formatCount(parsed.values.length) })}
+                        {parsed.duplicates > 0 && ` · ${t(($) => $.form.duplicates, { count: parsed.duplicates, formatted: formatCount(parsed.duplicates) })}`}
                       </span>
-                      <span className="block">{t("form.idsHelp", { max: formatCount(MAX_LIST_VALUES) })}</span>
+                      <span className="block">{t(($) => $.form.idsHelp, { max: formatCount(MAX_LIST_VALUES) })}</span>
                     </Description>
                     <FieldError>{error}</FieldError>
                   </TextField>
@@ -211,7 +211,7 @@ export function SavedGroupForm({
           <form.AppField name="conditions">
             {(field) => (
               <div className="flex flex-col gap-2">
-                <p className="text-label font-medium">{t("form.conditions")}</p>
+                <p className="text-label font-medium">{t(($) => $.form.conditions)}</p>
                 <ConditionBuilder value={field.state.value} onChange={field.handleChange} allowGroups={false} />
                 {attempted && field.state.meta.errors.length > 0 && <p className="text-meta text-danger">{errorText(field.state.meta.errors)}</p>}
               </div>
@@ -225,12 +225,12 @@ export function SavedGroupForm({
           <form.FormError />
         </form.AppForm>
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {isEdit && <p className="text-meta text-muted sm:mr-auto">{t("form.liveNote")}</p>}
+          {isEdit && <p className="text-meta text-muted sm:mr-auto">{t(($) => $.form.liveNote)}</p>}
           <Button size="sm" variant="tertiary" onPress={() => (isEdit ? form.reset() : onCancel?.())}>
-            {isEdit ? t("common:actions.discard") : t("common:actions.cancel")}
+            {isEdit ? t(($) => $.actions.discard, { ns: "common" }) : t(($) => $.actions.cancel, { ns: "common" })}
           </Button>
           <form.AppForm>
-            <form.SubmitButton label={isEdit ? t("form.save") : t("form.create")} size="sm" />
+            <form.SubmitButton label={isEdit ? t(($) => $.form.save) : t(($) => $.form.create)} size="sm" />
           </form.AppForm>
         </div>
       </div>

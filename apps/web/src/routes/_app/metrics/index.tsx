@@ -15,7 +15,7 @@ import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/metrics/")({
   validateSearch: (s: Record<string, unknown>): { new?: true } => (s.new ? { new: true } : {}),
-  head: () => ({ meta: [{ title: i18n.t("metrics:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "metrics" }) }] }),
   component: Page,
 });
 
@@ -30,12 +30,12 @@ function Page() {
         <PageHeader
           breadcrumb={
             <Breadcrumbs className="mb-1 text-label">
-              <Breadcrumbs.Item href="/metrics">{t("list.title")}</Breadcrumbs.Item>
-              <Breadcrumbs.Item>{t("new.breadcrumb")}</Breadcrumbs.Item>
+              <Breadcrumbs.Item href="/metrics">{t(($) => $.list.title)}</Breadcrumbs.Item>
+              <Breadcrumbs.Item>{t(($) => $.new.breadcrumb)}</Breadcrumbs.Item>
             </Breadcrumbs>
           }
-          title={t("new.title")}
-          description={t("new.description")}
+          title={t(($) => $.new.title)}
+          description={t(($) => $.new.description)}
         />
         <MetricForm
           onSaved={(m) => void navigate({ to: "/metrics/$metricId", params: { metricId: m.id } })}
@@ -55,22 +55,22 @@ function MetricList() {
   const usage = usageByMetric(experiments.data ?? []);
   const sourceName = (id: string) => {
     const s = sources.data?.find((x) => x.id === id);
-    return s !== undefined ? dataSourceName(s) : id === "builtin" ? t("builtinEvents") : "—";
+    return s !== undefined ? dataSourceName(s) : id === "builtin" ? t(($) => $.builtinEvents) : "—";
   };
 
   const { canEdit } = usePermissions();
   const newButton = canEdit && (
     <Link to="/metrics" search={{ new: true }} className={buttonVariants({ size: "sm" })}>
       <Plus className="size-4" />
-      {t("list.newMetric")}
+      {t(($) => $.list.newMetric)}
     </Link>
   );
 
   return (
     <>
       <PageHeader
-        title={t("list.title")}
-        description={t("list.description")}
+        title={t(($) => $.list.title)}
+        description={t(($) => $.list.description)}
         actions={newButton}
       />
       {metrics.isPending ? (
@@ -78,26 +78,26 @@ function MetricList() {
           <ListSkeleton />
         </Panel>
       ) : metrics.isError ? (
-        <QueryError message={t("list.loadFailed", { error: errorMessage(metrics.error) })} onRetry={() => metrics.refetch()} />
+        <QueryError message={t(($) => $.list.loadFailed, { error: errorMessage(metrics.error) })} onRetry={() => metrics.refetch()} />
       ) : metrics.data.length === 0 && !showArchived ? (
         <EmptyState
           icon={<ChartLine />}
-          title={t("list.emptyTitle")}
-          description={t("list.emptyDescription")}
+          title={t(($) => $.list.emptyTitle)}
+          description={t(($) => $.list.emptyDescription)}
           action={newButton}
         />
       ) : (
         <Panel>
           <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-2.5">
             <p className="text-label text-muted tabular">
-              {t("list.count", { count: metrics.data.length })}
+              {t(($) => $.list.count, { count: metrics.data.length })}
             </p>
             <Switch size="sm" isSelected={showArchived} onChange={setShowArchived} className="[--switch-control-bg:oklch(0.9_0_0)] dark:[--switch-control-bg:var(--default)]">
               <Switch.Content className="text-label text-muted">
                 <Switch.Control>
                   <Switch.Thumb className={showArchived ? "" : "dark:bg-[oklch(0.62_0_0)]"} />
                 </Switch.Control>
-                {t("list.showArchived")}
+                {t(($) => $.list.showArchived)}
               </Switch.Content>
             </Switch>
           </div>
@@ -105,12 +105,12 @@ function MetricList() {
             <table className={tbl.table}>
               <thead>
                 <tr>
-                  <th className={tbl.th}>{t("list.columns.metric")}</th>
-                  <th className={tbl.th}>{t("list.columns.type")}</th>
-                  <th className={`${tbl.th} hidden md:table-cell`}>{t("list.columns.dataSource")}</th>
-                  <th className={`${tbl.th} hidden sm:table-cell`}>{t("list.columns.goal")}</th>
-                  <th className={`${tbl.th} hidden lg:table-cell`}>{t("list.columns.window")}</th>
-                  <th className={`${tbl.th} text-right`}>{t("list.columns.usedBy")}</th>
+                  <th className={tbl.th}>{t(($) => $.list.columns.metric)}</th>
+                  <th className={tbl.th}>{t(($) => $.list.columns.type)}</th>
+                  <th className={`${tbl.th} hidden md:table-cell`}>{t(($) => $.list.columns.dataSource)}</th>
+                  <th className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.list.columns.goal)}</th>
+                  <th className={`${tbl.th} hidden lg:table-cell`}>{t(($) => $.list.columns.window)}</th>
+                  <th className={`${tbl.th} text-right`}>{t(($) => $.list.columns.usedBy)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,7 +124,7 @@ function MetricList() {
                         </Link>
                         <span className="flex items-center gap-2">
                           <code className="truncate font-mono text-meta text-muted">{m.key}</code>
-                          {m.archived && <span className="text-meta text-muted">· {t("archived")}</span>}
+                          {m.archived && <span className="text-meta text-muted">· {t(($) => $.archived)}</span>}
                         </span>
                       </td>
                       <td className={tbl.td}>{metricTypeLabel(m.type)}</td>
@@ -135,7 +135,7 @@ function MetricList() {
                       <td
                         className={`${tbl.td} hidden whitespace-nowrap lg:table-cell ${m.windowHours === null ? "text-muted" : "font-mono tabular"}`}
                       >
-                        {m.windowHours === null && m.delayHours === 0 ? t("common:states.none") : windowLabel(m)}
+                        {m.windowHours === null && m.delayHours === 0 ? t(($) => $.states.none, { ns: "common" }) : windowLabel(m)}
                       </td>
                       <td className={`${tbl.td} whitespace-nowrap text-right tabular ${used === 0 ? "text-muted" : ""}`}>
                         {experiments.isError ? (
@@ -144,7 +144,7 @@ function MetricList() {
                           <>
                             <span className="font-mono sm:hidden">{used}</span>
                             <span className="hidden sm:inline">
-                              {used === 0 ? t("common:states.none") : t("list.experimentCount", { count: used })}
+                              {used === 0 ? t(($) => $.states.none, { ns: "common" }) : t(($) => $.list.experimentCount, { count: used })}
                             </span>
                           </>
                         )}
@@ -154,7 +154,7 @@ function MetricList() {
                 })}
               </tbody>
             </table>
-            {metrics.data.length === 0 && <p className="px-5 py-10 text-center text-body text-muted">{t("list.noArchived")}</p>}
+            {metrics.data.length === 0 && <p className="px-5 py-10 text-center text-body text-muted">{t(($) => $.list.noArchived)}</p>}
           </div>
         </Panel>
       )}

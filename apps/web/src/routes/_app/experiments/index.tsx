@@ -18,7 +18,7 @@ type Filter = ExperimentStatus | "all";
 const filters: ReadonlyArray<Filter> = ["running", "draft", "stopped", "all"];
 
 export const Route = createFileRoute("/_app/experiments/")({
-  head: () => ({ meta: [{ title: i18n.t("experiments:pageTitle.list") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle.list, { ns: "experiments" }) }] }),
   validateSearch: (search: Record<string, unknown>): { status?: Filter } =>
     filters.includes(search.status as Filter) ? { status: search.status as Filter } : {},
   component: Page,
@@ -31,7 +31,7 @@ function NewButton() {
   return (
     <Link to="/experiments/new" className="button button--primary button--sm">
       <Plus className="size-4" aria-hidden="true" />
-      {t("list.newExperiment")}
+      {t(($) => $.list.newExperiment)}
     </Link>
   );
 }
@@ -54,15 +54,15 @@ function Page() {
   return (
     <>
       <PageHeader
-        title={t("list.title")}
-        description={t("list.description")}
+        title={t(($) => $.list.title)}
+        description={t(($) => $.list.description)}
         actions={all.length > 0 ? <NewButton /> : undefined}
       />
       {experiments.error !== null ? (
         <QueryError message={errorMessage(experiments.error)} onRetry={() => experiments.refetch()} />
       ) : experiments.isPending ? (
         <Panel>
-          <div className="flex flex-col gap-4 p-5" aria-busy="true" aria-label={t("list.loading")}>
+          <div className="flex flex-col gap-4 p-5" aria-busy="true" aria-label={t(($) => $.list.loading)}>
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-6">
                 <div className="flex flex-1 flex-col gap-1.5">
@@ -79,7 +79,7 @@ function Page() {
         <EmptyLoop />
       ) : (
         <div className="flex flex-col gap-4">
-          <nav aria-label={t("list.filterLabel")} className="flex w-fit rounded-lg border border-border bg-surface p-0.5">
+          <nav aria-label={t(($) => $.list.filterLabel)} className="flex w-fit rounded-lg border border-border bg-surface p-0.5">
             {filters.map((f) => (
               <Link
                 key={f}
@@ -90,7 +90,7 @@ function Page() {
                   status === f ? "bg-default font-medium text-foreground" : "text-muted hover:text-foreground"
                 }`}
               >
-                {f === "all" ? t("list.all") : t(`status.${f}`)}
+                {f === "all" ? t(($) => $.list.all) : t(($) => $.status[f])}
                 <span className="font-mono text-meta tabular text-muted">{count(f)}</span>
               </Link>
             ))}
@@ -98,22 +98,22 @@ function Page() {
           <Panel className="overflow-hidden">
             {rows.length === 0 ? (
               <p className="px-5 py-12 text-center text-body text-muted">
-                {t(`list.empty.${status}`)}{" "}
+                {t(($) => $.list.empty[status])}{" "}
                 <Link to="/experiments" className="text-link hover:underline">
-                  {t("list.showAll")}
+                  {t(($) => $.list.showAll)}
                 </Link>
               </p>
             ) : (
               <table className={tbl.table}>
                 <thead>
                   <tr>
-                    <th scope="col" className={tbl.th}>{t("list.columns.experiment")}</th>
-                    <th scope="col" className={`${tbl.th} hidden sm:table-cell`}>{t("list.columns.status")}</th>
-                    <th scope="col" className={`${tbl.th} hidden lg:table-cell`}>{t("list.columns.flag")}</th>
-                    <th scope="col" className={`${tbl.th} hidden xl:table-cell`}>{t("list.columns.primaryMetric")}</th>
-                    <th scope="col" className={tbl.th}>{t("list.columns.result")}</th>
-                    <th scope="col" className={`${tbl.th} hidden md:table-cell`}>{t("list.columns.duration")}</th>
-                    <th scope="col" className={`${tbl.th} hidden text-right md:table-cell`}>{t("list.columns.users")}</th>
+                    <th scope="col" className={tbl.th}>{t(($) => $.list.columns.experiment)}</th>
+                    <th scope="col" className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.list.columns.status)}</th>
+                    <th scope="col" className={`${tbl.th} hidden lg:table-cell`}>{t(($) => $.list.columns.flag)}</th>
+                    <th scope="col" className={`${tbl.th} hidden xl:table-cell`}>{t(($) => $.list.columns.primaryMetric)}</th>
+                    <th scope="col" className={tbl.th}>{t(($) => $.list.columns.result)}</th>
+                    <th scope="col" className={`${tbl.th} hidden md:table-cell`}>{t(($) => $.list.columns.duration)}</th>
+                    <th scope="col" className={`${tbl.th} hidden text-right md:table-cell`}>{t(($) => $.list.columns.users)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -171,10 +171,10 @@ function Row({ experiment: x, flagKey, metricName }: { experiment: Experiment; f
       <td className={`${tbl.td} hidden max-w-40 truncate font-mono text-meta lg:table-cell`}>
         {flagKey === undefined ? <span className="text-muted">–</span> : flagKey}
       </td>
-      <td className={`${tbl.td} hidden max-w-48 truncate xl:table-cell`}>{metricName ?? <span className="text-muted">{t("common:states.none")}</span>}</td>
+      <td className={`${tbl.td} hidden max-w-48 truncate xl:table-cell`}>{metricName ?? <span className="text-muted">{t(($) => $.states.none, { ns: "common" })}</span>}</td>
       <td className={`${tbl.td} whitespace-nowrap`}>
         {!started ? (
-          <span className="text-muted">{t("list.notStarted")}</span>
+          <span className="text-muted">{t(($) => $.list.notStarted)}</span>
         ) : latest.isPending ? (
           <Skeleton className="h-4 w-24 rounded-md" />
         ) : (
@@ -202,10 +202,10 @@ function DecisionText({ experiment: x }: { experiment: Experiment }) {
   if (d === null) return null;
   const label =
     d.outcome === "ship"
-      ? t("decision.shipped", { name: x.variations.find((v) => v.key === d.variationKey)?.name ?? d.variationKey ?? "" }).trim()
+      ? t(($) => $.decision.shipped, { name: x.variations.find((v) => v.key === d.variationKey)?.name ?? d.variationKey ?? "" }).trim()
       : d.outcome === "rollback"
-        ? t("decision.rolledBack")
-        : t("decision.inconclusive");
+        ? t(($) => $.decision.rolledBack)
+        : t(($) => $.decision.inconclusive);
   return (
     <p className="mt-0.5 truncate text-meta text-muted" title={label}>
       {label}
@@ -216,19 +216,19 @@ function DecisionText({ experiment: x }: { experiment: Experiment }) {
 function ResultSummary({ snapshot }: { snapshot: ResultSnapshot | null }) {
   const { t } = useTranslation("experiments");
   if (snapshot === null || snapshot.status === "error" || (snapshot.health?.totalUsers ?? 0) === 0) {
-    return <span className="text-muted">{snapshot?.status === "error" ? t("list.analysisFailed") : t("list.collectingData")}</span>;
+    return <span className="text-muted">{snapshot?.status === "error" ? t(($) => $.list.analysisFailed) : t(($) => $.list.collectingData)}</span>;
   }
   if (!isHealthy(snapshot.health)) {
     return (
       <span className="inline-flex items-center gap-1.5 text-health">
         <AlertTriangle className="size-3.5" aria-hidden="true" />
-        <span className="text-foreground">{t("list.notTrustworthy")}</span>
+        <span className="text-foreground">{t(($) => $.list.notTrustworthy)}</span>
       </span>
     );
   }
   const primary = snapshot.metrics.find((m) => m.role === "primary");
   const c = primary === undefined ? null : headlineComparison(primary);
-  if (c === null || c.lift === null || c.ci === null) return <span className="text-muted">{t("list.collectingData")}</span>;
+  if (c === null || c.lift === null || c.ci === null) return <span className="text-muted">{t(($) => $.list.collectingData)}</span>;
   const s = verdictStyle[c.verdict];
   const label = verdictLabel(c.verdict);
   const Icon = s.icon;
@@ -246,9 +246,9 @@ function ResultSummary({ snapshot }: { snapshot: ResultSnapshot | null }) {
       </svg>
       <span className="sr-only">{label}</span>
       {regressedGuardrails(snapshot.metrics).length > 0 && (
-        <span title={t("list.guardrailWorse")} className="inline-flex items-center gap-1 text-lose">
+        <span title={t(($) => $.list.guardrailWorse)} className="inline-flex items-center gap-1 text-lose">
           <AlertTriangle className="size-3.5" aria-hidden="true" />
-          <span className="sr-only">{t("list.guardrailRegressed")}</span>
+          <span className="sr-only">{t(($) => $.list.guardrailRegressed)}</span>
         </span>
       )}
     </span>
@@ -266,8 +266,8 @@ function EmptyLoop() {
   return (
     <div className="flex flex-col items-center gap-8 rounded-[10px] border border-dashed border-border px-6 py-14 text-center">
       <div className="flex max-w-[52ch] flex-col gap-1">
-        <h2 className="text-section font-medium">{t("list.emptyState.title")}</h2>
-        <p className="text-body text-muted">{t("list.emptyState.description")}</p>
+        <h2 className="text-section font-medium">{t(($) => $.list.emptyState.title)}</h2>
+        <p className="text-body text-muted">{t(($) => $.list.emptyState.description)}</p>
       </div>
       <ol className="grid w-full max-w-3xl grid-cols-2 gap-4 text-left sm:grid-cols-4">
         {steps.map((s, i) => (
@@ -279,16 +279,16 @@ function EmptyLoop() {
               {i < steps.length - 1 && <ArrowRight className="hidden size-3.5 text-border sm:block" aria-hidden="true" />}
             </div>
             <p className="text-label font-medium">
-              <span className="font-mono text-muted">{i + 1}.</span> {t(`list.emptyState.steps.${s.id}.title`)}
+              <span className="font-mono text-muted">{i + 1}.</span> {t(($) => $.list.emptyState.steps[s.id].title)}
             </p>
-            <p className="text-meta text-muted">{t(`list.emptyState.steps.${s.id}.body`)}</p>
+            <p className="text-meta text-muted">{t(($) => $.list.emptyState.steps[s.id].body)}</p>
           </li>
         ))}
       </ol>
       <div className="flex flex-wrap justify-center gap-2">
         <NewButton />
         <Link to="/flags" className="button button--outline button--sm">
-          {t("list.emptyState.createFlagFirst")}
+          {t(($) => $.list.emptyState.createFlagFirst)}
         </Link>
       </div>
     </div>

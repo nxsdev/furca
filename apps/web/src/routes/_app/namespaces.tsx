@@ -19,7 +19,7 @@ import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/namespaces")({
-  head: () => ({ meta: [{ title: i18n.t("namespaces:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "namespaces" }) }] }),
   component: Page,
 });
 
@@ -28,7 +28,7 @@ function NamespaceEditor({ namespace, onDone }: { namespace?: Namespace; onDone:
   const { t } = useTranslation(["namespaces", "common"]);
   const queryClient = useQueryClient();
   const required = useRequired();
-  const keyPattern = matches(Key, () => t("form.keyInvalid"));
+  const keyPattern = matches(Key, () => t(($) => $.form.keyInvalid));
   const isEdit = namespace !== undefined;
   const form = useAppForm({
     defaultValues: { name: namespace?.name ?? "", key: namespace?.key ?? "", description: namespace?.description ?? "" },
@@ -39,7 +39,7 @@ function NamespaceEditor({ namespace, onDone }: { namespace?: Namespace; onDone:
           : await client.namespaces.create({ key: value.key, name: value.name.trim(), description: value.description.trim() });
         void queryClient.invalidateQueries({ queryKey: orpc.namespaces.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast.success(isEdit ? t("form.saved") : t("form.created", { name: saved.name }));
+        toast.success(isEdit ? t(($) => $.form.saved) : t(($) => $.form.created, { name: saved.name }));
         onDone();
       } catch (e) {
         // BAD_REQUEST on create is the duplicate-key check (the name is validated here first)
@@ -61,23 +61,23 @@ function NamespaceEditor({ namespace, onDone }: { namespace?: Namespace; onDone:
             },
           }}
         >
-          {(field) => <field.TextField label={t("form.name")} placeholder={t("form.namePlaceholder")} />}
+          {(field) => <field.TextField label={t(($) => $.form.name)} placeholder={t(($) => $.form.namePlaceholder)} />}
         </form.AppField>
         <form.AppField name="key" validators={isEdit ? undefined : { onChange: ({ value }) => required({ value }) ?? keyPattern({ value }) }}>
           {(field) => (
-            <field.TextField label={t("form.key")} placeholder="checkout" description={isEdit ? t("form.keyLocked") : t("form.keyHelp")} isReadOnly={isEdit} mono />
+            <field.TextField label={t(($) => $.form.key)} placeholder="checkout" description={isEdit ? t(($) => $.form.keyLocked) : t(($) => $.form.keyHelp)} isReadOnly={isEdit} mono />
           )}
         </form.AppField>
         <form.AppField name="description">
-          {(field) => <field.TextField label={t("form.description")} placeholder={t("form.descriptionPlaceholder")} />}
+          {(field) => <field.TextField label={t(($) => $.form.description)} placeholder={t(($) => $.form.descriptionPlaceholder)} />}
         </form.AppField>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <form.AppForm>
-          <form.SubmitButton label={isEdit ? t("common:actions.save") : t("common:actions.create")} size="sm" />
+          <form.SubmitButton label={isEdit ? t(($) => $.actions.save, { ns: "common" }) : t(($) => $.actions.create, { ns: "common" })} size="sm" />
         </form.AppForm>
         <Button size="sm" variant="tertiary" onPress={onDone}>
-          {t("common:actions.cancel")}
+          {t(($) => $.actions.cancel, { ns: "common" })}
         </Button>
         <form.AppForm>
           <form.FormError />
@@ -101,7 +101,7 @@ function NamespaceRow({ item, onEdit, onDelete }: { item: NamespaceListItem; onE
       <td className={`${tbl.td} py-3 align-top`}>
         <AllocationBar allocations={allocations} />
         {allocations.length === 0 ? (
-          <p className="mt-1 text-meta text-muted">{t("row.noExperiments")}</p>
+          <p className="mt-1 text-meta text-muted">{t(($) => $.row.noExperiments)}</p>
         ) : (
           <ul className="mt-1.5 flex flex-col gap-1">
             {allocations.map((a) => (
@@ -125,18 +125,18 @@ function NamespaceRow({ item, onEdit, onDelete }: { item: NamespaceListItem; onE
       </td>
       <td className={`${tbl.td} w-px py-3 text-right align-top`}>
         {canEdit && <Dropdown>
-          <Button isIconOnly size="sm" variant="ghost" aria-label={t("row.moreActions", { name: ns.name })} className="size-8 min-w-8">
+          <Button isIconOnly size="sm" variant="ghost" aria-label={t(($) => $.row.moreActions, { name: ns.name })} className="size-8 min-w-8">
             <MoreHorizontal className="size-4" />
           </Button>
           <Dropdown.Popover placement="bottom end" className="min-w-44">
             <Dropdown.Menu onAction={(k) => (k === "edit" ? onEdit() : k === "delete" ? onDelete() : undefined)}>
-              <Dropdown.Item id="edit" textValue={t("row.edit")}>
+              <Dropdown.Item id="edit" textValue={t(($) => $.row.edit)}>
                 <Pencil className="size-4" />
-                <Label>{t("row.edit")}</Label>
+                <Label>{t(($) => $.row.edit)}</Label>
               </Dropdown.Item>
-              <Dropdown.Item id="delete" textValue={t("row.delete")} variant="danger">
+              <Dropdown.Item id="delete" textValue={t(($) => $.row.delete)} variant="danger">
                 <Trash2 className="size-4" />
-                <Label>{t("row.delete")}</Label>
+                <Label>{t(($) => $.row.delete)}</Label>
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown.Popover>
@@ -162,28 +162,28 @@ function Page() {
         void queryClient.invalidateQueries({ queryKey: orpc.namespaces.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         setDeleteOpen(false);
-        toast.success(t("delete.done", { name: deleting?.name ?? "" }));
+        toast.success(t(($) => $.delete.done, { name: deleting?.name ?? "" }));
       },
     }),
   );
   const newButton = canEdit && (
     <Button size="sm" onPress={() => setCreating(true)} isDisabled={creating}>
       <Plus className="size-4" />
-      {t("page.new")}
+      {t(($) => $.page.new)}
     </Button>
   );
 
   return (
     <>
-      <PageHeader title={t("page.title")} description={t("page.description")} actions={newButton} />
+      <PageHeader title={t(($) => $.page.title)} description={t(($) => $.page.description)} actions={newButton} />
       {list.isPending ? (
         <Panel>
           <ListSkeleton rows={3} />
         </Panel>
       ) : list.isError ? (
-        <QueryError message={t("page.loadFailed", { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
+        <QueryError message={t(($) => $.page.loadFailed, { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
       ) : list.data.length === 0 && !creating ? (
-        <EmptyState icon={<Layers />} title={t("page.emptyTitle")} description={t("page.emptyDescription")} action={newButton} />
+        <EmptyState icon={<Layers />} title={t(($) => $.page.emptyTitle)} description={t(($) => $.page.emptyDescription)} action={newButton} />
       ) : (
         <Panel>
           {creating && (
@@ -196,11 +196,11 @@ function Page() {
               <table className={tbl.table}>
                 <thead>
                   <tr>
-                    <th className={tbl.th}>{t("table.namespace")}</th>
-                    <th className={tbl.th}>{t("table.allocation")}</th>
-                    <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t("table.free")}</th>
+                    <th className={tbl.th}>{t(($) => $.table.namespace)}</th>
+                    <th className={tbl.th}>{t(($) => $.table.allocation)}</th>
+                    <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t(($) => $.table.free)}</th>
                     <th className={tbl.th}>
-                      <span className="sr-only">{t("table.actions")}</span>
+                      <span className="sr-only">{t(($) => $.table.actions)}</span>
                     </th>
                   </tr>
                 </thead>
@@ -234,13 +234,13 @@ function Page() {
       <ConfirmDialog
         isOpen={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title={t("delete.title", { name: deleting?.name ?? "" })}
-        confirmLabel={t("delete.confirm")}
+        title={t(($) => $.delete.title, { name: deleting?.name ?? "" })}
+        confirmLabel={t(($) => $.delete.confirm)}
         isPending={remove.isPending}
         error={remove.error === null ? null : errorMessage(remove.error)}
         onConfirm={() => deleting !== null && remove.mutate({ id: deleting.id })}
       >
-        <p>{t("delete.body")}</p>
+        <p>{t(($) => $.delete.body)}</p>
       </ConfirmDialog>
     </>
   );

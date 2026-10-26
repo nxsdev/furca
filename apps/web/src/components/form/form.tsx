@@ -144,15 +144,15 @@ function KeyField({
     return (
       <p className={`min-w-0 text-label text-muted ${className ?? ""}`}>
         {label}:{" "}
-        {field.state.value === "" ? t("form.keyFromName") : <code className="font-mono break-all text-foreground">{field.state.value}</code>}
+        {field.state.value === "" ? t(($) => $.form.keyFromName) : <code className="font-mono break-all text-foreground">{field.state.value}</code>}
         <span aria-hidden="true"> · </span>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label={t("form.changeLabel", { label })}
+          aria-label={t(($) => $.form.changeLabel, { label })}
           className="rounded-sm text-link outline-none hover:underline focus-visible:ring-2 focus-visible:ring-focus"
         >
-          {t("actions.change")}
+          {t(($) => $.actions.change)}
         </button>
       </p>
     );
@@ -432,5 +432,5 @@ export const setServerError = (form: AnyFormApi, error: unknown, field = mounted
 /** Required-text validator with a localized message */
 export function useRequired() {
   const { t } = useTranslation();
-  return ({ value }: { value: string }) => (value.trim().length === 0 ? t("form.required") : undefined);
+  return ({ value }: { value: string }) => (value.trim().length === 0 ? t(($) => $.form.required) : undefined);
 }

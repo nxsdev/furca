@@ -20,13 +20,13 @@ import { usePermissions } from "~/lib/permissions";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/data-sources/$dataSourceId")({
-  head: () => ({ meta: [{ title: i18n.t("datasources:detailPageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.detailPageTitle, { ns: "datasources" }) }] }),
   component: Page,
 });
 
 const crumbs = (name: ReactNode) => (
   <Breadcrumbs className="mb-1 text-label">
-    <Breadcrumbs.Item href="/data-sources">{i18n.t("datasources:list.title")}</Breadcrumbs.Item>
+    <Breadcrumbs.Item href="/data-sources">{i18n.t(($) => $.list.title, { ns: "datasources" })}</Breadcrumbs.Item>
     <Breadcrumbs.Item>{name}</Breadcrumbs.Item>
   </Breadcrumbs>
 );
@@ -53,8 +53,8 @@ function Page() {
   if (source.isError)
     return (
       <>
-        <PageHeader breadcrumb={crumbs(t("detail.fallbackTitle"))} title={t("detail.fallbackTitle")} />
-        <QueryError message={t("detail.loadFailed", { error: errorMessage(source.error) })} onRetry={() => source.refetch()} />
+        <PageHeader breadcrumb={crumbs(t(($) => $.detail.fallbackTitle))} title={t(($) => $.detail.fallbackTitle)} />
+        <QueryError message={t(($) => $.detail.loadFailed, { error: errorMessage(source.error) })} onRetry={() => source.refetch()} />
       </>
     );
   return source.data.type === "builtin" ? (
@@ -70,7 +70,7 @@ function MetricsUsing({ sourceId }: { sourceId: string }) {
   const using = metrics.data?.filter((m) => m.dataSourceId === sourceId) ?? [];
   return (
     <Panel>
-      <PanelHeader title={t("detail.metrics.title")} description={t("detail.metrics.description")} />
+      <PanelHeader title={t(($) => $.detail.metrics.title)} description={t(($) => $.detail.metrics.description)} />
       {metrics.isPending ? (
         <ListSkeleton rows={2} />
       ) : metrics.isError ? (
@@ -81,7 +81,7 @@ function MetricsUsing({ sourceId }: { sourceId: string }) {
         <p className="px-5 py-6 text-body text-muted">
           <Trans
             t={t}
-            i18nKey="detail.metrics.empty"
+            i18nKey={($) => $.detail.metrics.empty}
             components={{
               link: (
                 <Link
@@ -117,13 +117,13 @@ function BuiltinDetail({ source }: { source: DataSource }) {
     enabled: current !== null,
   });
   const steps: Array<[string, ReactNode]> = [
-    [t("detail.builtin.steps.exposuresTitle"), t("detail.builtin.steps.exposures")],
-    [t("detail.builtin.steps.eventsTitle"), <Trans t={t} i18nKey="detail.builtin.steps.events" components={{ c: code }} />],
+    [t(($) => $.detail.builtin.steps.exposuresTitle), t(($) => $.detail.builtin.steps.exposures)],
+    [t(($) => $.detail.builtin.steps.eventsTitle), <Trans t={t} i18nKey={($) => $.detail.builtin.steps.events} components={{ c: code }} />],
     [
-      t("detail.builtin.steps.storageTitle"),
+      t(($) => $.detail.builtin.steps.storageTitle),
       <Trans
         t={t}
-        i18nKey="detail.builtin.steps.storage"
+        i18nKey={($) => $.detail.builtin.steps.storage}
         components={{ endpoint: <code className="font-mono text-foreground">POST /api/sdk/v1/events/&lt;sdk key&gt;</code> }}
       />,
     ],
@@ -133,11 +133,11 @@ function BuiltinDetail({ source }: { source: DataSource }) {
       <PageHeader
         breadcrumb={crumbs(dataSourceName(source))}
         title={dataSourceName(source)}
-        description={t("detail.builtin.description")}
+        description={t(($) => $.detail.builtin.description)}
       />
       <div className="flex flex-col gap-6">
         <Panel>
-          <PanelHeader title={t("detail.builtin.howTitle")} />
+          <PanelHeader title={t(($) => $.detail.builtin.howTitle)} />
           <ol className="grid divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
             {steps.map(([title, body], i) => (
               <li key={title} className="flex flex-col gap-1 px-5 py-4">
@@ -154,8 +154,8 @@ function BuiltinDetail({ source }: { source: DataSource }) {
         {current !== null && (
           <Panel>
             <PanelHeader
-              title={t("detail.builtin.ingestionTitle")}
-              description={t("detail.builtin.ingestionDescription", { environment: current.name })}
+              title={t(($) => $.detail.builtin.ingestionTitle)}
+              description={t(($) => $.detail.builtin.ingestionDescription, { environment: current.name })}
             />
             <TrafficChart environmentId={current.id} environmentName={current.name} />
           </Panel>
@@ -163,15 +163,15 @@ function BuiltinDetail({ source }: { source: DataSource }) {
 
         <Panel>
           <PanelHeader
-            title={t("detail.builtin.eventNamesTitle")}
-            description={t("detail.builtin.eventNamesDescription", { environment: current?.name ?? t("thisEnvironment") })}
+            title={t(($) => $.detail.builtin.eventNamesTitle)}
+            description={t(($) => $.detail.builtin.eventNamesDescription, { environment: current?.name ?? t(($) => $.thisEnvironment) })}
           />
           {names.isPending ? (
             <ListSkeleton rows={4} />
           ) : names.isError ? (
             <div className="p-4">
               <QueryError
-                message={t("detail.builtin.eventNamesLoadFailed", { error: errorMessage(names.error) })}
+                message={t(($) => $.detail.builtin.eventNamesLoadFailed, { error: errorMessage(names.error) })}
                 onRetry={() => names.refetch()}
               />
             </div>
@@ -179,7 +179,7 @@ function BuiltinDetail({ source }: { source: DataSource }) {
             <p className="px-5 py-6 text-body text-muted">
               <Trans
                 t={t}
-                i18nKey="detail.builtin.eventNamesEmpty"
+                i18nKey={($) => $.detail.builtin.eventNamesEmpty}
                 components={{
                   c: code,
                   link: (
@@ -196,9 +196,9 @@ function BuiltinDetail({ source }: { source: DataSource }) {
               <table className={tbl.table}>
                 <thead className="sticky top-0 bg-surface">
                   <tr>
-                    <th className={tbl.th}>{t("detail.builtin.columns.event")}</th>
-                    <th className={`${tbl.th} text-right`}>{t("detail.builtin.columns.count")}</th>
-                    <th className={`${tbl.th} text-right`}>{t("detail.builtin.columns.lastSeen")}</th>
+                    <th className={tbl.th}>{t(($) => $.detail.builtin.columns.event)}</th>
+                    <th className={`${tbl.th} text-right`}>{t(($) => $.detail.builtin.columns.count)}</th>
+                    <th className={`${tbl.th} text-right`}>{t(($) => $.detail.builtin.columns.lastSeen)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -230,18 +230,18 @@ function ConnectionTest({ source, type }: { source: DataSource; type: WarehouseT
   return (
     <Panel>
       <PanelHeader
-        title={t("detail.test.title")}
-        description={type === "bigquery" ? t("detail.test.description") : t("detail.test.descriptionLimit0")}
+        title={t(($) => $.detail.test.title)}
+        description={type === "bigquery" ? t(($) => $.detail.test.description) : t(($) => $.detail.test.descriptionLimit0)}
         actions={
           <Button size="sm" variant="secondary" onPress={() => test.mutate({ id: source.id })} isPending={test.isPending} className="shrink-0">
             <PlugZap className="size-4" />
-            {t("detail.test.button")}
+            {t(($) => $.detail.test.button)}
           </Button>
         }
       />
       <div className="px-5 py-4" aria-live="polite">
         {test.isPending ? (
-          <p className="text-body text-muted">{t("detail.test.pending", { warehouse: WAREHOUSE_LABELS[type] })}</p>
+          <p className="text-body text-muted">{t(($) => $.detail.test.pending, { warehouse: WAREHOUSE_LABELS[type] })}</p>
         ) : test.error !== null ? (
           <p role="alert" className="flex items-start gap-2 text-body text-danger">
             <CircleX className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -249,13 +249,13 @@ function ConnectionTest({ source, type }: { source: DataSource; type: WarehouseT
           </p>
         ) : r === undefined ? (
           <p className="text-body text-muted">
-            {source.hasCredentials ? t("detail.test.notTested") : t(`detail.test.noSecret.${type}`)}
+            {source.hasCredentials ? t(($) => $.detail.test.notTested) : t(($) => $.detail.test.noSecret[type])}
           </p>
         ) : r.ok ? (
           <div className="flex items-start gap-2 text-body">
             <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-medium">{t("detail.test.connected")}</p>
+              <p className="font-medium">{t(($) => $.detail.test.connected)}</p>
               <p className="text-muted">
                 {r.message}
                 {r.bytesProcessed !== null && (
@@ -263,7 +263,7 @@ function ConnectionTest({ source, type }: { source: DataSource; type: WarehouseT
                     {" "}
                     <Trans
                       t={t}
-                      i18nKey="detail.test.scan"
+                      i18nKey={($) => $.detail.test.scan}
                       values={{ bytes: formatBytes(r.bytesProcessed) }}
                       components={{ bytes: <span className="font-mono text-foreground tabular" /> }}
                     />
@@ -276,7 +276,7 @@ function ConnectionTest({ source, type }: { source: DataSource; type: WarehouseT
           <div role="alert" className="flex items-start gap-2 text-body">
             <CircleX className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden="true" />
             <div className="min-w-0">
-              <p className="font-medium text-danger">{t("detail.test.failed")}</p>
+              <p className="font-medium text-danger">{t(($) => $.detail.test.failed)}</p>
               <p className="mt-0.5 whitespace-pre-wrap break-words text-muted">{r.message}</p>
             </div>
           </div>
@@ -299,7 +299,7 @@ function WarehouseDetail({ source, type }: { source: DataSource; type: Warehouse
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: orpc.dataSources.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast(t("detail.deletedToast", { name: source.name }));
+        toast(t(($) => $.detail.deletedToast, { name: source.name }));
         void navigate({ to: "/data-sources" });
       },
     }),
@@ -322,7 +322,7 @@ function WarehouseDetail({ source, type }: { source: DataSource; type: Warehouse
           isAdmin && (
             <Button size="sm" variant="tertiary" onPress={() => setConfirming(true)}>
               <Trash2 className="size-4" />
-              {t("common:actions.delete")}
+              {t(($) => $.actions.delete, { ns: "common" })}
             </Button>
           )
         }
@@ -333,14 +333,14 @@ function WarehouseDetail({ source, type }: { source: DataSource; type: Warehouse
           <>
             <ConnectionTest source={source} type={type} />
             <section className="flex flex-col gap-3">
-              <h2 className="text-section font-medium">{t("detail.settings")}</h2>
-              <DataSourceForm key={source.updatedAt.toString()} type={type} source={source} onSaved={() => toast.success(t("detail.savedToast"))} />
+              <h2 className="text-section font-medium">{t(($) => $.detail.settings)}</h2>
+              <DataSourceForm key={source.updatedAt.toString()} type={type} source={source} onSaved={() => toast.success(t(($) => $.detail.savedToast))} />
             </section>
           </>
         )}
         <MetricsUsing sourceId={source.id} />
         <Panel>
-          <PanelHeader title={t("detail.history")} />
+          <PanelHeader title={t(($) => $.detail.history)} />
           <AuditList entityType="datasource" entityId={source.id} limit={20} showEntity={false} />
         </Panel>
       </div>
@@ -350,14 +350,14 @@ function WarehouseDetail({ source, type }: { source: DataSource; type: Warehouse
           setConfirming(open);
           if (!open) remove.reset();
         }}
-        title={t("detail.delete.title", { name: source.name })}
-        confirmLabel={t("detail.delete.confirm")}
+        title={t(($) => $.detail.delete.title, { name: source.name })}
+        confirmLabel={t(($) => $.detail.delete.confirm)}
         isPending={remove.isPending}
         error={remove.error === null ? null : errorMessage(remove.error)}
         onConfirm={() => remove.mutate({ id: source.id })}
       >
-        <p>{t("detail.delete.body")}</p>
-        {used > 0 && <p className="text-foreground">{t("detail.delete.inUse", { count: used })}</p>}
+        <p>{t(($) => $.detail.delete.body)}</p>
+        {used > 0 && <p className="text-foreground">{t(($) => $.detail.delete.inUse, { count: used })}</p>}
       </ConfirmDialog>
     </>
   );

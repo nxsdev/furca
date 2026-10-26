@@ -9,7 +9,7 @@ import { orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/login")({
   ssr: false,
-  head: () => ({ meta: [{ title: i18n.t("shell:auth.signIn.pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.auth.signIn.pageTitle, { ns: "shell" }) }] }),
   component: LoginPage,
 });
 
@@ -33,19 +33,19 @@ function LoginPage() {
   if (status.data?.needsSetup === true) {
     return (
       <AuthCard
-        title={t("auth.setup.title")}
-        description={t("auth.setup.description")}
-        submitLabel={t("auth.setup.submit")}
+        title={t(($) => $.auth.setup.title)}
+        description={t(($) => $.auth.setup.description)}
+        submitLabel={t(($) => $.auth.setup.submit)}
         fields={[
-          { name: "name", label: t("auth.fields.name"), autoComplete: "name" },
-          { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email" },
+          { name: "name", label: t(($) => $.auth.fields.name), autoComplete: "name" },
+          { name: "email", label: t(($) => $.auth.fields.email), type: "email", autoComplete: "email" },
           {
             name: "password",
-            label: t("auth.fields.password"),
+            label: t(($) => $.auth.fields.password),
             type: "password",
             autoComplete: "new-password",
             minLength: 10,
-            description: t("auth.fields.passwordHint", { count: 10 }),
+            description: t(($) => $.auth.fields.passwordHint, { count: 10 }),
           },
         ]}
         onSubmit={async ({ name, email, password }) => {
@@ -58,18 +58,18 @@ function LoginPage() {
 
   return (
     <AuthCard
-      title={t("auth.signIn.title")}
-      description={t("auth.signIn.description")}
-      submitLabel={t("auth.signIn.submit")}
+      title={t(($) => $.auth.signIn.title)}
+      description={t(($) => $.auth.signIn.description)}
+      submitLabel={t(($) => $.auth.signIn.submit)}
       fields={[
-        { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email" },
-        { name: "password", label: t("auth.fields.password"), type: "password", autoComplete: "current-password" },
+        { name: "email", label: t(($) => $.auth.fields.email), type: "email", autoComplete: "email" },
+        { name: "password", label: t(($) => $.auth.fields.password), type: "password", autoComplete: "current-password" },
       ]}
       onSubmit={async ({ email, password }) => {
         const { error } = await authClient.signIn.email({ email, password });
         return error ? authErrorMessage(error, "invalidCredentials") : done();
       }}
-      footer={t("auth.signIn.footer")}
+      footer={t(($) => $.auth.signIn.footer)}
     />
   );
 }

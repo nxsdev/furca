@@ -35,7 +35,7 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const validKey = matches(Key, () => t("create.keyInvalid"));
+  const validKey = matches(Key, () => t(($) => $.create.keyInvalid));
   const form = useAppForm({
     defaultValues: {
       name: "",
@@ -59,7 +59,7 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
         });
       if (feature === null) return;
       await queryClient.invalidateQueries({ queryKey: orpc.features.key() });
-      toast.success(t("create.created", { key: feature.key }));
+      toast.success(t(($) => $.create.created, { key: feature.key }));
       await navigate({ to: "/flags/$featureId", params: { featureId: feature.id } });
     },
   });
@@ -82,19 +82,19 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
             <field.TextField
               label={
                 <>
-                  {t("create.name")} <span className="font-normal text-muted">{t("shared.optional")}</span>
+                  {t(($) => $.create.name)} <span className="font-normal text-muted">{t(($) => $.shared.optional)}</span>
                 </>
               }
-              description={t("create.nameHelp")}
+              description={t(($) => $.create.nameHelp)}
               className="sm:max-w-md"
             />
           )}
         </form.AppField>
-        <form.AppField name="key" validators={{ onChange: ({ value }) => (value === "" ? t("create.enterKey") : validKey({ value })) }}>
+        <form.AppField name="key" validators={{ onChange: ({ value }) => (value === "" ? t(($) => $.create.enterKey) : validKey({ value })) }}>
           {(field) => (
             <field.KeyField
-              label={t("shared.key")}
-              description={typesKey ? t("create.keyHintTyped") : t("create.keyHelp")}
+              label={t(($) => $.shared.key)}
+              description={typesKey ? t(($) => $.create.keyHintTyped) : t(($) => $.create.keyHelp)}
               expanded={typesKey}
               format={formatKey}
               className="sm:max-w-md"
@@ -107,15 +107,15 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
         >
           {(field) => (
             <div className="flex flex-col gap-1.5">
-              <Label>{t("shared.type")}</Label>
+              <Label>{t(($) => $.shared.type)}</Label>
               <Segmented
-                aria-label={t("shared.type")}
+                aria-label={t(($) => $.shared.type)}
                 value={field.state.value}
                 onChange={field.handleChange}
-                options={valueTypes.map((id) => ({ id, label: t(`valueTypes.${id}`) }))}
+                options={valueTypes.map((id) => ({ id, label: t(($) => $.valueTypes[id]) }))}
                 className="w-fit"
               />
-              <p className="text-meta text-muted">{t("create.typeHelp")}</p>
+              <p className="text-meta text-muted">{t(($) => $.create.typeHelp)}</p>
             </div>
           )}
         </form.AppField>
@@ -125,12 +125,12 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
         <Disclosure.Heading>
           <Disclosure.Trigger className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
             <span className="min-w-0">
-              <span className="block text-body font-medium">{t("create.options")}</span>
+              <span className="block text-body font-medium">{t(($) => $.create.options)}</span>
               <span className="block text-label font-normal text-muted">
                 {[
-                  t("create.defaultValueSummary", { value: defaultValue }),
-                  t("create.offEverywhere"),
-                  tags.length === 0 ? t("create.noTags") : t("create.tagCount", { count: tags.length }),
+                  t(($) => $.create.defaultValueSummary, { value: defaultValue }),
+                  t(($) => $.create.offEverywhere),
+                  tags.length === 0 ? t(($) => $.create.noTags) : t(($) => $.create.tagCount, { count: tags.length }),
                 ].join(" · ")}
               </span>
             </span>
@@ -139,7 +139,7 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
         </Disclosure.Heading>
         <Disclosure.Content>
           <Disclosure.Body className="flex flex-col gap-5 border-t border-border px-5 py-5">
-            <p className="text-label text-muted">{t("create.optionsWhy")}</p>
+            <p className="text-label text-muted">{t(($) => $.create.optionsWhy)}</p>
             {/* ValueInput shows its own validation message; the validator only blocks submit */}
             <form.AppField
               name="defaultValue"
@@ -147,16 +147,16 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
             >
               {(field) => (
                 <div className="flex flex-col gap-1">
-                  <ValueInput valueType={valueType} value={field.state.value} onChange={field.handleChange} label={t("shared.defaultValue")} />
-                  <p className="text-meta text-muted">{t("create.defaultValueHelp")}</p>
+                  <ValueInput valueType={valueType} value={field.state.value} onChange={field.handleChange} label={t(($) => $.shared.defaultValue)} />
+                  <p className="text-meta text-muted">{t(($) => $.create.defaultValueHelp)}</p>
                 </div>
               )}
             </form.AppField>
             <form.AppField name="tags">
               {(field) => (
                 <div className="flex flex-col gap-1.5">
-                  <Label>{t("shared.tags")}</Label>
-                  <TagInput aria-label={t("shared.tags")} values={field.state.value} onChange={field.handleChange} placeholder="checkout, growth" />
+                  <Label>{t(($) => $.shared.tags)}</Label>
+                  <TagInput aria-label={t(($) => $.shared.tags)} values={field.state.value} onChange={field.handleChange} placeholder="checkout, growth" />
                 </div>
               )}
             </form.AppField>
@@ -168,9 +168,9 @@ export function CreateFlagForm({ onCancel }: { onCancel: () => void }) {
         <form.FormError className="mx-5 mb-4" />
         <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-4">
           <Button size="sm" variant="tertiary" onPress={onCancel}>
-            {t("common:actions.cancel")}
+            {t(($) => $.actions.cancel, { ns: "common" })}
           </Button>
-          <form.SubmitButton size="sm" label={t("shared.createFlag")} />
+          <form.SubmitButton size="sm" label={t(($) => $.shared.createFlag)} />
         </div>
       </form.AppForm>
     </form>

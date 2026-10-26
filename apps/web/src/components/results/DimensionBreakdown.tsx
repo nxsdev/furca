@@ -80,11 +80,11 @@ export function DimensionBreakdown({
     return (
       <EmptyState
         icon={<SplitSquareVertical />}
-        title={t("breakdown.emptyTitle")}
+        title={t(($) => $.breakdown.emptyTitle)}
         description={
           <Trans
             t={t}
-            i18nKey="breakdown.emptyDescription"
+            i18nKey={($) => $.breakdown.emptyDescription}
             components={{
               link: (
                 <Link
@@ -104,29 +104,29 @@ export function DimensionBreakdown({
   // Default to the primary metric of the result
   const first = result?.slices[0]?.metrics ?? [];
   const selected = metricId ?? first.find((m) => m.role === "primary")?.metricId ?? first[0]?.metricId ?? null;
-  const metricName = (id: string) => metrics.get(id)?.name ?? t("table.deletedMetric");
+  const metricName = (id: string) => metrics.get(id)?.name ?? t(($) => $.table.deletedMetric);
 
   return (
     <Panel>
       <PanelHeader
-        title={t("breakdown.title")}
+        title={t(($) => $.breakdown.title)}
         description={
           <span className="inline-flex items-center gap-1">
             <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
-            {t("breakdown.exploratory")}
+            {t(($) => $.breakdown.exploratory)}
           </span>
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <HeaderSelect
-              label={t("breakdown.dimension")}
+              label={t(($) => $.breakdown.dimension)}
               value={dimension}
               onChange={setDimension}
               options={experiment.dimensions.map((d) => ({ id: d, label: d, mono: true }))}
             />
             {first.length > 0 && selected !== null && (
               <HeaderSelect
-                label={t("breakdown.metric")}
+                label={t(($) => $.breakdown.metric)}
                 value={selected}
                 onChange={setMetricId}
                 options={first.map((m) => ({ id: m.metricId, label: metricName(m.metricId) }))}
@@ -136,7 +136,7 @@ export function DimensionBreakdown({
               isIconOnly
               size="sm"
               variant="ghost"
-              aria-label={t("breakdown.recompute")}
+              aria-label={t(($) => $.breakdown.recompute)}
               onPress={() => void query.refetch()}
               isDisabled={query.isFetching}
               className="text-muted"
@@ -147,7 +147,7 @@ export function DimensionBreakdown({
         }
       />
       {query.isPending ? (
-        <div className="flex flex-col gap-2 p-5" aria-busy="true" aria-label={t("breakdown.loading")}>
+        <div className="flex flex-col gap-2 p-5" aria-busy="true" aria-label={t(($) => $.breakdown.loading)}>
           <Skeleton className="h-6 rounded-md" />
           <Skeleton className="h-6 rounded-md" />
           <Skeleton className="h-6 w-2/3 rounded-md" />
@@ -162,13 +162,13 @@ export function DimensionBreakdown({
           {result.error}
         </p>
       ) : result.slices.length === 0 || selected === null ? (
-        <p className="px-5 py-4 text-body text-muted">{t("breakdown.noData")}</p>
+        <p className="px-5 py-4 text-body text-muted">{t(($) => $.breakdown.noData)}</p>
       ) : (
         <SliceTable experiment={experiment} slices={result.slices} metricId={selected} metricName={metricName} trusted={trusted} />
       )}
       {result !== undefined && (
         <p className="border-t border-border px-5 py-2 text-meta text-muted">
-          <Trans t={t} i18nKey="breakdown.computed" components={{ time: <RelativeTime date={result.computedAt} /> }} />
+          <Trans t={t} i18nKey={($) => $.breakdown.computed} components={{ time: <RelativeTime date={result.computedAt} /> }} />
         </p>
       )}
     </Panel>
@@ -194,22 +194,22 @@ function SliceTable({
   const rowsOf = (slice: DimensionSlice) => slice.metrics.find((m) => m.metricId === metricId);
   const domain = liftDomain(slices.flatMap((s) => rowsOf(s)?.comparisons.map((c) => c.ci) ?? []));
   const [min, max] = domain;
-  const label = (value: string) => (value === OTHER ? t("breakdown.other") : value === NOT_SET ? t("breakdown.notSet") : value);
+  const label = (value: string) => (value === OTHER ? t(($) => $.breakdown.other) : value === NOT_SET ? t(($) => $.breakdown.notSet) : value);
   const variationIndex = (key: string) => experiment.variations.findIndex((v) => v.key === key);
   const columns = treatments > 1 ? 5 : 4;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] border-separate border-spacing-0 text-label">
-        <caption className="sr-only">{t("breakdown.caption", { metric: metricName(metricId), control: control?.name ?? t("table.controlFallback") })}</caption>
+        <caption className="sr-only">{t(($) => $.breakdown.caption, { metric: metricName(metricId), control: control?.name ?? t(($) => $.table.controlFallback) })}</caption>
         <thead>
           <tr className="text-left text-meta text-muted [&>th]:border-b [&>th]:border-border [&>th]:px-2.5 [&>th]:py-2 [&>th]:font-medium [&>th]:whitespace-nowrap">
-            <th scope="col" className="pl-5!">{t("breakdown.columns.value")}</th>
-            <th scope="col" className="text-right">{t("breakdown.columns.users")}</th>
-            {treatments > 1 && <th scope="col">{t("table.columns.variation")}</th>}
-            <th scope="col" className="text-right">{t("table.columns.lift")}</th>
+            <th scope="col" className="pl-5!">{t(($) => $.breakdown.columns.value)}</th>
+            <th scope="col" className="text-right">{t(($) => $.breakdown.columns.users)}</th>
+            {treatments > 1 && <th scope="col">{t(($) => $.table.columns.variation)}</th>}
+            <th scope="col" className="text-right">{t(($) => $.table.columns.lift)}</th>
             <th scope="col" className="w-[30%] min-w-[150px]">
-              <span className="sr-only">{t("table.columns.intervalPlot")}</span>
+              <span className="sr-only">{t(($) => $.table.columns.intervalPlot)}</span>
               <div className="relative h-4" style={{ marginInline: INTERVAL_INSET }} aria-hidden="true">
                 {liftTicks(domain).map((tick) => (
                   <span
@@ -222,7 +222,7 @@ function SliceTable({
                 ))}
               </div>
             </th>
-            <th scope="col" className="pr-5!">{t("table.columns.result")}</th>
+            <th scope="col" className="pr-5!">{t(($) => $.table.columns.result)}</th>
           </tr>
         </thead>
         <tbody>
@@ -245,7 +245,7 @@ function SliceTable({
                   {valueCell(1)}
                   {usersCell(1)}
                   <td colSpan={columns - 1} className="border-b border-border px-2.5 py-2.5 pr-5 text-muted">
-                    {result?.error ?? t("table.noComparisons")}
+                    {result?.error ?? t(($) => $.table.noComparisons)}
                   </td>
                 </tr>
               );
@@ -279,7 +279,7 @@ function SliceTable({
                       ci={c.ci}
                       verdict={trusted ? c.verdict : "neutral"}
                       domain={domain}
-                      label={`${label(slice.value)}: ${t("table.versus", { variation, control: control?.name ?? t("table.controlFallback") })}`}
+                      label={`${label(slice.value)}: ${t(($) => $.table.versus, { variation, control: control?.name ?? t(($) => $.table.controlFallback) })}`}
                     />
                   </td>
                   <td className="pr-5!" title={c.message ?? undefined}>
@@ -288,13 +288,13 @@ function SliceTable({
                     ) : (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-label font-medium">
                         <AlertTriangle className="size-3.5 shrink-0 text-health" aria-hidden="true" />
-                        {t("table.unreliable")}
+                        {t(($) => $.table.unreliable)}
                       </span>
                     )}
                     {trusted && regressed.length > 0 && (
                       <div className="inline-flex items-center gap-1 text-meta text-lose">
                         <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
-                        {t("breakdown.guardrailRegressed", { metrics: formatList(regressed.map((m) => metricName(m.metricId))) })}
+                        {t(($) => $.breakdown.guardrailRegressed, { metrics: formatList(regressed.map((m) => metricName(m.metricId))) })}
                       </div>
                     )}
                   </td>

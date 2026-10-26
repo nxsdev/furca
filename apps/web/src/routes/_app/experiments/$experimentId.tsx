@@ -22,7 +22,7 @@ type Tab = "results" | "setup" | "phases" | "history";
 const tabs: ReadonlyArray<Tab> = ["results", "setup", "phases", "history"];
 
 export const Route = createFileRoute("/_app/experiments/$experimentId")({
-  head: () => ({ meta: [{ title: i18n.t("experiments:pageTitle.detail") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle.detail, { ns: "experiments" }) }] }),
   validateSearch: (search: Record<string, unknown>): { tab?: Tab } =>
     tabs.includes(search.tab as Tab) ? { tab: search.tab as Tab } : {},
   component: Page,
@@ -32,7 +32,7 @@ function Breadcrumb() {
   const { t } = useTranslation("experiments");
   return (
     <Link to="/experiments" className="w-fit text-label text-muted hover:text-foreground">
-      {t("breadcrumb")}
+      {t(($) => $.breadcrumb)}
     </Link>
   );
 }
@@ -46,13 +46,13 @@ function Page() {
   if (query.error !== null)
     return (
       <>
-        <PageHeader breadcrumb={breadcrumb} title={t("detail.title")} />
+        <PageHeader breadcrumb={breadcrumb} title={t(($) => $.detail.title)} />
         <QueryError message={errorMessage(query.error)} onRetry={() => query.refetch()} />
       </>
     );
   if (query.isPending)
     return (
-      <div className="flex flex-col gap-3" aria-busy="true" aria-label={t("detail.loading")}>
+      <div className="flex flex-col gap-3" aria-busy="true" aria-label={t(($) => $.detail.loading)}>
         <Skeleton className="h-4 w-24 rounded-md" />
         <Skeleton className="h-7 w-72 rounded-md" />
         <Skeleton className="h-4 w-96 max-w-full rounded-md" />
@@ -90,7 +90,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       onSuccess: (next) => {
         saved(next);
         setConfirm(null);
-        toast.success(i18n.t("experiments:detail.toast.started"), { description: i18n.t("experiments:detail.toast.startedDescription") });
+        toast.success(i18n.t(($) => $.detail.toast.started, { ns: "experiments" }), { description: i18n.t(($) => $.detail.toast.startedDescription, { ns: "experiments" }) });
         void navigate({ to: ".", search: { tab: "results" } });
       },
     }),
@@ -100,7 +100,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: orpc.experiments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.features.key() });
-        toast(i18n.t("experiments:detail.toast.deleted"));
+        toast(i18n.t(($) => $.detail.toast.deleted, { ns: "experiments" }));
         void navigate({ to: "/experiments" });
       },
     }),
@@ -109,11 +109,11 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
     orpc.experiments.archive.mutationOptions({
       onSuccess: (next) => {
         saved(next);
-        toast(i18n.t(next.archived ? "experiments:detail.toast.archived" : "experiments:detail.toast.restored"), {
-          description: next.archived ? i18n.t("experiments:detail.toast.archivedDescription") : undefined,
+        toast(i18n.t(($) => (next.archived ? $.detail.toast.archived : $.detail.toast.restored), { ns: "experiments" }), {
+          description: next.archived ? i18n.t(($) => $.detail.toast.archivedDescription, { ns: "experiments" }) : undefined,
         });
       },
-      onError: (error) => toast.danger(i18n.t("experiments:detail.toast.archiveFailed"), { description: errorMessage(error) }),
+      onError: (error) => toast.danger(i18n.t(($) => $.detail.toast.archiveFailed, { ns: "experiments" }), { description: errorMessage(error) }),
     }),
   );
 
@@ -131,29 +131,29 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
 
   const actions = !canEdit ? undefined : x.status === "draft" ? (
       <>
-        <Button size="sm" variant="ghost" onPress={() => setConfirm("delete")} aria-label={t("detail.actions.deleteDraft")} isIconOnly className="text-muted">
+        <Button size="sm" variant="ghost" onPress={() => setConfirm("delete")} aria-label={t(($) => $.detail.actions.deleteDraft)} isIconOnly className="text-muted">
           <Trash2 className="size-4" />
         </Button>
         <Button size="sm" onPress={() => setConfirm("start")} isDisabled={blocked}>
           <Play className="size-3.5" />
-          {t("detail.actions.start")}
+          {t(($) => $.detail.actions.start)}
         </Button>
       </>
     ) : x.status === "running" ? (
       <>
         <Button size="sm" variant="outline" onPress={() => setMode(mode === "traffic" ? "view" : "traffic")} isDisabled={mode === "stop" || blocked}>
           <SlidersHorizontal className="size-3.5" />
-          {t("detail.actions.changeTraffic")}
+          {t(($) => $.detail.actions.changeTraffic)}
         </Button>
         <Button size="sm" onPress={() => setMode(mode === "stop" ? "view" : "stop")} isDisabled={mode === "traffic" || blocked}>
           <Square className="size-3.5" />
-          {t("detail.actions.stopAndDecide")}
+          {t(($) => $.detail.actions.stopAndDecide)}
         </Button>
       </>
     ) : (
       <Button size="sm" variant="outline" onPress={() => archive.mutate({ id: x.id, archived: !x.archived })} isPending={archive.isPending}>
         {x.archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}
-        {x.archived ? t("common:actions.restore") : t("common:actions.archive")}
+        {x.archived ? t(($) => $.actions.restore, { ns: "common" }) : t(($) => $.actions.archive, { ns: "common" })}
       </Button>
     );
 
@@ -168,7 +168,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
               <StatusBadge status={x.status} />
             </span>
             {x.status === "stopped" && <DecisionBadge experiment={x} />}
-            {x.archived && <span className="text-label font-normal text-muted">{t("detail.archivedBadge")}</span>}
+            {x.archived && <span className="text-label font-normal text-muted">{t(($) => $.detail.archivedBadge)}</span>}
           </span>
         }
         description={
@@ -180,11 +180,11 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
               className="inline-flex items-center gap-1 font-mono text-label text-foreground hover:underline"
             >
               <Flag className="size-3.5 text-muted" aria-hidden="true" />
-              {feature?.key ?? t("detail.flagFallback")}
+              {feature?.key ?? t(($) => $.detail.flagFallback)}
             </Link>
             <span className="text-label">{formatList(envs.map((e) => e.name))}</span>
             {x.status === "running" && x.startedAt !== null && (
-              <span className="text-label">{t("detail.runningFor", { duration: formatDuration(x.startedAt, new Date()) })}</span>
+              <span className="text-label">{t(($) => $.detail.runningFor, { duration: formatDuration(x.startedAt, new Date()) })}</span>
             )}
           </span>
         }
@@ -195,7 +195,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
         <p className="-mt-2 mb-6 max-w-[80ch] border-l-2 border-border pl-3 text-body whitespace-pre-line text-muted">
           {x.decision.reason}
           <span className="ml-2 text-meta whitespace-nowrap">
-            <Trans t={t} i18nKey="detail.decided" components={{ time: <RelativeTime date={x.decision.decidedAt} /> }} />
+            <Trans t={t} i18nKey={($) => $.detail.decided} components={{ time: <RelativeTime date={x.decision.decidedAt} /> }} />
           </span>
         </p>
       )}
@@ -215,25 +215,25 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
 
       <Tabs variant="secondary" selectedKey={tab} onSelectionChange={(k) => void navigate({ to: ".", search: { tab: k as Tab }, replace: true })}>
         <Tabs.ListContainer className="mb-6">
-          <Tabs.List aria-label={t("detail.tabs.label")} className="min-w-0 gap-1">
+          <Tabs.List aria-label={t(($) => $.detail.tabs.label)} className="min-w-0 gap-1">
             {started && (
               <Tabs.Tab className="w-auto px-2.5 text-label" id="results">
-                {t("detail.tabs.results")}
+                {t(($) => $.detail.tabs.results)}
                 <Tabs.Indicator />
               </Tabs.Tab>
             )}
             <Tabs.Tab className="w-auto px-2.5 text-label" id="setup">
-              {t("detail.tabs.setup")}
+              {t(($) => $.detail.tabs.setup)}
               <Tabs.Indicator />
             </Tabs.Tab>
             {started && (
               <Tabs.Tab className="w-auto px-2.5 text-label" id="phases">
-                {t("detail.tabs.phases")} <span className="ml-1 font-mono text-meta text-muted tabular">{x.phases.length}</span>
+                {t(($) => $.detail.tabs.phases)} <span className="ml-1 font-mono text-meta text-muted tabular">{x.phases.length}</span>
                 <Tabs.Indicator />
               </Tabs.Tab>
             )}
             <Tabs.Tab className="w-auto px-2.5 text-label" id="history">
-              {t("detail.tabs.history")}
+              {t(($) => $.detail.tabs.history)}
               <Tabs.Indicator />
             </Tabs.Tab>
           </Tabs.List>
@@ -260,35 +260,35 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
         <AlertDialog.Container size="sm">
           <AlertDialog.Dialog>
             <AlertDialog.Header>
-              <AlertDialog.Heading className="text-section font-semibold">{t("detail.start.title", { name: x.name })}</AlertDialog.Heading>
+              <AlertDialog.Heading className="text-section font-semibold">{t(($) => $.detail.start.title, { name: x.name })}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body className="flex flex-col gap-3 text-body text-muted">
               <p>
                 <Trans
                   t={t}
-                  i18nKey="detail.start.body"
+                  i18nKey={($) => $.detail.start.body}
                   count={envs.length}
                   values={{
-                    flag: feature?.key ?? t("theFlag"),
+                    flag: feature?.key ?? t(($) => $.theFlag),
                     environments: formatList(envs.map((e) => e.name)),
                     variations: x.variations.map((v) => v.name).join(" / "),
                   }}
                   components={{ code: <span className="font-mono text-foreground" /> }}
                 />
               </p>
-              <p>{t("detail.start.locks")}</p>
+              <p>{t(($) => $.detail.start.locks)}</p>
               {offIn.length > 0 && (
                 <p className="text-foreground">
                   <Trans
                     t={t}
-                    i18nKey="detail.start.flagOff"
+                    i18nKey={($) => $.detail.start.flagOff}
                     values={{ flag: feature?.key ?? "", environments: formatList(offIn.map((e) => e.name)) }}
                     components={{ code: <span className="font-mono" /> }}
                   />
                 </p>
               )}
-              {x.primaryMetricId === null && <p className="text-foreground">{t("detail.start.needsPrimary")}</p>}
-              {review.environment !== null && <p>{t("results:decision.reviewNote", { environment: review.environment.name })}</p>}
+              {x.primaryMetricId === null && <p className="text-foreground">{t(($) => $.detail.start.needsPrimary)}</p>}
+              {review.environment !== null && <p>{t(($) => $.decision.reviewNote, { ns: "results", environment: review.environment.name })}</p>}
               {starting.error !== null && (
                 <p role="alert" className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-label text-danger">
                   {errorMessage(starting.error)}
@@ -297,7 +297,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button slot="close" variant="tertiary" size="sm" isDisabled={starting.isPending}>
-                {t("common:actions.cancel")}
+                {t(($) => $.actions.cancel, { ns: "common" })}
               </Button>
               <Button
                 size="sm"
@@ -305,7 +305,7 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
                 isDisabled={x.primaryMetricId === null}
                 onPress={() => (review.environment === null ? start.mutate({ id: x.id }) : requestStart.mutate())}
               >
-                {review.environment === null ? t("detail.start.confirm") : t("results:decision.requestReview")}
+                {review.environment === null ? t(($) => $.detail.start.confirm) : t(($) => $.decision.requestReview, { ns: "results" })}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -315,8 +315,8 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
       <ConfirmDialog
         isOpen={confirm === "delete"}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title={t("detail.delete.title")}
-        confirmLabel={t("detail.actions.deleteDraft")}
+        title={t(($) => $.detail.delete.title)}
+        confirmLabel={t(($) => $.detail.actions.deleteDraft)}
         onConfirm={() => remove.mutate({ id: x.id })}
         isPending={remove.isPending}
         error={remove.error === null ? null : errorMessage(remove.error)}
@@ -324,8 +324,8 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
         <p>
           <Trans
             t={t}
-            i18nKey="detail.delete.body"
-            values={{ name: x.name, flag: feature?.key ?? t("theFlag") }}
+            i18nKey={($) => $.detail.delete.body}
+            values={{ name: x.name, flag: feature?.key ?? t(($) => $.theFlag) }}
             components={{ name: <span className="font-medium text-foreground" />, code: <span className="font-mono" /> }}
           />
         </p>
@@ -337,15 +337,15 @@ function Detail({ experiment: x }: { experiment: Experiment }) {
 const pendingAction = (change: ChangeRequest["change"], experiment: Experiment): string => {
   switch (change.type) {
     case "experiment.start":
-      return i18n.t("results:decision.pending.start");
+      return i18n.t(($) => $.decision.pending.start, { ns: "results" });
     case "experiment.traffic":
-      return i18n.t("results:decision.pending.traffic");
+      return i18n.t(($) => $.decision.pending.traffic, { ns: "results" });
     case "experiment.stop":
       return change.outcome === "ship"
-        ? i18n.t("results:decision.pending.stopShip", { name: experiment.variations.find((v) => v.key === change.variationKey)?.name ?? change.variationKey ?? "" })
+        ? i18n.t(($) => $.decision.pending.stopShip, { ns: "results", name: experiment.variations.find((v) => v.key === change.variationKey)?.name ?? change.variationKey ?? "" })
         : change.outcome === "rollback"
-          ? i18n.t("results:decision.pending.stopRollback")
-          : i18n.t("results:decision.pending.stopInconclusive");
+          ? i18n.t(($) => $.decision.pending.stopRollback, { ns: "results" })
+          : i18n.t(($) => $.decision.pending.stopInconclusive, { ns: "results" });
     default:
       return "";
   }
@@ -360,27 +360,27 @@ function PendingReviews({ experiment, requests }: { experiment: Experiment; requ
   const cancel = useMutation(
     orpc.changeRequests.cancel.mutationOptions({
       onSuccess: () => {
-        toast(i18n.t("results:decision.pending.cancelled"));
+        toast(i18n.t(($) => $.decision.pending.cancelled, { ns: "results" }));
         void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
       },
-      onError: (error) => toast.danger(i18n.t("results:decision.pending.cancelFailed"), { description: errorMessage(error) }),
+      onError: (error) => toast.danger(i18n.t(($) => $.decision.pending.cancelFailed, { ns: "results" }), { description: errorMessage(error) }),
     }),
   );
   if (requests.length === 0) return null;
   return (
-    <section aria-label={t("decision.pending.blocked")} className="mb-6 rounded-[10px] border border-focus/40 bg-focus/[0.04]">
+    <section aria-label={t(($) => $.decision.pending.blocked)} className="mb-6 rounded-[10px] border border-focus/40 bg-focus/[0.04]">
       <ul className="divide-y divide-focus/15">
         {requests.map((r) => (
           <li key={r.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div className="flex min-w-0 items-start gap-2">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-focus" aria-hidden="true" />
               <div className="min-w-0">
-                <p className="text-label font-medium">{t("decision.pending.title", { action: pendingAction(r.change, experiment) })}</p>
+                <p className="text-label font-medium">{t(($) => $.decision.pending.title, { action: pendingAction(r.change, experiment) })}</p>
                 <p className="text-meta text-muted">
                   <Trans
                     t={t}
-                    i18nKey="decision.pending.by"
+                    i18nKey={($) => $.decision.pending.by}
                     values={{ email: r.authorEmail, environment: environments.find((e) => e.id === r.environmentId)?.name ?? "" }}
                     components={{ time: <RelativeTime date={r.createdAt} /> }}
                   />
@@ -389,18 +389,18 @@ function PendingReviews({ experiment, requests }: { experiment: Experiment; requ
             </div>
             <div className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
               <Link to="/reviews" className="text-label text-focus hover:underline">
-                {t("decision.pending.open")}
+                {t(($) => $.decision.pending.open)}
               </Link>
               {(me?.id === r.authorId || isAdmin) && (
                 <Button size="sm" variant="tertiary" onPress={() => cancel.mutate({ id: r.id })} isPending={cancel.isPending && cancel.variables?.id === r.id}>
-                  {t("decision.pending.cancel")}
+                  {t(($) => $.decision.pending.cancel)}
                 </Button>
               )}
             </div>
           </li>
         ))}
       </ul>
-      <p className="border-t border-focus/15 px-4 py-2 text-meta text-muted sm:px-5">{t("decision.pending.blocked")}</p>
+      <p className="border-t border-focus/15 px-4 py-2 text-meta text-muted sm:px-5">{t(($) => $.decision.pending.blocked)}</p>
     </section>
   );
 }

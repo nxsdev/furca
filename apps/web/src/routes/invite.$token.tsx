@@ -9,7 +9,7 @@ import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/invite/$token")({
   ssr: false,
-  head: () => ({ meta: [{ title: i18n.t("shell:auth.invite.pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.auth.invite.pageTitle, { ns: "shell" }) }] }),
   component: InvitePage,
 });
 
@@ -29,27 +29,27 @@ function InvitePage() {
   if (invitation.error !== null) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-2 px-4 text-center">
-        <h1 className="text-title font-semibold">{t("auth.invite.unavailable")}</h1>
-        <p className="text-body text-muted">{t("auth.invite.unavailableBody", { reason: errorMessage(invitation.error) })}</p>
-        <Link href="/login">{t("auth.invite.goToSignIn")}</Link>
+        <h1 className="text-title font-semibold">{t(($) => $.auth.invite.unavailable)}</h1>
+        <p className="text-body text-muted">{t(($) => $.auth.invite.unavailableBody, { reason: errorMessage(invitation.error) })}</p>
+        <Link href="/login">{t(($) => $.auth.invite.goToSignIn)}</Link>
       </div>
     );
   }
 
   return (
     <AuthCard
-      title={t("auth.invite.title")}
+      title={t(($) => $.auth.invite.title)}
       description={
         <>
-          {t("auth.invite.description", { email: invitation.data.email, role: t(`settings:roles.${invitation.data.role}`) })}
-          <span className="mt-1 block">{t(`settings:roles.${invitation.data.role}Help`)}</span>
+          {t(($) => $.auth.invite.description, { email: invitation.data.email, role: t(($) => $.roles[invitation.data.role], { ns: "settings" }) })}
+          <span className="mt-1 block">{t(($) => $.roles[`${invitation.data.role}Help` as const], { ns: "settings" })}</span>
         </>
       }
-      submitLabel={t("auth.invite.submit")}
+      submitLabel={t(($) => $.auth.invite.submit)}
       fields={[
-        { name: "email", label: t("auth.fields.email"), type: "email", autoComplete: "email", defaultValue: invitation.data.email, isReadOnly: true },
-        { name: "name", label: t("auth.fields.name"), autoComplete: "name" },
-        { name: "password", label: t("auth.fields.password"), type: "password", autoComplete: "new-password", minLength: 10 },
+        { name: "email", label: t(($) => $.auth.fields.email), type: "email", autoComplete: "email", defaultValue: invitation.data.email, isReadOnly: true },
+        { name: "name", label: t(($) => $.auth.fields.name), autoComplete: "name" },
+        { name: "password", label: t(($) => $.auth.fields.password), type: "password", autoComplete: "new-password", minLength: 10 },
       ]}
       onSubmit={async ({ name, email, password }) => {
         // The server accepts the sign-up only with this invitation's one-time token (INVITATION_HEADER in Auth.ts)

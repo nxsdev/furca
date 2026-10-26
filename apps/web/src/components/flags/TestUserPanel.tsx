@@ -127,19 +127,19 @@ export function TestUserPanel({
   return (
     <Panel>
       <PanelHeader
-        title={t("testUser.title")}
-        description={t("testUser.description", { environment: environment.name })}
+        title={t(($) => $.testUser.title)}
+        description={t(($) => $.testUser.description, { environment: environment.name })}
       />
       <div className="flex flex-col gap-3 px-4 py-4 sm:px-5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-label font-medium">{t("testUser.attributes")}</span>
+          <span className="text-label font-medium">{t(($) => $.testUser.attributes)}</span>
           <Segmented
-            aria-label={t("testUser.editor")}
+            aria-label={t(($) => $.testUser.editor)}
             value={mode}
             onChange={switchMode}
             options={[
-              { id: "rows", label: t("testUser.fields") },
-              { id: "json", label: t("testUser.json") },
+              { id: "rows", label: t(($) => $.testUser.fields) },
+              { id: "json", label: t(($) => $.testUser.json) },
             ]}
           />
         </div>
@@ -147,17 +147,17 @@ export function TestUserPanel({
           <div className="flex flex-col gap-1.5">
             {rows.map((r) => (
               <div key={r.id} className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_2rem] gap-1.5">
-                <TextField aria-label={t("testUser.attributeName")} value={r.key} onChange={(key) => update(r.id, { key })}>
-                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder={t("testUser.attribute")} spellCheck={false} autoFocus={r.id === focusId} />
+                <TextField aria-label={t(($) => $.testUser.attributeName)} value={r.key} onChange={(key) => update(r.id, { key })}>
+                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder={t(($) => $.testUser.attribute)} spellCheck={false} autoFocus={r.id === focusId} />
                 </TextField>
-                <TextField aria-label={t("testUser.valueOf", { attribute: r.key || t("testUser.attribute") })} value={r.value} onChange={(value) => update(r.id, { value })}>
-                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder={t("testUser.notSet")} spellCheck={false} />
+                <TextField aria-label={t(($) => $.testUser.valueOf, { attribute: r.key || t(($) => $.testUser.attribute) })} value={r.value} onChange={(value) => update(r.id, { value })}>
+                  <Input className="h-8 py-1 font-mono text-base sm:text-label" placeholder={t(($) => $.testUser.notSet)} spellCheck={false} />
                 </TextField>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="ghost"
-                  aria-label={t("testUser.remove", { attribute: r.key || t("testUser.attribute") })}
+                  aria-label={t(($) => $.testUser.remove, { attribute: r.key || t(($) => $.testUser.attribute) })}
                   className="size-8 min-w-8 text-muted hover:text-foreground"
                   onPress={() => setRows(rows.filter((x) => x.id !== r.id))}
                 >
@@ -177,14 +177,14 @@ export function TestUserPanel({
                 }}
               >
                 <Plus className="size-3.5" />
-                {t("testUser.addAttribute")}
+                {t(($) => $.testUser.addAttribute)}
               </Button>
             </div>
           </div>
         ) : (
-          <TextField aria-label={t("testUser.attributesJson")} value={json} onChange={setJson} isInvalid={jsonError !== null}>
+          <TextField aria-label={t(($) => $.testUser.attributesJson)} value={json} onChange={setJson} isInvalid={jsonError !== null}>
             <TextArea rows={6} spellCheck={false} className="w-full font-mono text-base sm:text-label leading-5" />
-            {jsonError !== null && <p className="mt-1 text-meta text-danger">{t(`testUser.jsonErrors.${jsonError}`)}</p>}
+            {jsonError !== null && <p className="mt-1 text-meta text-danger">{t(($) => $.testUser.jsonErrors[jsonError])}</p>}
           </TextField>
         )}
       </div>
@@ -196,13 +196,13 @@ export function TestUserPanel({
           </div>
         ) : payload.error !== null ? (
           <div className="flex items-center justify-between gap-3 text-label">
-            <span className="text-danger">{t("testUser.payloadError", { error: errorMessage(payload.error) })}</span>
+            <span className="text-danger">{t(($) => $.testUser.payloadError, { error: errorMessage(payload.error) })}</span>
             <Button size="sm" variant="outline" onPress={() => payload.refetch()}>
-              {t("common:actions.retry")}
+              {t(($) => $.actions.retry, { ns: "common" })}
             </Button>
           </div>
         ) : result === null ? (
-          <p className="text-label text-muted">{t("testUser.fixJson")}</p>
+          <p className="text-label text-muted">{t(($) => $.testUser.fixJson)}</p>
         ) : (
           <Result
             feature={feature}
@@ -214,7 +214,7 @@ export function TestUserPanel({
         {hasUnsavedChanges && (
           <p className="mt-3 flex items-start gap-1.5 text-meta text-muted">
             <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-            {t("testUser.unsavedHint")}
+            {t(($) => $.testUser.unsavedHint)}
           </p>
         )}
       </div>
@@ -237,15 +237,15 @@ function Result({
   const { evaluation, steps, ruleIds } = result;
   const label = (index: number) => {
     const n = ruleNumber(ruleIds[index] ?? null);
-    return n === null ? t("testUser.publishedRule", { number: index + 1 }) : t("testUser.rule", { number: n });
+    return n === null ? t(($) => $.testUser.publishedRule, { number: index + 1 }) : t(($) => $.testUser.rule, { number: n });
   };
 
   if (evaluation.source === "unknown") {
     return (
       <div className="flex flex-col gap-1">
-        <span className="text-meta font-medium text-muted">{t("testUser.serves")}</span>
-        <span className="text-body font-medium">{t("testUser.fallback")}</span>
-        <p className="text-label text-muted">{t("testUser.notInPayload", { key: feature.key, environment: environment.name })}</p>
+        <span className="text-meta font-medium text-muted">{t(($) => $.testUser.serves)}</span>
+        <span className="text-body font-medium">{t(($) => $.testUser.fallback)}</span>
+        <p className="text-label text-muted">{t(($) => $.testUser.notInPayload, { key: feature.key, environment: environment.name })}</p>
       </div>
     );
   }
@@ -253,30 +253,30 @@ function Result({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span className="text-meta font-medium text-muted">{t("testUser.serves")}</span>
+        <span className="text-meta font-medium text-muted">{t(($) => $.testUser.serves)}</span>
         <div>
           <ValuePreview valueType={feature.valueType} value={JSON.stringify(evaluation.value)} className="text-body" />
         </div>
         <p className="text-label text-muted">
           {evaluation.source === "default"
-            ? t("testUser.defaultServed")
+            ? t(($) => $.testUser.defaultServed)
             : evaluation.experiment
-              ? t("testUser.matchedVariation", { rule: label(evaluation.ruleIndex), variation: evaluation.experiment.variationKey })
-              : t("testUser.matched", { rule: label(evaluation.ruleIndex) })}
+              ? t(($) => $.testUser.matchedVariation, { rule: label(evaluation.ruleIndex), variation: evaluation.experiment.variationKey })
+              : t(($) => $.testUser.matched, { rule: label(evaluation.ruleIndex) })}
         </p>
       </div>
       {steps.length > 0 && (
-        <ol className="flex flex-col gap-1.5 border-t border-border pt-3" aria-label={t("testUser.steps")}>
+        <ol className="flex flex-col gap-1.5 border-t border-border pt-3" aria-label={t(($) => $.testUser.steps)}>
           {steps.map((s) => (
             <li key={s.index} className="flex items-start gap-2 text-label">
               {s.matched ? (
-                <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label={t("testUser.stepMatched")} />
+                <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label={t(($) => $.testUser.stepMatched)} />
               ) : (
-                <Minus className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label={t("testUser.stepSkipped")} />
+                <Minus className="mt-0.5 size-3.5 shrink-0 text-muted" aria-label={t(($) => $.testUser.stepSkipped)} />
               )}
               <span className="min-w-0">
                 <span className="font-medium">
-                  {label(s.index)} · {t(`rules.types.${s.rule.type}`)}
+                  {label(s.index)} · {t(($) => $.rules.types[s.rule.type])}
                 </span>
                 <span className="text-muted"> — {s.reason}</span>
               </span>
@@ -284,8 +284,8 @@ function Result({
           ))}
           {evaluation.source === "default" && (
             <li className="flex items-start gap-2 text-label">
-              <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label={t("testUser.stepMatched")} />
-              <span className="font-medium">{t("shared.defaultValue")}</span>
+              <Check className="mt-0.5 size-3.5 shrink-0 text-focus" aria-label={t(($) => $.testUser.stepMatched)} />
+              <span className="font-medium">{t(($) => $.shared.defaultValue)}</span>
             </li>
           )}
         </ol>

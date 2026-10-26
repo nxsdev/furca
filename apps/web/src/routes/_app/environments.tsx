@@ -21,7 +21,7 @@ import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/environments")({
-  head: () => ({ meta: [{ title: i18n.t("environments:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "environments" }) }] }),
   component: Page,
 });
 
@@ -29,16 +29,16 @@ const LARGE_PAYLOAD = 100 * 1024;
 
 function PayloadSize({ bytes }: { bytes: number | null }) {
   const { t } = useTranslation("environments");
-  if (bytes === null) return <span className="text-muted">{t("payloadSize.notPublished")}</span>;
+  if (bytes === null) return <span className="text-muted">{t(($) => $.payloadSize.notPublished)}</span>;
   if (bytes <= LARGE_PAYLOAD) return <span className="font-mono tabular">{formatBytes(bytes)}</span>;
   return (
     <Tooltip delay={200}>
       <Tooltip.Trigger className="inline-flex items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-focus">
         <TriangleAlert className="size-3.5 text-health" aria-hidden="true" />
         <span className="font-mono tabular">{formatBytes(bytes)}</span>
-        <span className="text-meta text-muted">{t("payloadSize.large")}</span>
+        <span className="text-meta text-muted">{t(($) => $.payloadSize.large)}</span>
       </Tooltip.Trigger>
-      <Tooltip.Content className="max-w-64">{t("payloadSize.largeHint")}</Tooltip.Content>
+      <Tooltip.Content className="max-w-64">{t(($) => $.payloadSize.largeHint)}</Tooltip.Content>
     </Tooltip>
   );
 }
@@ -84,7 +84,7 @@ function CreateEnvironment({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation(["environments", "common"]);
   const queryClient = useQueryClient();
   const required = useRequired();
-  const keyPattern = matches(Key, () => t("create.keyInvalid"));
+  const keyPattern = matches(Key, () => t(($) => $.create.keyInvalid));
   const form = useAppForm({
     defaultValues: { name: "", key: "" },
     onSubmit: async ({ value, formApi }) => {
@@ -92,7 +92,7 @@ function CreateEnvironment({ onDone }: { onDone: () => void }) {
         const env = await client.environments.create({ name: value.name.trim(), key: value.key });
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast.success(t("create.created", { name: env.name }), { description: t("create.createdDescription") });
+        toast.success(t(($) => $.create.created, { name: env.name }), { description: t(($) => $.create.createdDescription) });
         onDone();
       } catch (e) {
         // BAD_REQUEST is the duplicate-key check (the name is validated here first)
@@ -117,17 +117,17 @@ function CreateEnvironment({ onDone }: { onDone: () => void }) {
           },
         }}
       >
-        {() => <RowField label={t("create.name")} placeholder="Staging" autoFocus />}
+        {() => <RowField label={t(($) => $.create.name)} placeholder="Staging" autoFocus />}
       </form.AppField>
       <form.AppField name="key" validators={{ onChange: ({ value }) => required({ value }) ?? keyPattern({ value }) }}>
-        {() => <RowField label={t("create.key")} placeholder="staging" description={t("create.keyHelp")} mono />}
+        {() => <RowField label={t(($) => $.create.key)} placeholder="staging" description={t(($) => $.create.keyHelp)} mono />}
       </form.AppField>
       <div className="flex items-center gap-2 sm:mt-6">
         <form.AppForm>
-          <form.SubmitButton label={t("common:actions.create")} size="sm" />
+          <form.SubmitButton label={t(($) => $.actions.create, { ns: "common" })} size="sm" />
         </form.AppForm>
         <Button size="sm" variant="tertiary" onPress={onDone}>
-          {t("common:actions.cancel")}
+          {t(($) => $.actions.cancel, { ns: "common" })}
         </Button>
       </div>
       <form.AppForm>
@@ -149,11 +149,11 @@ function PayloadDrawer({ env, onClose }: { env: Environment | null; onClose: () 
         <Drawer.Dialog className="w-[min(680px,100vw)] max-w-full gap-0 p-0 sm:w-[680px]">
           <Drawer.CloseTrigger />
           <Drawer.Header className="flex flex-col gap-1 border-b border-border px-5 py-4">
-            <Drawer.Heading className="text-section font-semibold">{t("payloadDrawer.title", { name: env?.name ?? "" })}</Drawer.Heading>
+            <Drawer.Heading className="text-section font-semibold">{t(($) => $.payloadDrawer.title, { name: env?.name ?? "" })}</Drawer.Heading>
             <p className="text-label text-muted">
               <Trans
                 t={t}
-                i18nKey="payloadDrawer.description"
+                i18nKey={($) => $.payloadDrawer.description}
                 values={{ path: "/api/sdk/v1/payload/<sdk key>" }}
                 components={{ code: <code className="font-mono" /> }}
               />
@@ -166,13 +166,13 @@ function PayloadDrawer({ env, onClose }: { env: Environment | null; onClose: () 
               </div>
             ) : payload.isError ? (
               <QueryError
-                message={t("payloadDrawer.loadFailed", { message: errorMessage(payload.error) })}
+                message={t(($) => $.payloadDrawer.loadFailed, { message: errorMessage(payload.error) })}
                 onRetry={() => payload.refetch()}
               />
             ) : (
               <>
                 <p className="mb-2 text-meta text-muted tabular">{formatBytes(new TextEncoder().encode(payload.data).length)}</p>
-                <CodeBlock code={payload.data} label={t("payloadDrawer.copyJson")} className="" />
+                <CodeBlock code={payload.data} label={t(($) => $.payloadDrawer.copyJson)} className="" />
               </>
             )}
           </Drawer.Body>
@@ -194,18 +194,18 @@ function RequireReviewSwitch({ env }: { env: Environment }) {
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         if (saved.requireApproval && adminCount !== null && adminCount < 2) {
-          toast.warning(t("review.turnedOn", { name: saved.name }), { description: t("review.soleAdmin"), timeout: 0 });
+          toast.warning(t(($) => $.review.turnedOn, { name: saved.name }), { description: t(($) => $.review.soleAdmin), timeout: 0 });
         } else {
-          toast(saved.requireApproval ? t("review.turnedOn", { name: saved.name }) : t("review.turnedOff", { name: saved.name }));
+          toast(saved.requireApproval ? t(($) => $.review.turnedOn, { name: saved.name }) : t(($) => $.review.turnedOff, { name: saved.name }));
         }
       },
-      onError: (e) => toast.danger(t("review.failed"), { description: errorMessage(e) }),
+      onError: (e) => toast.danger(t(($) => $.review.failed), { description: errorMessage(e) }),
     }),
   );
-  if (!isAdmin) return <span className={env.requireApproval ? "" : "text-muted"}>{env.requireApproval ? t("review.required") : t("review.notRequired")}</span>;
+  if (!isAdmin) return <span className={env.requireApproval ? "" : "text-muted"}>{env.requireApproval ? t(($) => $.review.required) : t(($) => $.review.notRequired)}</span>;
   return (
     <FlagSwitch
-      aria-label={t("review.switchLabel", { name: env.name })}
+      aria-label={t(($) => $.review.switchLabel, { name: env.name })}
       isSelected={update.isPending ? update.variables.requireApproval : env.requireApproval}
       isDisabled={update.isPending}
       onChange={(requireApproval) => update.mutate({ id: env.id, requireApproval })}
@@ -235,7 +235,7 @@ function EnvironmentRow({
             <code className="block truncate font-mono text-meta text-muted">{env.key}</code>
             <span className="relative z-1 flex items-center gap-1 sm:hidden">
               <code className="max-w-[140px] truncate font-mono text-meta">{env.sdkKey}</code>
-              <CopyButton value={env.sdkKey} label={t("row.copySdkKey")} />
+              <CopyButton value={env.sdkKey} label={t(($) => $.row.copySdkKey)} />
             </span>
           </span>
         </span>
@@ -243,7 +243,7 @@ function EnvironmentRow({
       <td className={`${tbl.td} hidden sm:table-cell`}>
         <span className="flex items-center gap-1">
           <code className="max-w-[220px] truncate font-mono">{env.sdkKey}</code>
-          <CopyButton value={env.sdkKey} label={t("row.copySdkKey")} />
+          <CopyButton value={env.sdkKey} label={t(($) => $.row.copySdkKey)} />
         </span>
       </td>
       <td className={`${tbl.td} hidden whitespace-nowrap sm:table-cell`}>
@@ -261,17 +261,17 @@ function EnvironmentRow({
         <span className="inline-flex items-center gap-1">
           <Button size="sm" variant="ghost" onPress={onPayload} className="h-8">
             <FileJson className="size-4" />
-            <span className="hidden sm:inline">{t("row.payload")}</span>
+            <span className="hidden sm:inline">{t(($) => $.row.payload)}</span>
           </Button>
           {isAdmin && <Dropdown>
-            <Button isIconOnly size="sm" variant="ghost" aria-label={t("row.moreActions", { name: env.name })} className="size-8 min-w-8">
+            <Button isIconOnly size="sm" variant="ghost" aria-label={t(($) => $.row.moreActions, { name: env.name })} className="size-8 min-w-8">
               <MoreHorizontal className="size-4" />
             </Button>
             <Dropdown.Popover placement="bottom end" className="min-w-48">
               <Dropdown.Menu onAction={(k) => k === "rotate" && onRotate()}>
-                <Dropdown.Item id="rotate" textValue={t("row.rotateSdkKey")} variant="danger">
+                <Dropdown.Item id="rotate" textValue={t(($) => $.row.rotateSdkKey)} variant="danger">
                   <RotateCw className="size-4" />
-                  <Label>{t("row.rotateSdkKeyMenu")}</Label>
+                  <Label>{t(($) => $.row.rotateSdkKeyMenu)}</Label>
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -299,7 +299,7 @@ function Page() {
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
         setRotateOpen(false);
-        toast.success(t("rotate.done", { name: env.name }), { description: t("rotate.doneDescription") });
+        toast.success(t(($) => $.rotate.done, { name: env.name }), { description: t(($) => $.rotate.doneDescription) });
       },
     }),
   );
@@ -307,13 +307,13 @@ function Page() {
   return (
     <>
       <PageHeader
-        title={t("page.title")}
-        description={t("page.description")}
+        title={t(($) => $.page.title)}
+        description={t(($) => $.page.description)}
         actions={
           isAdmin && (
             <Button size="sm" onPress={() => setCreating(true)} isDisabled={creating}>
               <Plus className="size-4" />
-              {t("page.newEnvironment")}
+              {t(($) => $.page.newEnvironment)}
             </Button>
           )
         }
@@ -324,16 +324,16 @@ function Page() {
             <ListSkeleton rows={3} />
           </Panel>
         ) : list.isError ? (
-          <QueryError message={t("page.loadFailed", { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
+          <QueryError message={t(($) => $.page.loadFailed, { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
         ) : list.data.length === 0 && !creating ? (
           <EmptyState
             icon={<KeyRound />}
-            title={t("page.emptyTitle")}
-            description={t("page.emptyDescription")}
+            title={t(($) => $.page.emptyTitle)}
+            description={t(($) => $.page.emptyDescription)}
             action={
               isAdmin && (
                 <Button size="sm" onPress={() => setCreating(true)}>
-                  {t("page.newEnvironment")}
+                  {t(($) => $.page.newEnvironment)}
                 </Button>
               )
             }
@@ -345,14 +345,14 @@ function Page() {
               <table className={tbl.table}>
                 <thead>
                   <tr>
-                    <th className={tbl.th}>{t("table.environment")}</th>
-                    <th className={`${tbl.th} hidden sm:table-cell`}>{t("table.sdkKey")}</th>
-                    <th className={`${tbl.th} hidden sm:table-cell`}>{t("table.payload")}</th>
-                    <th className={`${tbl.th} hidden text-right md:table-cell`}>{t("table.flagsOn")}</th>
-                    <th className={`${tbl.th} hidden min-[1400px]:table-cell`}>{t("table.last24h")}</th>
-                    <th className={tbl.th}>{t("table.review")}</th>
+                    <th className={tbl.th}>{t(($) => $.table.environment)}</th>
+                    <th className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.table.sdkKey)}</th>
+                    <th className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.table.payload)}</th>
+                    <th className={`${tbl.th} hidden text-right md:table-cell`}>{t(($) => $.table.flagsOn)}</th>
+                    <th className={`${tbl.th} hidden min-[1400px]:table-cell`}>{t(($) => $.table.last24h)}</th>
+                    <th className={tbl.th}>{t(($) => $.table.review)}</th>
                     <th className={tbl.th}>
-                      <span className="sr-only">{t("table.actions")}</span>
+                      <span className="sr-only">{t(($) => $.table.actions)}</span>
                     </th>
                   </tr>
                 </thead>
@@ -374,14 +374,14 @@ function Page() {
             </div>
             <p className="flex items-start gap-2 border-t border-border px-5 py-3 text-meta text-muted">
               <ShieldCheck className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-              {t("review.help")}
+              {t(($) => $.review.help)}
             </p>
             {isAdmin && adminCount !== null && adminCount < 2 && list.data.some((item) => item.environment.requireApproval) && (
               <p className="flex flex-wrap items-start gap-x-2 gap-y-1 border-t border-border px-5 py-3 text-meta">
                 <TriangleAlert className="mt-px size-3.5 shrink-0 text-health" aria-hidden="true" />
-                <span className="min-w-0 flex-1">{t("review.soleAdmin")}</span>
+                <span className="min-w-0 flex-1">{t(($) => $.review.soleAdmin)}</span>
                 <Link to="/settings" className="rounded-sm font-medium underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-focus">
-                  {t("review.inviteAdmin")}
+                  {t(($) => $.review.inviteAdmin)}
                 </Link>
               </p>
             )}
@@ -394,8 +394,8 @@ function Page() {
       <ConfirmDialog
         isOpen={rotateOpen}
         onOpenChange={setRotateOpen}
-        title={t("rotate.title", { name: rotating?.name ?? "" })}
-        confirmLabel={t("rotate.confirm")}
+        title={t(($) => $.rotate.title, { name: rotating?.name ?? "" })}
+        confirmLabel={t(($) => $.rotate.confirm)}
         isPending={rotate.isPending}
         error={rotate.error === null ? null : errorMessage(rotate.error)}
         onConfirm={() => rotating !== null && rotate.mutate({ id: rotating.id })}
@@ -403,7 +403,7 @@ function Page() {
         <p>
           <Trans
             t={t}
-            i18nKey="rotate.body"
+            i18nKey={($) => $.rotate.body}
             values={{ sdkKey: rotating?.sdkKey ?? "" }}
             components={{ code: <code className="break-all font-mono text-foreground" /> }}
           />

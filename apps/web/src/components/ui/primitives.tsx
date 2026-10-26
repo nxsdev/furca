@@ -71,7 +71,7 @@ export function Code({ children, copy = false, className = "" }: { children: str
 export function CopyButton({ value, label }: { value: string; label?: string }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const name = label ?? t("actions.copy");
+  const name = label ?? t(($) => $.actions.copy);
   return (
     <Tooltip delay={300}>
       <Button
@@ -88,7 +88,7 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
       >
         {copied ? <Check className="size-3.5 text-win" /> : <Copy className="size-3.5" />}
       </Button>
-      <Tooltip.Content>{copied ? t("actions.copied") : name}</Tooltip.Content>
+      <Tooltip.Content>{copied ? t(($) => $.actions.copied) : name}</Tooltip.Content>
     </Tooltip>
   );
 }
@@ -114,7 +114,7 @@ export function PanelHeader({ title, description, actions }: { title: ReactNode;
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t("states.loading")}>
+    <div className="flex flex-col gap-3 p-5" aria-busy="true" aria-label={t(($) => $.states.loading)}>
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-5 rounded-md" style={{ width: `${85 - ((i * 13) % 40)}%` }} />
       ))}
@@ -130,7 +130,7 @@ export function QueryError({ message, onRetry }: { message: string; onRetry?: ()
       <span>{message}</span>
       {onRetry !== undefined && (
         <Button size="sm" variant="outline" onPress={onRetry}>
-          {t("actions.retry")}
+          {t(($) => $.actions.retry)}
         </Button>
       )}
     </div>
@@ -153,7 +153,7 @@ export function RelativeTime({ date }: { date: Date | string }) {
   const relativeFormat = new Intl.RelativeTimeFormat(intlLocale(), { numeric: "auto" });
   const seconds = (d.getTime() - Date.now()) / 1000;
   const [unit, size] = units.find(([, s]) => Math.abs(seconds) >= s) ?? ["second", 1];
-  const text = Math.abs(seconds) < 45 ? t("states.justNow") : relativeFormat.format(Math.round(seconds / size), unit);
+  const text = Math.abs(seconds) < 45 ? t(($) => $.states.justNow) : relativeFormat.format(Math.round(seconds / size), unit);
   return (
     <time dateTime={d.toISOString()} title={d.toLocaleString(intlLocale())} className="whitespace-nowrap">
       {text}

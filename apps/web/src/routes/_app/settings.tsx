@@ -16,7 +16,7 @@ import { usePermissions } from "~/lib/permissions";
 import { client, errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: i18n.t("settings:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "settings" }) }] }),
   component: Page,
 });
 
@@ -54,7 +54,7 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
           name="email"
           validators={{
             // Empty is only an error on submit, so tabbing through the field stays quiet
-            onBlur: ({ value }) => (value.trim() === "" || EMAIL.test(value.trim()) ? undefined : t("common:form.email")),
+            onBlur: ({ value }) => (value.trim() === "" || EMAIL.test(value.trim()) ? undefined : t(($) => $.form.email, { ns: "common" })),
             onSubmit: required,
           }}
           // Once the format error shows, re-check while typing so it clears as soon as the address is valid
@@ -66,7 +66,7 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
         >
           {(field) => (
             <field.TextField
-              label={t("invite.label")}
+              label={t(($) => $.invite.label)}
               type="email"
               placeholder="teammate@company.com"
               autoComplete="off"
@@ -77,8 +77,8 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
         <form.AppField name="role">
           {(field) => (
             <field.SelectField
-              label={t("invite.role")}
-              options={ASSIGNABLE.map((r) => ({ id: r, label: t(`roles.${r}`), textValue: t(`roles.${r}`) }))}
+              label={t(($) => $.invite.role)}
+              options={ASSIGNABLE.map((r) => ({ id: r, label: t(($) => $.roles[r]), textValue: t(($) => $.roles[r]) }))}
               className="sm:w-36"
             />
           )}
@@ -90,7 +90,7 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
             label={
               <>
                 <Link2 className="size-4" />
-                {t("invite.submit")}
+                {t(($) => $.invite.submit)}
               </>
             }
           />
@@ -99,7 +99,7 @@ function InviteForm({ onCreated }: { onCreated: (inv: Invitation) => void }) {
       <form.AppForm>
         <form.FormError />
       </form.AppForm>
-      <p className="text-xs text-muted">{t("invite.help")}</p>
+      <p className="text-xs text-muted">{t(($) => $.invite.help)}</p>
     </form>
   );
 }
@@ -112,21 +112,21 @@ function CreatedInvite({ invitation, onDismiss }: { invitation: Invitation; onDi
       <p className="text-label">
         <Trans
           t={t}
-          i18nKey="invite.createdFor"
+          i18nKey={($) => $.invite.createdFor}
           values={{ email: invitation.email }}
           components={{ strong: <span className="font-medium" /> }}
         />
       </p>
       <div className="flex items-center gap-1 rounded-md border border-border bg-background py-1 pr-1 pl-3">
         <code className="min-w-0 flex-1 truncate font-mono text-label">{url}</code>
-        <CopyButton value={url} label={t("invite.copyLink")} />
+        <CopyButton value={url} label={t(($) => $.invite.copyLink)} />
       </div>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted">
-          <Trans t={t} i18nKey="invite.createdExpires" components={{ relative: <RelativeTime date={invitation.expiresAt} /> }} />
+          <Trans t={t} i18nKey={($) => $.invite.createdExpires} components={{ relative: <RelativeTime date={invitation.expiresAt} /> }} />
         </p>
         <Button size="sm" variant="ghost" onPress={onDismiss} className="h-7">
-          {t("invite.done")}
+          {t(($) => $.invite.done)}
         </Button>
       </div>
     </div>
@@ -143,14 +143,14 @@ function RoleSelect({ member }: { member: Member }) {
         void queryClient.invalidateQueries({ queryKey: orpc.members.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.session.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast(t("members.roleUpdated", { name, role: t(`roles.${saved.role}`) }));
+        toast(t(($) => $.members.roleUpdated, { name, role: t(($) => $.roles[saved.role]) }));
       },
-      onError: (e) => toast.danger(t("members.roleFailed"), { description: errorMessage(e) }),
+      onError: (e) => toast.danger(t(($) => $.members.roleFailed), { description: errorMessage(e) }),
     }),
   );
   return (
     <Select
-      aria-label={t("members.roleOf", { name })}
+      aria-label={t(($) => $.members.roleOf, { name })}
       value={member.role}
       isDisabled={setRole.isPending}
       onChange={(role) => {
@@ -165,8 +165,8 @@ function RoleSelect({ member }: { member: Member }) {
       <Select.Popover>
         <ListBox>
           {ASSIGNABLE.map((r) => (
-            <ListBox.Item key={r} id={r} textValue={t(`roles.${r}`)}>
-              {t(`roles.${r}`)}
+            <ListBox.Item key={r} id={r} textValue={t(($) => $.roles[r])}>
+              {t(($) => $.roles[r])}
               <ListBox.ItemIndicator />
             </ListBox.Item>
           ))}
@@ -187,7 +187,7 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: orpc.members.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast(t("members.removed", { name: removing?.name || removing?.email || "" }));
+        toast(t(($) => $.members.removed, { name: removing?.name || removing?.email || "" }));
         setRemoveOpen(false);
       },
     }),
@@ -196,18 +196,18 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
   const anyRemovable = members.some(canManage);
   return (
     <Panel>
-      <PanelHeader title={t("members.title")} description={isAdmin ? t("members.descriptionAdmin") : t("members.description")} />
+      <PanelHeader title={t(($) => $.members.title)} description={isAdmin ? t(($) => $.members.descriptionAdmin) : t(($) => $.members.description)} />
       <div className="overflow-x-auto">
         <table className={tbl.table}>
           <thead>
             <tr>
-              <th className={tbl.th}>{t("members.name")}</th>
-              <th className={`${tbl.th} hidden sm:table-cell`}>{t("members.email")}</th>
-              <th className={tbl.th}>{t("members.role")}</th>
-              <th className={`${tbl.th} hidden text-right md:table-cell`}>{t("members.joined")}</th>
+              <th className={tbl.th}>{t(($) => $.members.name)}</th>
+              <th className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.members.email)}</th>
+              <th className={tbl.th}>{t(($) => $.members.role)}</th>
+              <th className={`${tbl.th} hidden text-right md:table-cell`}>{t(($) => $.members.joined)}</th>
               {anyRemovable && (
                 <th className={tbl.th}>
-                  <span className="sr-only">{t("members.actions")}</span>
+                  <span className="sr-only">{t(($) => $.members.actions)}</span>
                 </th>
               )}
             </tr>
@@ -223,7 +223,7 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
                         <span className="truncate font-medium">{m.name || m.email}</span>
-                        {m.id === me?.id && <span className="text-meta text-muted">{t("members.you")}</span>}
+                        {m.id === me?.id && <span className="text-meta text-muted">{t(($) => $.members.you)}</span>}
                       </span>
                       <span className="block truncate text-meta text-muted sm:hidden">{m.email}</span>
                     </span>
@@ -231,7 +231,7 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
                 </td>
                 <td className={`${tbl.td} hidden max-w-[280px] truncate text-muted sm:table-cell`}>{m.email}</td>
                 <td className={`${tbl.td} whitespace-nowrap`}>
-                  {canManage(m) ? <RoleSelect member={m} /> : <span className={m.role === "owner" ? "font-medium" : ""}>{t(`roles.${m.role}`)}</span>}
+                  {canManage(m) ? <RoleSelect member={m} /> : <span className={m.role === "owner" ? "font-medium" : ""}>{t(($) => $.roles[m.role])}</span>}
                 </td>
                 <td className={`${tbl.td} hidden whitespace-nowrap text-right text-muted tabular md:table-cell`}>
                   {formatJoined(new Date(m.createdAt))}
@@ -244,7 +244,7 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
                           remove.reset();
                           setRemoveOpen(true);
                         }}>
-                        {t("members.remove")}
+                        {t(($) => $.members.remove)}
                       </Button>
                     )}
                   </td>
@@ -257,16 +257,16 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
       <dl className="grid gap-x-6 gap-y-1.5 border-t border-border px-5 py-4 text-label sm:grid-cols-[auto_1fr]">
         {ROLES.map((r) => (
           <div key={r} className="contents">
-            <dt className="font-medium">{t(`roles.${r}`)}</dt>
-            <dd className="text-muted">{t(`roles.${r}Help`)}</dd>
+            <dt className="font-medium">{t(($) => $.roles[r])}</dt>
+            <dd className="text-muted">{t(($) => $.roles[`${r}Help` as const])}</dd>
           </div>
         ))}
       </dl>
       <ConfirmDialog
         isOpen={removeOpen}
         onOpenChange={setRemoveOpen}
-        title={t("members.removeTitle", { name: removing?.name || removing?.email || "" })}
-        confirmLabel={t("members.removeConfirm")}
+        title={t(($) => $.members.removeTitle, { name: removing?.name || removing?.email || "" })}
+        confirmLabel={t(($) => $.members.removeConfirm)}
         isPending={remove.isPending}
         error={remove.error === null ? null : errorMessage(remove.error)}
         onConfirm={() => removing !== null && remove.mutate({ id: removing.id })}
@@ -274,7 +274,7 @@ function MembersPanel({ members }: { members: ReadonlyArray<Member> }) {
         <p>
           <Trans
             t={t}
-            i18nKey="members.removeBody"
+            i18nKey={($) => $.members.removeBody}
             values={{ email: removing?.email ?? "" }}
             components={{ strong: <span className="text-foreground" /> }}
           />
@@ -292,28 +292,28 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
     orpc.members.revokeInvitation.mutationOptions({
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: orpc.members.key() });
-        toast(t("invitations.revoked"), { description: t("invitations.revokedDescription") });
+        toast(t(($) => $.invitations.revoked), { description: t(($) => $.invitations.revokedDescription) });
       },
-      onError: (e) => toast.danger(t("invitations.revokeFailed"), { description: errorMessage(e) }),
+      onError: (e) => toast.danger(t(($) => $.invitations.revokeFailed), { description: errorMessage(e) }),
     }),
   );
   return (
     <Panel>
-      <PanelHeader title={t("invitations.title")} description={t("invitations.description")} />
+      <PanelHeader title={t(($) => $.invitations.title)} description={t(($) => $.invitations.description)} />
       <InviteForm onCreated={setCreated} />
       {created !== null && <CreatedInvite invitation={created} onDismiss={() => setCreated(null)} />}
       {invitations.length === 0 ? (
-        <p className="px-5 py-5 text-body text-muted">{t("invitations.empty")}</p>
+        <p className="px-5 py-5 text-body text-muted">{t(($) => $.invitations.empty)}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className={tbl.table}>
             <thead>
               <tr>
-                <th className={tbl.th}>{t("invitations.pending")}</th>
-                <th className={tbl.th}>{t("members.role")}</th>
-                <th className={`${tbl.th} hidden sm:table-cell`}>{t("invitations.expires")}</th>
+                <th className={tbl.th}>{t(($) => $.invitations.pending)}</th>
+                <th className={tbl.th}>{t(($) => $.members.role)}</th>
+                <th className={`${tbl.th} hidden sm:table-cell`}>{t(($) => $.invitations.expires)}</th>
                 <th className={tbl.th}>
-                  <span className="sr-only">{t("invitations.actions")}</span>
+                  <span className="sr-only">{t(($) => $.invitations.actions)}</span>
                 </th>
               </tr>
             </thead>
@@ -326,20 +326,20 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
                     <td className={`${tbl.td} max-w-[320px]`}>
                       <span className="block truncate">{inv.email}</span>
                       <span className="block text-meta text-muted sm:hidden">
-                        <Trans t={t} i18nKey={expired ? "invitations.expiredAt" : "invitations.expiresAt"} components={relative} />
+                        <Trans t={t} i18nKey={($) => (expired ? $.invitations.expiredAt : $.invitations.expiresAt)} components={relative} />
                       </span>
                     </td>
-                    <td className={`${tbl.td} whitespace-nowrap`}>{t(`roles.${inv.role}`)}</td>
+                    <td className={`${tbl.td} whitespace-nowrap`}>{t(($) => $.roles[inv.role])}</td>
                     <td className={`${tbl.td} hidden text-muted sm:table-cell`}>
                       {expired ? (
-                        <Trans t={t} i18nKey="invitations.expiredAt" components={relative} />
+                        <Trans t={t} i18nKey={($) => $.invitations.expiredAt} components={relative} />
                       ) : (
                         <RelativeTime date={inv.expiresAt} />
                       )}
                     </td>
                     <td className={`${tbl.td} w-px whitespace-nowrap text-right`}>
                       <span className="inline-flex items-center gap-1">
-                        {!expired && <CopyButton value={fullUrl(inv)} label={t("invite.copyLink")} />}
+                        {!expired && <CopyButton value={fullUrl(inv)} label={t(($) => $.invite.copyLink)} />}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -347,7 +347,7 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
                           isPending={revoke.isPending && revoke.variables?.id === inv.id}
                           onPress={() => revoke.mutate({ id: inv.id })}
                         >
-                          {t("invitations.revoke")}
+                          {t(($) => $.invitations.revoke)}
                         </Button>
                       </span>
                     </td>
@@ -365,22 +365,22 @@ function InvitationsPanel({ invitations }: { invitations: ReadonlyArray<Invitati
 function AboutPanel() {
   const { t } = useTranslation("settings");
   const links = [
-    { href: REPO, label: t("about.docs") },
-    { href: `${REPO}/tree/main/packages/sdk`, label: t("about.sdkReference") },
-    { href: `${REPO}/issues`, label: t("about.reportIssue") },
+    { href: REPO, label: t(($) => $.about.docs) },
+    { href: `${REPO}/tree/main/packages/sdk`, label: t(($) => $.about.sdkReference) },
+    { href: `${REPO}/issues`, label: t(($) => $.about.reportIssue) },
   ];
   return (
     <Panel>
-      <PanelHeader title={t("about.title")} />
+      <PanelHeader title={t(($) => $.about.title)} />
       <div className="flex flex-col gap-4 px-5 py-4 text-body">
         <p className="max-w-[72ch] text-muted">
-          <Trans t={t} i18nKey="about.dataLocation" components={{ code: <code className="font-mono text-foreground" /> }} />
+          <Trans t={t} i18nKey={($) => $.about.dataLocation} components={{ code: <code className="font-mono text-foreground" /> }} />
         </p>
         <dl className="grid grid-cols-[auto_1fr] items-center gap-x-6 gap-y-1 text-label">
-          <dt className="text-muted">{t("about.sdkHost")}</dt>
+          <dt className="text-muted">{t(($) => $.about.sdkHost)}</dt>
           <dd className="flex min-w-0 items-center gap-1">
             <code className="truncate font-mono">{window.location.origin}</code>
-            <CopyButton value={window.location.origin} label={t("about.copySdkHost")} />
+            <CopyButton value={window.location.origin} label={t(($) => $.about.copySdkHost)} />
           </dd>
         </dl>
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-label">
@@ -409,14 +409,14 @@ function Page() {
   const list = useQuery(orpc.members.list.queryOptions());
   return (
     <>
-      <PageHeader title={t("page.title")} description={t("page.description")} />
+      <PageHeader title={t(($) => $.page.title)} description={t(($) => $.page.description)} />
       <div className="flex flex-col gap-6">
         {list.isPending ? (
           <Panel>
             <ListSkeleton rows={3} />
           </Panel>
         ) : list.isError ? (
-          <QueryError message={t("page.loadFailed", { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
+          <QueryError message={t(($) => $.page.loadFailed, { message: errorMessage(list.error) })} onRetry={() => list.refetch()} />
         ) : (
           <>
             <MembersPanel members={list.data.members} />

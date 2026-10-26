@@ -44,7 +44,7 @@ export function ConfirmDialog({
           </AlertDialog.Body>
           <AlertDialog.Footer>
             <Button slot="close" variant="tertiary" size="sm" isDisabled={isPending}>
-              {t("actions.cancel")}
+              {t(($) => $.actions.cancel)}
             </Button>
             <Button variant="danger" size="sm" isPending={isPending} onPress={onConfirm}>
               {confirmLabel}

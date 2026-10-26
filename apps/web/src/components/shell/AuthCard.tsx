@@ -46,9 +46,9 @@ export function AuthCard({
   });
   const validatorFor = (f: AuthField) => ({
     onBlur: ({ value }: { value: string }) => {
-      if (value.trim().length === 0) return t("form.required");
-      if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t("form.email");
-      if (f.minLength !== undefined && value.length < f.minLength) return t("form.minLength", { count: f.minLength });
+      if (value.trim().length === 0) return t(($) => $.form.required);
+      if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t(($) => $.form.email);
+      if (f.minLength !== undefined && value.length < f.minLength) return t(($) => $.form.minLength, { count: f.minLength });
       return undefined;
     },
   });

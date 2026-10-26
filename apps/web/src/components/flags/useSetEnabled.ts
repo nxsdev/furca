@@ -42,7 +42,7 @@ export function useSetEnabled() {
     onError: (error, { feature, environment, enabled }, context) => {
       for (const [key, data] of context?.snapshot ?? []) queryClient.setQueryData(key, data);
       const vars = { key: feature.key, environment: environment.name };
-      toast.danger(enabled ? t("toggle.turnOnFailed", vars) : t("toggle.turnOffFailed", vars), {
+      toast.danger(enabled ? t(($) => $.toggle.turnOnFailed, vars) : t(($) => $.toggle.turnOffFailed, vars), {
         description: errorMessage(error),
       });
     },
@@ -60,14 +60,14 @@ export function useSetEnabled() {
           .map((x) => [x.id, x]),
       );
       const serving = servingText(saved, environment.id, experiments);
-      const id = toast(enabled ? t("toggle.turnedOn", vars) : t("toggle.turnedOff", vars), {
+      const id = toast(enabled ? t(($) => $.toggle.turnedOn, vars) : t(($) => $.toggle.turnedOff, vars), {
         description: !enabled
-          ? t("toggle.turnedOffDescription")
+          ? t(($) => $.toggle.turnedOffDescription)
           : servesOnlyFalse(saved, environment.id)
-            ? t("serving.onlyFalseHint")
-            : t("toggle.turnedOnServing", { serving, next: t("toggle.turnedOnDescription") }),
+            ? t(($) => $.serving.onlyFalseHint)
+            : t(($) => $.toggle.turnedOnServing, { serving, next: t(($) => $.toggle.turnedOnDescription) }),
         actionProps: {
-          children: t("toggle.undo"),
+          children: t(($) => $.toggle.undo),
           variant: "tertiary",
           onPress: () => {
             toast.close(id);

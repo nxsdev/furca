@@ -33,7 +33,7 @@ type Tab = "targeting" | "implementation" | "history";
 export const Route = createFileRoute("/_app/flags/$featureId")({
   validateSearch: (search: Record<string, unknown>): { tab?: Exclude<Tab, "targeting"> } =>
     search.tab === "implementation" || search.tab === "history" ? { tab: search.tab } : {},
-  head: () => ({ meta: [{ title: i18n.t("flags:page.detailTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.page.detailTitle, { ns: "flags" }) }] }),
   component: FlagPage,
 });
 
@@ -57,18 +57,18 @@ function FlagPage() {
         <div className="pt-8">
           <EmptyState
             icon={<Flag />}
-            title={t("detail.notFoundTitle")}
-            description={t("detail.notFoundDescription")}
+            title={t(($) => $.detail.notFoundTitle)}
+            description={t(($) => $.detail.notFoundDescription)}
             action={
               <Link to="/flags" className="button button--sm button--outline">
-                {t("detail.backToFlags")}
+                {t(($) => $.detail.backToFlags)}
               </Link>
             }
           />
         </div>
       );
     }
-    return <QueryError message={t("detail.loadError", { error: errorMessage(feature.error) })} onRetry={() => feature.refetch()} />;
+    return <QueryError message={t(($) => $.detail.loadError, { error: errorMessage(feature.error) })} onRetry={() => feature.refetch()} />;
   }
   if (feature.isPending) return <FlagSkeleton />;
   return <FlagDetail feature={feature.data} />;
@@ -77,7 +77,7 @@ function FlagPage() {
 function FlagSkeleton() {
   const { t } = useTranslation("flags");
   return (
-    <div aria-busy="true" aria-label={t("detail.loading")}>
+    <div aria-busy="true" aria-label={t(($) => $.detail.loading)}>
       <Skeleton className="mb-4 h-4 w-16 rounded-md" />
       <Skeleton className="h-7 w-64 rounded-md" />
       <Skeleton className="mt-2 mb-8 h-4 w-96 max-w-full rounded-md" />
@@ -130,11 +130,11 @@ function FlagDetail({ feature }: { feature: Feature }) {
         }
         formApi.reset(draftOf(saved, environments));
         setEditingId(null);
-        if (requested) toast.success(t("reviews:request.requested"), { description: t("reviews:request.requestedDescription") });
-        else toast.success(t("detail.rulesSaved"), { description: t("detail.rulesSavedDescription") });
+        if (requested) toast.success(t(($) => $.request.requested, { ns: "reviews" }), { description: t(($) => $.request.requestedDescription, { ns: "reviews" }) });
+        else toast.success(t(($) => $.detail.rulesSaved), { description: t(($) => $.detail.rulesSavedDescription) });
       } catch (error) {
         setServerError(formApi, error);
-        toast.danger(t("detail.saveRulesFailed"), { description: errorMessage(error), timeout: 0 });
+        toast.danger(t(($) => $.detail.saveRulesFailed), { description: errorMessage(error), timeout: 0 });
       } finally {
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
@@ -228,17 +228,17 @@ function FlagDetail({ feature }: { feature: Feature }) {
         onSelectionChange={(k) => void navigate({ search: k === "targeting" ? {} : { tab: k as Exclude<Tab, "targeting"> }, replace: true })}
       >
         <Tabs.ListContainer className="mb-6">
-          <Tabs.List aria-label={t("detail.sections")} className="min-w-0 gap-1">
+          <Tabs.List aria-label={t(($) => $.detail.sections)} className="min-w-0 gap-1">
             <Tabs.Tab id="targeting" className="w-auto px-2.5 text-label">
-              {t("detail.tabs.targeting")}
+              {t(($) => $.detail.tabs.targeting)}
               <Tabs.Indicator />
             </Tabs.Tab>
             <Tabs.Tab id="implementation" className="w-auto px-2.5 text-label">
-              {t("detail.tabs.implementation")}
+              {t(($) => $.detail.tabs.implementation)}
               <Tabs.Indicator />
             </Tabs.Tab>
             <Tabs.Tab id="history" className="w-auto px-2.5 text-label">
-              {t("detail.tabs.history")}
+              {t(($) => $.detail.tabs.history)}
               <Tabs.Indicator />
             </Tabs.Tab>
           </Tabs.List>
@@ -255,13 +255,13 @@ function FlagDetail({ feature }: { feature: Feature }) {
                 <EnvironmentsPanel feature={feature} environments={environments} experimentsById={experimentsById} />
                 <Panel>
                   <PanelHeader
-                    title={t("detail.rulesTitle")}
-                    description={t("detail.rulesDescription")}
+                    title={t(($) => $.detail.rulesTitle)}
+                    description={t(($) => $.detail.rulesDescription)}
                     actions={
                       environments.length > 1 && (
                         <Segmented
                           className="shrink-0"
-                          aria-label={t("detail.rulesEnvironment")}
+                          aria-label={t(($) => $.detail.rulesEnvironment)}
                           value={ruleEnv.id}
                           onChange={(id) => {
                             setEnvId(id);
@@ -273,7 +273,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                             label: (
                               <span className="inline-flex items-center gap-1.5">
                                 {e.name}
-                                {dirtyIds.includes(e.id) && <span className="size-1.5 rounded-full bg-focus" aria-label={t("detail.unsaved")} />}
+                                {dirtyIds.includes(e.id) && <span className="size-1.5 rounded-full bg-focus" aria-label={t(($) => $.detail.unsaved)} />}
                               </span>
                             ),
                           }))}
@@ -306,7 +306,7 @@ function FlagDetail({ feature }: { feature: Feature }) {
                       }}
                     />
                     <span className="hidden text-meta text-muted sm:inline">
-                      {t("detail.experimentRulesHint")}
+                      {t(($) => $.detail.experimentRulesHint)}
                     </span>
                   </div>}
                 </Panel>
@@ -335,36 +335,36 @@ function FlagDetail({ feature }: { feature: Feature }) {
         <div className="pointer-events-none sticky bottom-4 z-(--z-sticky) mt-6 flex justify-center">
           <div
             role="region"
-            aria-label={t("detail.unsavedRegion")}
+            aria-label={t(($) => $.detail.unsavedRegion)}
             className="pointer-events-auto flex w-full max-w-xl flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-border bg-overlay py-2 pr-2 pl-4 shadow-overlay"
           >
             <span className="size-2 shrink-0 rounded-full bg-focus" aria-hidden="true" />
             <p className="min-w-0 flex-1 text-label">
-              {t("detail.unsavedChanges", {
+              {t(($) => $.detail.unsavedChanges, {
                 environments: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(
                   environments.filter((e) => dirtyIds.includes(e.id)).map((e) => e.name),
                 ),
               })}
-              {invalidCount > 0 && <span className="text-danger"> · {t("detail.fixFirst", { count: invalidCount })}</span>}
+              {invalidCount > 0 && <span className="text-danger"> · {t(($) => $.detail.fixFirst, { count: invalidCount })}</span>}
               {saveError !== "" && <span className="block text-meta text-danger">{saveError}</span>}
             </p>
             <div className="flex shrink-0 gap-2">
               <Button size="sm" variant="tertiary" isDisabled={saving} onPress={discard}>
-                {t("common:actions.discard")}
+                {t(($) => $.actions.discard, { ns: "common" })}
               </Button>
               <Button size="sm" isPending={saving} isDisabled={invalidCount > 0} onPress={() => void form.handleSubmit()}>
                 {reviewIds.length === 0
-                  ? t("common:actions.save")
+                  ? t(($) => $.actions.save, { ns: "common" })
                   : reviewIds.length === dirtyIds.length
-                    ? t("reviews:request.submit")
-                    : t("reviews:request.saveAndRequest")}
+                    ? t(($) => $.request.submit, { ns: "reviews" })
+                    : t(($) => $.request.saveAndRequest, { ns: "reviews" })}
               </Button>
             </div>
             {reviewIds.length > 0 && (
               <div className="flex w-full flex-col gap-1 pr-2 pb-1">
                 <p className="flex items-center gap-1.5 text-meta text-muted">
                   <ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />
-                  {t("reviews:request.explain", {
+                  {t(($) => $.request.explain, { ns: "reviews",
                     environment: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(
                       environments.filter((e) => reviewIds.includes(e.id)).map((e) => e.name),
                     ),
@@ -372,8 +372,8 @@ function FlagDetail({ feature }: { feature: Feature }) {
                 </p>
                 <form.AppField name="comment">
                   {(field) => (
-                    <TextField aria-label={t("reviews:request.commentLabel")} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
-                      <Input className="h-8 py-1 text-base sm:text-label" placeholder={t("reviews:request.commentPlaceholder")} />
+                    <TextField aria-label={t(($) => $.request.commentLabel, { ns: "reviews" })} value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur}>
+                      <Input className="h-8 py-1 text-base sm:text-label" placeholder={t(($) => $.request.commentPlaceholder, { ns: "reviews" })} />
                     </TextField>
                   )}
                 </form.AppField>
@@ -388,17 +388,17 @@ function FlagDetail({ feature }: { feature: Feature }) {
           <AlertDialog.Dialog>
             <AlertDialog.Header>
               <AlertDialog.Icon status="warning" />
-              <AlertDialog.Heading>{t("detail.leaveTitle")}</AlertDialog.Heading>
+              <AlertDialog.Heading>{t(($) => $.detail.leaveTitle)}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p className="text-body text-muted">{t("detail.leaveDescription")}</p>
+              <p className="text-body text-muted">{t(($) => $.detail.leaveDescription)}</p>
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button size="sm" variant="tertiary" onPress={() => blocker.reset?.()}>
-                {t("detail.keepEditing")}
+                {t(($) => $.detail.keepEditing)}
               </Button>
               <Button size="sm" variant="danger" onPress={() => blocker.proceed?.()}>
-                {t("detail.discardAndLeave")}
+                {t(($) => $.detail.discardAndLeave)}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -430,7 +430,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
         cacheFeature(queryClient, saved);
         setEditing(false);
       } catch (error) {
-        toast.danger(t("header.saveDetailsFailed"), { description: errorMessage(error) });
+        toast.danger(t(($) => $.header.saveDetailsFailed), { description: errorMessage(error) });
       }
     },
   });
@@ -439,11 +439,11 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
     onSuccess: (saved) => {
       cacheFeature(queryClient, saved);
       void queryClient.invalidateQueries({ queryKey: orpc.features.list.key() });
-      toast(saved.archived ? t("header.archivedToast", { key: saved.key }) : t("header.restoredToast", { key: saved.key }), {
-        description: saved.archived ? t("header.archivedDescription") : undefined,
+      toast(saved.archived ? t(($) => $.header.archivedToast, { key: saved.key }) : t(($) => $.header.restoredToast, { key: saved.key }), {
+        description: saved.archived ? t(($) => $.header.archivedDescription) : undefined,
       });
     },
-    onError: (error) => toast.danger(t("header.updateFailed"), { description: errorMessage(error) }),
+    onError: (error) => toast.danger(t(($) => $.header.updateFailed), { description: errorMessage(error) }),
   });
   const remove = useMutation({
     mutationFn: () => client.features.delete({ id: feature.id }),
@@ -451,7 +451,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
       setConfirmDelete(false);
       queryClient.removeQueries({ queryKey: orpc.features.get.queryKey({ input: { id: feature.id } }) });
       await queryClient.invalidateQueries({ queryKey: orpc.features.list.key() });
-      toast(t("header.deletedToast", { key: feature.key }));
+      toast(t(($) => $.header.deletedToast, { key: feature.key }));
       await navigate({ to: "/flags" });
     },
   });
@@ -463,9 +463,9 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
 
   return (
     <header className="pb-5">
-      <nav aria-label={t("header.breadcrumb")} className="mb-2 text-label">
+      <nav aria-label={t(($) => $.header.breadcrumb)} className="mb-2 text-label">
         <Link to="/flags" className="rounded-sm text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus">
-          {t("shared.flags")}
+          {t(($) => $.shared.flags)}
         </Link>
         <span className="mx-1.5 text-muted" aria-hidden="true">
           /
@@ -475,41 +475,41 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <h1 className="min-w-0 truncate font-mono text-title font-semibold tracking-tight">{feature.key}</h1>
-            <CopyButton value={feature.key} label={t("shared.copyKey")} />
+            <CopyButton value={feature.key} label={t(($) => $.shared.copyKey)} />
             <span className="rounded-[4px] border border-border px-1.5 font-mono text-meta leading-[18px] text-muted">{feature.valueType}</span>
-            {feature.archived && <span className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px] text-muted">{t("shared.archived")}</span>}
+            {feature.archived && <span className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px] text-muted">{t(($) => $.shared.archived)}</span>}
           </div>
           {editing ? (
             <form className="mt-3 flex max-w-xl flex-col gap-3" noValidate onSubmit={submitHandler(form)}>
               <form.AppField name="description">
                 {(field) => (
                   <TextField value={field.state.value} onChange={field.handleChange} onBlur={field.handleBlur} autoFocus>
-                    <Label>{t("shared.description")}</Label>
-                    <Input className="text-base sm:text-label" placeholder={t("shared.descriptionPlaceholder")} />
+                    <Label>{t(($) => $.shared.description)}</Label>
+                    <Input className="text-base sm:text-label" placeholder={t(($) => $.shared.descriptionPlaceholder)} />
                   </TextField>
                 )}
               </form.AppField>
               <form.AppField name="tags">
                 {(field) => (
                   <div className="flex flex-col gap-1.5">
-                    <Label>{t("shared.tags")}</Label>
-                    <TagInput aria-label={t("shared.tags")} values={field.state.value} onChange={field.handleChange} placeholder="checkout, growth" />
+                    <Label>{t(($) => $.shared.tags)}</Label>
+                    <TagInput aria-label={t(($) => $.shared.tags)} values={field.state.value} onChange={field.handleChange} placeholder="checkout, growth" />
                   </div>
                 )}
               </form.AppField>
               <div className="flex gap-2">
                 <form.AppForm>
-                  <form.SubmitButton size="sm" label={t("common:actions.save")} />
+                  <form.SubmitButton size="sm" label={t(($) => $.actions.save, { ns: "common" })} />
                 </form.AppForm>
                 <Button size="sm" variant="tertiary" onPress={() => setEditing(false)}>
-                  {t("common:actions.cancel")}
+                  {t(($) => $.actions.cancel, { ns: "common" })}
                 </Button>
               </div>
             </form>
           ) : (
             <div className="group mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <p className={`max-w-[70ch] text-body ${feature.description === "" ? "text-muted" : "text-muted"}`}>
-                {feature.description === "" ? t("header.noDescription") : feature.description}
+                {feature.description === "" ? t(($) => $.header.noDescription) : feature.description}
               </p>
               {feature.tags.map((tag) => (
                 <span key={tag} className="rounded-[4px] bg-default px-1.5 text-meta leading-[18px]">
@@ -521,7 +521,7 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
                   isIconOnly
                   size="sm"
                   variant="ghost"
-                  aria-label={t("header.editDetails")}
+                  aria-label={t(($) => $.header.editDetails)}
                   className="size-7 min-w-7 text-muted hover:text-foreground"
                   onPress={startEditing}
                 >
@@ -532,28 +532,28 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
           )}
         </div>
         {canEdit && <Dropdown>
-          <Button isIconOnly size="sm" variant="outline" aria-label={t("header.actions")} className="shrink-0">
+          <Button isIconOnly size="sm" variant="outline" aria-label={t(($) => $.header.actions)} className="shrink-0">
             <Ellipsis className="size-4" />
           </Button>
           <Dropdown.Popover placement="bottom end" className="min-w-56">
             <Dropdown.Menu
-              aria-label={t("header.actions")}
+              aria-label={t(($) => $.header.actions)}
               disabledKeys={linkedExperiments.length > 0 ? ["delete"] : []}
               onAction={(key) => {
                 if (key === "archive") archive.mutate(!feature.archived);
                 else if (key === "delete") setConfirmDelete(true);
               }}
             >
-              <Dropdown.Item id="archive" textValue={feature.archived ? t("header.restore") : t("common:actions.archive")}>
+              <Dropdown.Item id="archive" textValue={feature.archived ? t(($) => $.header.restore) : t(($) => $.actions.archive, { ns: "common" })}>
                 {feature.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-                <Label>{feature.archived ? t("header.restore") : t("common:actions.archive")}</Label>
+                <Label>{feature.archived ? t(($) => $.header.restore) : t(($) => $.actions.archive, { ns: "common" })}</Label>
               </Dropdown.Item>
-              <Dropdown.Item id="delete" textValue={t("header.deleteFlag")} variant="danger">
+              <Dropdown.Item id="delete" textValue={t(($) => $.header.deleteFlag)} variant="danger">
                 <Trash2 className="size-4" />
                 <div className="flex flex-col">
-                  <Label>{t("header.deleteFlag")}</Label>
+                  <Label>{t(($) => $.header.deleteFlag)}</Label>
                   {linkedExperiments.length > 0 && (
-                    <span className="text-meta text-muted">{t("header.usedBy", { count: linkedExperiments.length })}</span>
+                    <span className="text-meta text-muted">{t(($) => $.header.usedBy, { count: linkedExperiments.length })}</span>
                   )}
                 </div>
               </Dropdown.Item>
@@ -567,18 +567,18 @@ function FlagHeader({ feature, linkedExperiments }: { feature: Feature; linkedEx
           <AlertDialog.Dialog>
             <AlertDialog.Header>
               <AlertDialog.Icon status="danger" />
-              <AlertDialog.Heading>{t("header.deleteTitle", { key: feature.key })}</AlertDialog.Heading>
+              <AlertDialog.Heading>{t(($) => $.header.deleteTitle, { key: feature.key })}</AlertDialog.Heading>
             </AlertDialog.Header>
             <AlertDialog.Body>
-              <p className="text-body text-muted">{t("header.deleteDescription")}</p>
+              <p className="text-body text-muted">{t(($) => $.header.deleteDescription)}</p>
               {remove.error !== null && <p className="mt-3 text-label text-danger">{errorMessage(remove.error)}</p>}
             </AlertDialog.Body>
             <AlertDialog.Footer>
               <Button size="sm" variant="tertiary" onPress={() => setConfirmDelete(false)}>
-                {t("common:actions.cancel")}
+                {t(($) => $.actions.cancel, { ns: "common" })}
               </Button>
               <Button size="sm" variant="danger" isPending={remove.isPending} onPress={() => remove.mutate()}>
-                {t("header.deleteFlag")}
+                {t(($) => $.header.deleteFlag)}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>
@@ -605,8 +605,8 @@ function EnvironmentsPanel({
   return (
     <Panel>
       <PanelHeader
-        title={t("environments.title")}
-        description={t("environments.description")}
+        title={t(($) => $.environments.title)}
+        description={t(($) => $.environments.description)}
       />
       <ul>
         {environments.map((env) => {
@@ -623,7 +623,7 @@ function EnvironmentsPanel({
                     {env.requireApproval && (
                       <span className="inline-flex items-center gap-1 text-meta font-normal text-muted">
                         <ShieldCheck className="size-3.5" aria-hidden="true" />
-                        {t("reviews:request.badge")}
+                        {t(($) => $.request.badge, { ns: "reviews" })}
                       </span>
                     )}
                   </div>
@@ -632,14 +632,14 @@ function EnvironmentsPanel({
                   {unused > 0 && (
                     <div className="mt-0.5 flex items-center gap-1 text-meta">
                       <TriangleAlert className="size-3.5 shrink-0 text-health" aria-hidden="true" />
-                      {t("environments.unusedRules", { count: unused })}
+                      {t(($) => $.environments.unusedRules, { count: unused })}
                     </div>
                   )}
                 </div>
-                <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? t("shared.on") : t("shared.off")}</span>
+                <span className={`text-label ${enabled ? "font-medium" : "text-muted"}`}>{enabled ? t(($) => $.shared.on) : t(($) => $.shared.off)}</span>
                 <FlagSwitch
                   size="md"
-                  aria-label={t("shared.switchLabel", { key: feature.key, environment: env.name })}
+                  aria-label={t(($) => $.shared.switchLabel, { key: feature.key, environment: env.name })}
                   description={stateAndServing(feature, env.id, experimentsById)}
                   isSelected={enabled}
                   isDisabled={feature.archived || !canEdit}
@@ -651,7 +651,7 @@ function EnvironmentsPanel({
               {servesOnlyFalse(feature, env.id) && (
                 <p className="flex items-start gap-2 px-4 pb-3 text-meta text-muted sm:px-5 sm:pl-10">
                   <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-                  {t("serving.onlyFalseHint")}
+                  {t(($) => $.serving.onlyFalseHint)}
                 </p>
               )}
               {requesting?.environment.id === env.id && (
@@ -691,7 +691,7 @@ function ToggleRequestForm({
         });
         void queryClient.invalidateQueries({ queryKey: orpc.changeRequests.key() });
         void queryClient.invalidateQueries({ queryKey: orpc.audit.key() });
-        toast.success(t("request.requested"), { description: t("request.requestedDescription") });
+        toast.success(t(($) => $.request.requested), { description: t(($) => $.request.requestedDescription) });
         onDone();
       } catch (error) {
         setServerError(formApi, error);
@@ -702,12 +702,12 @@ function ToggleRequestForm({
   return (
     <form noValidate onSubmit={submitHandler(form)} className="flex flex-col gap-3 border-t border-border bg-surface-secondary/60 px-4 py-4 sm:px-5 sm:pl-9">
       <div>
-        <p className="text-label font-medium">{enabled ? t("request.toggleOn", vars) : t("request.toggleOff", vars)}</p>
-        <p className="mt-0.5 text-meta text-muted">{t("request.explain", { environment: environment.name })}</p>
+        <p className="text-label font-medium">{enabled ? t(($) => $.request.toggleOn, vars) : t(($) => $.request.toggleOff, vars)}</p>
+        <p className="mt-0.5 text-meta text-muted">{t(($) => $.request.explain, { environment: environment.name })}</p>
       </div>
       <form.AppField name="comment">
         {(field) => (
-          <field.TextAreaField label={t("request.commentLabel")} placeholder={t("request.commentPlaceholder")} rows={2} className="max-w-lg" />
+          <field.TextAreaField label={t(($) => $.request.commentLabel)} placeholder={t(($) => $.request.commentPlaceholder)} rows={2} className="max-w-lg" />
         )}
       </form.AppField>
       <form.AppForm>
@@ -715,10 +715,10 @@ function ToggleRequestForm({
       </form.AppForm>
       <div className="flex gap-2">
         <form.AppForm>
-          <form.SubmitButton size="sm" label={t("request.submit")} />
+          <form.SubmitButton size="sm" label={t(($) => $.request.submit)} />
         </form.AppForm>
         <Button size="sm" variant="tertiary" onPress={onDone}>
-          {t("common:actions.cancel")}
+          {t(($) => $.actions.cancel, { ns: "common" })}
         </Button>
       </div>
     </form>
@@ -731,10 +731,10 @@ function OpenReviews({ feature, environments }: { feature: Feature; environments
   const open = useQuery(orpc.changeRequests.list.queryOptions({ input: { status: "open", featureId: feature.id } }));
   if (open.data === undefined || open.data.length === 0) return null;
   return (
-    <section aria-label={t("banner.title", { count: open.data.length })} className="rounded-[10px] border border-focus/40 bg-focus/[0.04]">
+    <section aria-label={t(($) => $.banner.title, { count: open.data.length })} className="rounded-[10px] border border-focus/40 bg-focus/[0.04]">
       <h2 className="flex items-center gap-2 border-b border-focus/20 px-4 py-3 text-label font-medium sm:px-5">
         <ShieldCheck className="size-4 text-focus" aria-hidden="true" />
-        {t("banner.title", { count: open.data.length })}
+        {t(($) => $.banner.title, { count: open.data.length })}
       </h2>
       <ul className="divide-y divide-focus/15">
         {open.data.map((request) => (
@@ -766,7 +766,7 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
         cacheFeature(queryClient, saved);
         void queryClient.invalidateQueries({ queryKey: orpc.environments.key() });
         setEditing(false);
-        toast.success(t("defaultRow.saved"));
+        toast.success(t(($) => $.defaultRow.saved));
       } catch (error) {
         setServerError(formApi, error);
       }
@@ -782,15 +782,15 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">{t("defaultRow.badge")}</span>
-            <span className="text-label">{t("defaultRow.everyoneElse")}</span>
-            <span className="hidden text-meta text-muted sm:inline">{t("defaultRow.sameEverywhere")}</span>
-            {isMatched && <span className="text-meta font-medium text-focus">{t("shared.matchesTestUser")}</span>}
+            <span className="rounded-[4px] border border-border px-1.5 text-meta leading-[18px] font-medium">{t(($) => $.defaultRow.badge)}</span>
+            <span className="text-label">{t(($) => $.defaultRow.everyoneElse)}</span>
+            <span className="hidden text-meta text-muted sm:inline">{t(($) => $.defaultRow.sameEverywhere)}</span>
+            {isMatched && <span className="text-meta font-medium text-focus">{t(($) => $.shared.matchesTestUser)}</span>}
           </div>
           <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-meta text-muted">
             <Trans
               t={t}
-              i18nKey="shared.serve"
+              i18nKey={($) => $.shared.serve}
               components={{ value: <ValuePreview valueType={feature.valueType} value={feature.defaultValue} className="min-w-0" /> }}
             />
           </div>
@@ -800,7 +800,7 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
             isIconOnly
             size="sm"
             variant={editing ? "tertiary" : "ghost"}
-            aria-label={editing ? t("defaultRow.close") : t("defaultRow.edit")}
+            aria-label={editing ? t(($) => $.defaultRow.close) : t(($) => $.defaultRow.edit)}
             aria-expanded={editing}
             className="size-8 min-w-8 text-muted hover:text-foreground"
             onPress={() => {
@@ -821,22 +821,22 @@ function DefaultValueRow({ feature, isMatched }: { feature: Feature; isMatched: 
           {/* ValueInput shows its own validation message; the validator only blocks submit */}
           <form.AppField name="value" validators={{ onChange: ({ value }) => valueIssue(feature.valueType, value) ?? undefined }}>
             {(field) => (
-              <ValueInput valueType={feature.valueType} value={field.state.value} onChange={field.handleChange} label={t("shared.defaultValue")} />
+              <ValueInput valueType={feature.valueType} value={field.state.value} onChange={field.handleChange} label={t(($) => $.shared.defaultValue)} />
             )}
           </form.AppField>
           <form.Subscribe selector={(s) => errorText(s.errors)}>
             {(error) => error !== "" && <p className="text-meta text-danger">{error}</p>}
           </form.Subscribe>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-meta text-muted">{t("defaultRow.help")}</p>
+            <p className="text-meta text-muted">{t(($) => $.defaultRow.help)}</p>
             <div className="flex gap-2">
               <Button size="sm" variant="tertiary" onPress={() => setEditing(false)}>
-                {t("common:actions.cancel")}
+                {t(($) => $.actions.cancel, { ns: "common" })}
               </Button>
               <form.Subscribe selector={(s) => [s.isSubmitting, s.isFieldsValid && s.values.value !== feature.defaultValue] as const}>
                 {([isSubmitting, canSave]) => (
                   <Button size="sm" type="submit" isPending={isSubmitting} isDisabled={!canSave}>
-                    {t("defaultRow.save")}
+                    {t(($) => $.defaultRow.save)}
                   </Button>
                 )}
               </form.Subscribe>
@@ -874,8 +874,8 @@ function EnvironmentOffNote({
       )}
       <span className={running ? "" : "text-muted"}>
         {running
-          ? t("offNote.experimentStarved", { key: feature.key, environment: environment.name, experiment: running.name })
-          : t("offNote.rulesInactive", { key: feature.key, environment: environment.name })}
+          ? t(($) => $.offNote.experimentStarved, { key: feature.key, environment: environment.name, experiment: running.name })
+          : t(($) => $.offNote.rulesInactive, { key: feature.key, environment: environment.name })}
       </span>
     </p>
   );
@@ -903,7 +903,7 @@ function ConcurrentExperimentsNote({
     <p className="flex items-start gap-2 border-b border-border bg-surface-secondary/60 px-4 py-2.5 text-label sm:px-5">
       <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-health" aria-hidden="true" />
       <span>
-        {t("concurrentExperiments", {
+        {t(($) => $.concurrentExperiments, {
           environment: environment.name,
           count: running.length,
           names: new Intl.ListFormat(intlLocale(), { type: "conjunction" }).format(running.map((x) => x.name)),

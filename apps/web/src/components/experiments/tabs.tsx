@@ -32,12 +32,12 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function MetricLinks({ ids, metrics }: { ids: ReadonlyArray<string>; metrics: ReadonlyMap<string, Metric> }) {
   const { t } = useTranslation(["experiments", "common"]);
   return ids.length === 0 ? (
-    <span className="text-muted">{t("common:states.none")}</span>
+    <span className="text-muted">{t(($) => $.states.none, { ns: "common" })}</span>
   ) : (
     <span className="flex flex-col gap-0.5">
       {ids.map((id) => (
         <Link key={id} to="/metrics/$metricId" params={{ metricId: id }} className="w-fit truncate hover:underline">
-          {metrics.get(id)?.name ?? t("setup.deletedMetric")}
+          {metrics.get(id)?.name ?? t(($) => $.setup.deletedMetric)}
         </Link>
       ))}
     </span>
@@ -59,34 +59,34 @@ function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; f
   const metrics = new Map((metricsQuery.data ?? []).map((m) => [m.id, m]));
   const traffic = trafficOf(x);
   const started = x.status !== "draft";
-  const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? t("setup.deletedEnvironment");
+  const envName = (id: string) => environments.find((e) => e.id === id)?.name ?? t(($) => $.setup.deletedEnvironment);
   const s = x.stats;
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
       <div className="flex min-w-0 flex-col gap-4">
         <Panel>
-          <PanelHeader title={t("setup.hypothesis")} />
+          <PanelHeader title={t(($) => $.setup.hypothesis)} />
           <p className={`whitespace-pre-wrap px-5 py-4 text-body ${x.hypothesis.trim() === "" ? "text-muted" : ""}`}>
-            {x.hypothesis.trim() === "" ? t("setup.noHypothesis") : x.hypothesis}
+            {x.hypothesis.trim() === "" ? t(($) => $.setup.noHypothesis) : x.hypothesis}
           </p>
         </Panel>
         <Panel className="overflow-hidden">
           <PanelHeader
-            title={t("setup.variations")}
+            title={t(($) => $.setup.variations)}
             description={
               <>
                 {feature === undefined ? (
-                  t("setup.valuesServedByFlag")
+                  t(($) => $.setup.valuesServedByFlag)
                 ) : (
                   <Trans
                     t={t}
-                    i18nKey="setup.valuesServedBy"
+                    i18nKey={($) => $.setup.valuesServedBy}
                     values={{ flag: feature.key }}
                     components={{ link: <Link to="/flags/$featureId" params={{ featureId: feature.id }} className="font-mono hover:underline" /> }}
                   />
                 )}
-                {started ? t("setup.currentWeights") : ""}
+                {started ? t(($) => $.setup.currentWeights) : ""}
               </>
             }
           />
@@ -94,10 +94,10 @@ function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; f
             <table className={tbl.table}>
               <thead>
                 <tr>
-                  <th scope="col" className={tbl.th}>{t("setup.columns.variation")}</th>
-                  <th scope="col" className={tbl.th}>{t("setup.columns.key")}</th>
-                  <th scope="col" className={tbl.th}>{t("setup.columns.value")}</th>
-                  <th scope="col" className={`${tbl.th} text-right`}>{t("setup.columns.weight")}</th>
+                  <th scope="col" className={tbl.th}>{t(($) => $.setup.columns.variation)}</th>
+                  <th scope="col" className={tbl.th}>{t(($) => $.setup.columns.key)}</th>
+                  <th scope="col" className={tbl.th}>{t(($) => $.setup.columns.value)}</th>
+                  <th scope="col" className={`${tbl.th} text-right`}>{t(($) => $.setup.columns.weight)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,40 +121,40 @@ function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; f
           </div>
         </Panel>
         <Panel>
-          <PanelHeader title={t("setup.targeting")} />
+          <PanelHeader title={t(($) => $.setup.targeting)} />
           <Rows>
-            <Row label={t("setup.whoCanEnter")}>{conditionsSummary(traffic.conditions)}</Row>
-            <Row label={t("setup.coverage")}>
-              <Trans t={t} i18nKey="setup.coverageValue" values={{ percent: formatPercent(traffic.coverage, 0) }} components={{ num }} />
+            <Row label={t(($) => $.setup.whoCanEnter)}>{conditionsSummary(traffic.conditions)}</Row>
+            <Row label={t(($) => $.setup.coverage)}>
+              <Trans t={t} i18nKey={($) => $.setup.coverageValue} values={{ percent: formatPercent(traffic.coverage, 0) }} components={{ num }} />
             </Row>
-            <Row label={t("setup.assignBy")}>
+            <Row label={t(($) => $.setup.assignBy)}>
               <code className="font-mono">{x.hashAttribute}</code>
             </Row>
-            <Row label={t("setup.runsIn")}>{formatList(x.environmentIds.map(envName)) || "–"}</Row>
-            <Row label={t("setup.analyzedIn")}>{envName(x.analysisEnvironmentId)}</Row>
+            <Row label={t(($) => $.setup.runsIn)}>{formatList(x.environmentIds.map(envName)) || "–"}</Row>
+            <Row label={t(($) => $.setup.analyzedIn)}>{envName(x.analysisEnvironmentId)}</Row>
           </Rows>
         </Panel>
       </div>
       <div className="flex min-w-0 flex-col gap-4">
         <Panel>
-          <PanelHeader title={t("setup.metrics")} />
+          <PanelHeader title={t(($) => $.setup.metrics)} />
           <Rows>
-            <Row label={t("setup.primary")}>
+            <Row label={t(($) => $.setup.primary)}>
               {x.primaryMetricId === null ? (
-                <span className="text-muted">{t("setup.primaryMissing")}</span>
+                <span className="text-muted">{t(($) => $.setup.primaryMissing)}</span>
               ) : (
                 <MetricLinks ids={[x.primaryMetricId]} metrics={metrics} />
               )}
             </Row>
-            <Row label={t("setup.secondary")}>
+            <Row label={t(($) => $.setup.secondary)}>
               <MetricLinks ids={x.secondaryMetricIds} metrics={metrics} />
             </Row>
-            <Row label={t("setup.guardrails")}>
+            <Row label={t(($) => $.setup.guardrails)}>
               <MetricLinks ids={x.guardrailMetricIds} metrics={metrics} />
             </Row>
-            <Row label={t("setup.breakdowns")}>
+            <Row label={t(($) => $.setup.breakdowns)}>
               {x.dimensions.length === 0 ? (
-                <span className="text-muted">{t("setup.noBreakdowns")}</span>
+                <span className="text-muted">{t(($) => $.setup.noBreakdowns)}</span>
               ) : (
                 <span className="font-mono">{formatList(x.dimensions)}</span>
               )}
@@ -163,29 +163,29 @@ function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; f
         </Panel>
         <Panel>
           <PanelHeader
-            title={t("setup.statistics")}
+            title={t(($) => $.setup.statistics)}
             description={
               started ? (
                 <span className="inline-flex items-center gap-1">
-                  <Lock className="size-3" aria-hidden="true" /> {t("setup.locked")}
+                  <Lock className="size-3" aria-hidden="true" /> {t(($) => $.setup.locked)}
                 </span>
               ) : (
-                t("setup.locksOnStart")
+                t(($) => $.setup.locksOnStart)
               )
             }
           />
           <Rows>
-            <Row label={t("setup.engine")}>
-              {s.engine === "bayesian" ? t("setup.bayesian") : s.sequential ? t("setup.sequential") : t("setup.fixed")}
+            <Row label={t(($) => $.setup.engine)}>
+              {s.engine === "bayesian" ? t(($) => $.setup.bayesian) : s.sequential ? t(($) => $.setup.sequential) : t(($) => $.setup.fixed)}
             </Row>
-            <Row label={t("setup.confidence")}>{Math.round((1 - s.alpha) * 100)}%</Row>
-            <Row label="CUPED">{s.cuped ? t("setup.on") : t("setup.off")}</Row>
+            <Row label={t(($) => $.setup.confidence)}>{Math.round((1 - s.alpha) * 100)}%</Row>
+            <Row label="CUPED">{s.cuped ? t(($) => $.setup.on) : t(($) => $.setup.off)}</Row>
             {s.engine === "frequentist" && (
-              <Row label={t("setup.correction")}>{s.correction === "holm" ? t("setup.holm") : t("common:states.none")}</Row>
+              <Row label={t(($) => $.setup.correction)}>{s.correction === "holm" ? t(($) => $.setup.holm) : t(($) => $.states.none, { ns: "common" })}</Row>
             )}
             {s.engine === "frequentist" && s.sequential && (
-              <Row label={t("setup.tunedFor")}>
-                <Trans t={t} i18nKey="setup.tunedForValue" values={{ n: formatCount(s.sequentialTuning) }} components={{ num }} />
+              <Row label={t(($) => $.setup.tunedFor)}>
+                <Trans t={t} i18nKey={($) => $.setup.tunedForValue} values={{ n: formatCount(s.sequentialTuning) }} components={{ num }} />
               </Row>
             )}
           </Rows>
@@ -195,19 +195,19 @@ function RegisteredSetup({ experiment: x, feature }: { experiment: Experiment; f
           <DraftSetup experiment={x} feature={feature} only="plan" />
         ) : (
           <Panel>
-            <PanelHeader title={t("setup.plan")} />
+            <PanelHeader title={t(($) => $.setup.plan)} />
             <Rows>
-              <Row label={t("setup.detect")}>
-                <Trans t={t} i18nKey="setup.detectValue" values={{ mde: formatPercent(x.plan.mde) }} components={{ num }} />
+              <Row label={t(($) => $.setup.detect)}>
+                <Trans t={t} i18nKey={($) => $.setup.detectValue} values={{ mde: formatPercent(x.plan.mde) }} components={{ num }} />
               </Row>
-              <Row label={t("setup.perVariation")}>
+              <Row label={t(($) => $.setup.perVariation)}>
                 {x.plan.sampleSizePerVariation === null ? (
-                  <span className="text-muted">{t("setup.notPlanned")}</span>
+                  <span className="text-muted">{t(($) => $.setup.notPlanned)}</span>
                 ) : (
                   <span className="font-mono tabular">{formatCount(x.plan.sampleSizePerVariation)}</span>
                 )}
               </Row>
-              <Row label={t("setup.dailyUsers")}>
+              <Row label={t(($) => $.setup.dailyUsers)}>
                 {x.plan.dailyTraffic === null ? <span className="text-muted">–</span> : <span className="font-mono tabular">{formatCount(x.plan.dailyTraffic)}</span>}
               </Row>
             </Rows>
@@ -227,7 +227,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
     <div className="flex flex-col gap-4">
       <p className="flex items-start gap-2 text-label text-muted">
         <RotateCcw className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-        {t("phases.intro")}
+        {t(($) => $.phases.intro)}
       </p>
       <Panel>
         <ol>
@@ -235,7 +235,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
             const current = i === x.phases.length - 1 && p.endedAt === null;
             const prev = x.phases[i - 1];
             const was = (changed: boolean, text: string) =>
-              prev !== undefined && changed ? <span className="ml-2 font-sans text-meta text-muted">{t("phases.was", { value: text })}</span> : null;
+              prev !== undefined && changed ? <span className="ml-2 font-sans text-meta text-muted">{t(($) => $.phases.was, { value: text })}</span> : null;
             return (
               <li key={i} className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3 border-b border-border px-5 py-4 last:border-b-0">
                 <span
@@ -248,18 +248,18 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                 <div className="flex min-w-0 flex-col gap-2">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <p className="text-body font-medium">
-                      {t("phases.phase", { n: i + 1 })}
-                      {current && <span className="ml-2 text-label font-normal text-muted">{t("phases.current")}</span>}
+                      {t(($) => $.phases.phase, { n: i + 1 })}
+                      {current && <span className="ml-2 text-label font-normal text-muted">{t(($) => $.phases.current)}</span>}
                     </p>
                     <p className="text-label text-muted tabular">
                       {formatDateTime(p.startedAt)} –{" "}
-                      {p.endedAt === null ? t("phases.now") : formatDateTime(p.endedAt)} ·{" "}
+                      {p.endedAt === null ? t(($) => $.phases.now) : formatDateTime(p.endedAt)} ·{" "}
                       {formatDuration(p.startedAt, p.endedAt ?? new Date())}
                     </p>
                   </div>
                   {p.reason !== "" && <p className="text-label">{p.reason}</p>}
                   <dl className="grid gap-x-6 gap-y-1.5 text-label sm:grid-cols-[auto_minmax(0,1fr)]">
-                    <dt className="text-muted">{t("phases.split")}</dt>
+                    <dt className="text-muted">{t(($) => $.phases.split)}</dt>
                     <dd className="flex min-w-0 flex-col gap-1.5">
                       <div className="flex h-1.5 w-full max-w-xs gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
                         {p.weights.map((w, j) => (
@@ -270,7 +270,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                         {p.weights.map((w, j) => (
                           <span key={j} className="inline-flex items-center gap-1">
                             <VariationSwatch index={j} />
-                            <span className="font-sans">{x.variations[j]?.name ?? t("phases.variationN", { n: j })}</span> {weightLabel(w)}
+                            <span className="font-sans">{x.variations[j]?.name ?? t(($) => $.phases.variationN, { n: j })}</span> {weightLabel(w)}
                           </span>
                         ))}
                         {was(
@@ -279,12 +279,12 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                         )}
                       </span>
                     </dd>
-                    <dt className="text-muted">{t("phases.coverage")}</dt>
+                    <dt className="text-muted">{t(($) => $.phases.coverage)}</dt>
                     <dd className="font-mono tabular">
                       {formatPercent(p.coverage, 0)}
                       {was(prev !== undefined && prev.coverage !== p.coverage, formatPercent(prev?.coverage ?? 0, 0))}
                     </dd>
-                    <dt className="text-muted">{t("phases.targeting")}</dt>
+                    <dt className="text-muted">{t(($) => $.phases.targeting)}</dt>
                     <dd>
                       {conditionsSummary(p.conditions)}
                       {was(
@@ -292,7 +292,7 @@ export function PhasesView({ experiment: x }: { experiment: Experiment }) {
                         conditionsSummary(prev?.conditions ?? []),
                       )}
                     </dd>
-                    <dt className="text-muted">{t("phases.seed")}</dt>
+                    <dt className="text-muted">{t(($) => $.phases.seed)}</dt>
                     <dd className="truncate font-mono text-meta">{p.seed}</dd>
                   </dl>
                 </div>
@@ -346,7 +346,7 @@ export function HistoryView({ experiment }: { experiment: Experiment }) {
       </Panel>
     );
   if (audit.error !== null) return <QueryError message={errorMessage(audit.error)} onRetry={() => audit.refetch()} />;
-  if (audit.data.length === 0) return <p className="py-10 text-center text-body text-muted">{t("history.empty")}</p>;
+  if (audit.data.length === 0) return <p className="py-10 text-center text-body text-muted">{t(($) => $.history.empty)}</p>;
   return (
     <Panel>
       <ol>
@@ -362,7 +362,7 @@ export function HistoryView({ experiment }: { experiment: Experiment }) {
             <li key={log.id} className="flex flex-col gap-1 border-b border-border px-5 py-3 last:border-b-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                 <p className="text-label">
-                  <span className="font-medium">{log.actorEmail}</span> <span className="text-muted">{key === null ? log.action.toLowerCase() : t(`history.actions.${key}`)}</span>
+                  <span className="font-medium">{log.actorEmail}</span> <span className="text-muted">{key === null ? log.action.toLowerCase() : t(($) => $.history.actions[key])}</span>
                 </p>
                 <span className="text-meta text-muted">
                   <RelativeTime date={log.createdAt} />
@@ -372,12 +372,12 @@ export function HistoryView({ experiment }: { experiment: Experiment }) {
                 <details className="text-meta">
                   <summary className="w-fit cursor-pointer text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus">
                     {/* ponytail: field names are the audit JSON keys spelled out, not translated */}
-                    {t("history.changed", { fields: changed.map((k) => k.replace(/([A-Z])/g, " $1").toLowerCase()).join(", ") })}
+                    {t(($) => $.history.changed, { fields: changed.map((k) => k.replace(/([A-Z])/g, " $1").toLowerCase()).join(", ") })}
                   </summary>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     {[
-                      [t("history.before"), before],
-                      [t("history.after"), after],
+                      [t(($) => $.history.before), before],
+                      [t(($) => $.history.after), after],
                     ].map(([label, obj]) => (
                       <div key={label as string} className="min-w-0">
                         <p className="mb-1 text-muted">{label as string}</p>

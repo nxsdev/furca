@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_app/data-sources/")({
     ...(s.new ? { new: true } : {}),
     ...((WarehouseType.literals as ReadonlyArray<unknown>).includes(s.type) ? { type: s.type as WarehouseType } : {}),
   }),
-  head: () => ({ meta: [{ title: i18n.t("datasources:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "datasources" }) }] }),
   component: Page,
 });
 
@@ -30,15 +30,15 @@ function Page() {
   if (!isNew || !isAdmin) return <SourceList />;
   const crumbs = (
     <Breadcrumbs className="mb-1 text-label">
-      <Breadcrumbs.Item href="/data-sources">{t("list.title")}</Breadcrumbs.Item>
-      <Breadcrumbs.Item>{type === undefined ? t("new.breadcrumb") : WAREHOUSE_LABELS[type]}</Breadcrumbs.Item>
+      <Breadcrumbs.Item href="/data-sources">{t(($) => $.list.title)}</Breadcrumbs.Item>
+      <Breadcrumbs.Item>{type === undefined ? t(($) => $.new.breadcrumb) : WAREHOUSE_LABELS[type]}</Breadcrumbs.Item>
     </Breadcrumbs>
   );
   if (type === undefined)
     return (
       <>
-        <PageHeader breadcrumb={crumbs} title={t("new.title")} description={t("new.description")} />
-        <ul className="grid max-w-[860px] gap-3 sm:grid-cols-2" aria-label={t("new.title")}>
+        <PageHeader breadcrumb={crumbs} title={t(($) => $.new.title)} description={t(($) => $.new.description)} />
+        <ul className="grid max-w-[860px] gap-3 sm:grid-cols-2" aria-label={t(($) => $.new.title)}>
           {WarehouseType.literals.map((w) => (
             <li key={w}>
               <Link
@@ -50,7 +50,7 @@ function Page() {
                   <Database className="size-4 text-muted" aria-hidden="true" />
                   {WAREHOUSE_LABELS[w]}
                 </span>
-                <span className="text-label text-muted">{t(`types.${w}`)}</span>
+                <span className="text-label text-muted">{t(($) => $.types[w])}</span>
               </Link>
             </li>
           ))}
@@ -61,15 +61,15 @@ function Page() {
     <>
       <PageHeader
         breadcrumb={crumbs}
-        title={t("new.connect", { warehouse: WAREHOUSE_LABELS[type] })}
-        description={t(`types.${type}`)}
+        title={t(($) => $.new.connect, { warehouse: WAREHOUSE_LABELS[type] })}
+        description={t(($) => $.types[type])}
       />
       <div className="max-w-[860px]">
         <DataSourceForm
           key={type}
           type={type}
           onSaved={(s) => {
-            toast.success(t("new.createdToast", { name: s.name }), { description: t("new.createdToastDescription") });
+            toast.success(t(($) => $.new.createdToast, { name: s.name }), { description: t(($) => $.new.createdToastDescription) });
             void navigate({ to: "/data-sources/$dataSourceId", params: { dataSourceId: s.id } });
           }}
           onCancel={() => void navigate({ search: { new: true } })}
@@ -94,13 +94,13 @@ function SourceList() {
   return (
     <>
       <PageHeader
-        title={t("list.title")}
-        description={t("list.description")}
+        title={t(($) => $.list.title)}
+        description={t(($) => $.list.description)}
         actions={
           isAdmin && (
             <Link to="/data-sources" search={{ new: true }} className={buttonVariants({ size: "sm" })}>
               <Plus className="size-4" />
-              {t("list.connect")}
+              {t(($) => $.list.connect)}
             </Link>
           )
         }
@@ -110,7 +110,7 @@ function SourceList() {
           <ListSkeleton rows={2} />
         </Panel>
       ) : sources.isError ? (
-        <QueryError message={t("list.loadFailed", { error: errorMessage(sources.error) })} onRetry={() => sources.refetch()} />
+        <QueryError message={t(($) => $.list.loadFailed, { error: errorMessage(sources.error) })} onRetry={() => sources.refetch()} />
       ) : (
         <div className="flex flex-col gap-4">
           <Panel>
@@ -118,11 +118,11 @@ function SourceList() {
               <table className={tbl.table}>
                 <thead>
                   <tr>
-                    <th className={tbl.th}>{t("list.columns.name")}</th>
-                    <th className={tbl.th}>{t("list.columns.type")}</th>
-                    <th className={`${tbl.th} hidden md:table-cell`}>{t("list.columns.location")}</th>
-                    <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t("list.columns.metrics")}</th>
-                    <th className={`${tbl.th} hidden text-right lg:table-cell`}>{t("list.columns.updated")}</th>
+                    <th className={tbl.th}>{t(($) => $.list.columns.name)}</th>
+                    <th className={tbl.th}>{t(($) => $.list.columns.type)}</th>
+                    <th className={`${tbl.th} hidden md:table-cell`}>{t(($) => $.list.columns.location)}</th>
+                    <th className={`${tbl.th} hidden text-right sm:table-cell`}>{t(($) => $.list.columns.metrics)}</th>
+                    <th className={`${tbl.th} hidden text-right lg:table-cell`}>{t(($) => $.list.columns.updated)}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,7 +145,7 @@ function SourceList() {
                         <td className={`${tbl.td} whitespace-nowrap`}>{dataSourceTypeLabel(s)}</td>
                         <td className={`${tbl.td} hidden max-w-[300px] truncate md:table-cell`}>
                           {s.config === null ? (
-                            <span className="text-muted">{t("list.builtinLocation")}</span>
+                            <span className="text-muted">{t(($) => $.list.builtinLocation)}</span>
                           ) : (
                             <span className="font-mono">{configSummary(s.config)}</span>
                           )}
@@ -165,7 +165,7 @@ function SourceList() {
           </Panel>
           {!hasWarehouse && (
             <p className="max-w-[72ch] text-label text-muted">
-              {t("list.warehouseHint")}
+              {t(($) => $.list.warehouseHint)}
             </p>
           )}
         </div>

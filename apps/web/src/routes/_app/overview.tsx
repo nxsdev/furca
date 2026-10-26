@@ -15,7 +15,7 @@ import { useEnvironment } from "~/lib/environment";
 import { errorMessage, orpc } from "~/lib/rpc";
 
 export const Route = createFileRoute("/_app/overview")({
-  head: () => ({ meta: [{ title: i18n.t("overview:pageTitle") }] }),
+  head: () => ({ meta: [{ title: i18n.t(($) => $.pageTitle, { ns: "overview" }) }] }),
   component: Page,
 });
 
@@ -45,8 +45,8 @@ function Page() {
 
   const header = (
     <PageHeader
-      title={t("page.title")}
-      description={current === null ? t("page.description") : t("page.descriptionIn", { name: current.name })}
+      title={t(($) => $.page.title)}
+      description={current === null ? t(($) => $.page.description) : t(($) => $.page.descriptionIn, { name: current.name })}
     />
   );
   const core = [features, experiments, metrics] as const;
@@ -66,7 +66,7 @@ function Page() {
       <>
         {header}
         <QueryError
-          message={t("page.loadFailed", { message: errorMessage(failed?.error) })}
+          message={t(($) => $.page.loadFailed, { message: errorMessage(failed?.error) })}
           onRetry={() => core.forEach((q) => void q.refetch())}
         />
       </>
@@ -78,31 +78,31 @@ function Page() {
   const steps: ReadonlyArray<OnboardingStep> = [
     {
       id: "flag",
-      title: t("steps.flag.title"),
+      title: t(($) => $.steps.flag.title),
       description:
-        features.data.length > 0 ? t("steps.flag.doneDescription", { count: features.data.length }) : t("steps.flag.description"),
+        features.data.length > 0 ? t(($) => $.steps.flag.doneDescription, { count: features.data.length }) : t(($) => $.steps.flag.description),
       done: features.data.length > 0,
       action: (v) => (
         <Link to="/flags" search={{ new: "1" }} className={buttonVariants({ size: "sm", variant: v })}>
-          {t("steps.flag.action")}
+          {t(($) => $.steps.flag.action)}
         </Link>
       ),
     },
     {
       id: "sdk",
-      title: t("steps.sdk.title"),
+      title: t(($) => $.steps.sdk.title),
       // ponytail: sawTraffic implies a selected environment (its queries are disabled otherwise)
       description: sawTraffic ? (
         <span className="text-foreground">
           <Check className="mr-1 inline size-3.5 align-[-2px]" aria-hidden="true" />
           {lastEventAt === null ? (
-            t("steps.sdk.received", { name: current?.name ?? "" })
+            t(($) => $.steps.sdk.received, { name: current?.name ?? "" })
           ) : (
-            <Trans t={t} i18nKey="steps.sdk.receivedAt" values={{ name: current?.name ?? "" }} components={{ time: <RelativeTime date={lastEventAt} /> }} />
+            <Trans t={t} i18nKey={($) => $.steps.sdk.receivedAt} values={{ name: current?.name ?? "" }} components={{ time: <RelativeTime date={lastEventAt} /> }} />
           )}
         </span>
       ) : (
-        t("steps.sdk.description", { name: current?.name ?? "" })
+        t(($) => $.steps.sdk.description, { name: current?.name ?? "" })
       ),
       done: sawTraffic,
       body:
@@ -111,24 +111,24 @@ function Page() {
             <SdkTabs sdkKey={current.sdkKey} flagKey={flagKey} targets={["browser", "react"]} />
             <p className="flex items-center gap-2 text-label text-muted">
               <span className="size-2 shrink-0 rounded-full bg-muted motion-safe:animate-pulse" aria-hidden="true" />
-              {names.isError && volume.isError ? t("steps.sdk.checkFailed") : t("steps.sdk.waiting", { name: current.name })}
+              {names.isError && volume.isError ? t(($) => $.steps.sdk.checkFailed) : t(($) => $.steps.sdk.waiting, { name: current.name })}
             </p>
             <Link to="/environments" className={`${linkCls} w-fit`}>
-              {t("steps.sdk.otherRuntimes")}
+              {t(($) => $.steps.sdk.otherRuntimes)}
             </Link>
           </div>
         ),
     },
     {
       id: "metric",
-      title: t("steps.metric.title"),
+      title: t(($) => $.steps.metric.title),
       description:
         metrics.data.length > 0 ? (
-          t("steps.metric.doneDescription", { count: metrics.data.length })
+          t(($) => $.steps.metric.doneDescription, { count: metrics.data.length })
         ) : (
           <Trans
             t={t}
-            i18nKey={eventNames.length > 0 ? "steps.metric.descriptionWithEvents" : "steps.metric.description"}
+            i18nKey={($) => (eventNames.length > 0 ? $.steps.metric.descriptionWithEvents : $.steps.metric.description)}
             values={{
               call: 'furca.track("purchase")',
               names: `${eventNames
@@ -142,18 +142,18 @@ function Page() {
       done: metrics.data.length > 0,
       action: (v) => (
         <Link to="/metrics" search={{ new: true }} className={buttonVariants({ size: "sm", variant: v })}>
-          {t("steps.metric.action")}
+          {t(($) => $.steps.metric.action)}
         </Link>
       ),
     },
     {
       id: "experiment",
-      title: t("steps.experiment.title"),
-      description: t("steps.experiment.description"),
+      title: t(($) => $.steps.experiment.title),
+      description: t(($) => $.steps.experiment.description),
       done: experiments.data.some((x) => x.status !== "draft"),
       action: (v) => (
         <Link to="/experiments/new" className={buttonVariants({ size: "sm", variant: v })}>
-          {t("steps.experiment.action")}
+          {t(($) => $.steps.experiment.action)}
         </Link>
       ),
     },
@@ -172,11 +172,11 @@ function Page() {
             {current !== null && (
               <Panel>
                 <PanelHeader
-                  title={t("traffic.title")}
-                  description={t("traffic.description", { name: current.name })}
+                  title={t(($) => $.traffic.title)}
+                  description={t(($) => $.traffic.description, { name: current.name })}
                   actions={
                     <Link to="/data-sources/$dataSourceId" params={{ dataSourceId: "builtin" }} className={`${linkCls} shrink-0`}>
-                      {t("traffic.eventStore")}
+                      {t(($) => $.traffic.eventStore)}
                     </Link>
                   }
                 />
@@ -185,10 +185,10 @@ function Page() {
             )}
             <Panel>
               <PanelHeader
-                title={t("recentChanges.title")}
+                title={t(($) => $.recentChanges.title)}
                 actions={
                   <Link to="/audit" className={`${linkCls} shrink-0`}>
-                    {t("recentChanges.auditLog")}
+                    {t(($) => $.recentChanges.auditLog)}
                   </Link>
                 }
               />
